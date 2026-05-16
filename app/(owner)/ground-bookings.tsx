@@ -404,6 +404,7 @@ export default function OwnerBookingsScreen() {
         if (error) throw error;
         if (data && data.success) {
           setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
+          setSelectedSlotBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
           if (Platform.OS === 'web') alert('Booking cancelled and refund processed.');
           else Alert.alert('Success', 'Booking cancelled and refund processed.');
         } else {
@@ -1556,22 +1557,16 @@ export default function OwnerBookingsScreen() {
                         </View>
 
                         <Text style={styles.slotBookingName}>{(b.booked_for_name || b.user?.full_name || 'Customer').toUpperCase()}</Text>
-                        <Text style={styles.slotCustomerPhone}>{b.user?.phone || 'No phone provided'}</Text>
 
-                        <View style={styles.slotDetailsGrid}>
-                          <View style={styles.slotDetailRow}>
-                            <Calendar size={14} color="#64748B" />
-                            <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
-                          </View>
-                          <View style={styles.slotDetailRow}>
-                            <Clock size={14} color="#64748B" />
-                            <Text style={styles.slotBookingDetail}>
-                              {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
-                            </Text>
-                          </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                          <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                          <Text style={{ color: '#CBD5E1', fontSize: 12 }}>|</Text>
+                          <Text style={styles.slotBookingDetail}>
+                            {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
+                          </Text>
                           {isCricket && (
-                            <View style={styles.slotDetailRow}>
-                              <Users size={14} color="#64748B" />
+                            <>
+                              <Text style={{ color: '#CBD5E1', fontSize: 12 }}>|</Text>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                 <Text style={styles.slotBookingDetail}>
                                   {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
@@ -1582,32 +1577,46 @@ export default function OwnerBookingsScreen() {
                                   </Text>
                                 </View>
                               </View>
-                            </View>
+                            </>
                           )}
                           {isNet && (
-                            <View style={styles.slotDetailRow}>
-                              <LandPlot size={14} color="#64748B" />
+                            <>
+                              <Text style={{ color: '#CBD5E1', fontSize: 12 }}>|</Text>
                               <Text style={styles.slotBookingDetail}>
                                 {b.ground.name.toUpperCase()}
                               </Text>
-                            </View>
+                            </>
                           )}
                         </View>
                       </View>
-                      <View style={{ alignItems: 'flex-end', gap: 8, justifyContent: 'space-between' }}>
-                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? '#DCFCE7' : (b.status === 'cancelled' ? 'transparent' : '#F1F5F9'), height: 24, paddingHorizontal: 8, borderRadius: 6 }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
-                            {b.status.toUpperCase()}
+                      <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', alignSelf: 'stretch' }}>
+                        <View style={[styles.statusBadge, { backgroundColor: 'transparent', height: 24, paddingHorizontal: 0, borderRadius: 6, borderWidth: b.status === 'cancelled' ? 1 : 0, borderColor: '#EF4444' }]}>
+                          <Text style={[styles.statusText, { color: b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? '#64748B' : '#166534') : '#EF4444', fontSize: 10, fontWeight: '800' }]}>
+                            {b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? 'DONE' : 'ACTIVE') : b.status.toUpperCase()}
                           </Text>
                         </View>
                         
-                        <View style={{ alignItems: 'flex-end' }}>
+                        <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Banknote size={16} color="#059669" />
-                            <Text style={{ color: '#059669', fontWeight: '800', fontSize: 18 }}>
+                            <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 18 }}>
                               ₹{(b.total_amount - calculateBRowFee(b)).toLocaleString()}
                             </Text>
                           </View>
+
+                          {b.status === 'confirmed' && !isDateInPast(b.booking_date) && (
+                            <TouchableOpacity 
+                              onPress={() => handleCancelBooking(b)}
+                              style={{ 
+                                marginTop: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 2
+                              }}
+                            >
+                              <X size={10} color="#E11D48" />
+                              <Text style={{ color: '#E11D48', fontSize: 10, fontWeight: '800', textDecorationLine: 'underline' }}>CANCEL</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     </View>

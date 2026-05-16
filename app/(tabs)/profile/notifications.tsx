@@ -35,6 +35,17 @@ function NotificationsInner() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const dateOptions = useMemo(() => {
+    const dates = [];
+    for (let i = -2; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  }, []);
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
@@ -90,8 +101,7 @@ function NotificationsInner() {
         `)
         .eq('user_id', user.id)
         .eq('status', 'confirmed')
-        .gte('booking_date', nowIso)
-        .lte('booking_date', tomorrowIso);
+        .eq('booking_date', selectedDate);
 
       // Map bookings to look like notifications
       const mappedBookings = (bookings || []).map(b => ({
@@ -125,9 +135,25 @@ function NotificationsInner() {
     }
   };
 
+  const markAsRead = async (id: string) => {
+    if (id.startsWith('booking-')) return;
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setReminders(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
   useEffect(() => {
     loadReminders();
-  }, [user]);
+  }, [user, selectedDate]);
 
   useEffect(() => {
     setTabBarVisible(false);
@@ -142,6 +168,7 @@ function NotificationsInner() {
         key={item.id} 
         style={[styles.reminderCard, isUnread && styles.unreadCard]}
         onPress={() => {
+          markAsRead(item.id);
           if (item.booking_id && item.booking_id !== 'undefined') {
             router.push(`/bookings/${item.booking_id}` as any);
           } else {
@@ -193,6 +220,34 @@ function NotificationsInner() {
             </View>
           )}
         </View>
+        
+        {!IS_WEB && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.datePickerScroll}
+            contentContainerStyle={styles.datePickerContent}
+          >
+            {dateOptions.map((date) => {
+              const d = new Date(date);
+              const isSelected = date === selectedDate;
+              const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+              const dayNum = d.getDate();
+              
+              return (
+                <TouchableOpacity 
+                  key={date}
+                  onPress={() => setSelectedDate(date)}
+                  style={[styles.dateChip, isSelected && styles.dateChipActive]}
+                >
+                  <Text style={[styles.dateDayName, isSelected && styles.dateTextActive]}>{dayName}</Text>
+                  <Text style={[styles.dateDayNum, isSelected && styles.dateTextActive]}>{dayNum}</Text>
+                  {isSelected && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
 
       <View style={styles.inner}>
@@ -442,5 +497,53 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  datePickerScroll: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginTop: 35,
+  },
+  datePickerContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  dateChip: {
+    width: 60,
+    height: 70,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  dateChipActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  dateDayName: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginBottom: 4,
+  },
+  dateDayNum: {
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  dateTextActive: {
+    color: '#FFFFFF',
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#00ea6b',
+    marginTop: 4,
   },
 });

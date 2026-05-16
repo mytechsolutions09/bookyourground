@@ -11,6 +11,8 @@ import { getBookingDisplayAmount } from '@/utils/bookingPricing';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
+import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { getDayOfWeek } from '@/utils/helpers';
 
 function getNetsTimeSlotSummary(booking: any): string {
   const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
@@ -124,18 +126,26 @@ export default function BookingDetailsScreen() {
           .order('start_time', { ascending: true });
           
         if (!relatedError && related) {
-          relatedBookings = related;
+          // Further filter to ensure the slots string is an EXACT match
+          // This prevents (Slots: 09:00) from matching (Slots: 09:00, 10:00)
+          relatedBookings = related.filter(r => {
+            const rMatch = /\(Slots:\s*([^)]+)\)/.exec(r.notes);
+            return rMatch && rMatch[0] === slotsPart;
+          });
         }
       }
       
       // Fetch duration from ground info (time_slots)
       let calculatedDuration = null;
       try {
+        const parsedDate = new Date(data.booking_date);
+        const dow = getDayOfWeek(parsedDate) as any;
+        
         const { data: slotsData } = await supabase
           .from('time_slots')
           .select('start_time, end_time')
           .eq('ground_id', data.ground_id)
-          .eq('date', data.booking_date);
+          .eq('day_of_week', dow);
 
         if (slotsData) {
           const targetHHMM = normalizeDbTimeToHHMM(data.start_time);
@@ -200,11 +210,31 @@ export default function BookingDetailsScreen() {
 
   const { slotCount, timeSlotLabel, isNetsWithMultipleSlots } = useMemo(() => {
     if (!booking) return { slotCount: 1, timeSlotLabel: '', isNetsWithMultipleSlots: false };
+    
+    // 1. Prefer actual related bookings count from database
+    if (booking.relatedBookings && booking.relatedBookings.length > 0) {
+      const count = booking.relatedBookings.length;
+      const sorted = [...booking.relatedBookings].sort((a, b) => a.start_time.localeCompare(b.start_time));
+      const label = sorted.map(b => {
+        let t = b.start_time;
+        if (t.includes('__')) t = t.split('__')[1];
+        return formatTime(t);
+      }).join(', ');
+      
+      return { 
+        slotCount: count, 
+        timeSlotLabel: label, 
+        isNetsWithMultipleSlots: count > 1 
+      };
+    }
+
+    // 2. Fallback to notes parsing
     let count = 1;
     let startStr = booking.start_time;
     if (typeof startStr === 'string' && startStr.includes('__')) startStr = startStr.split('__')[1];
     let label = formatTime(startStr);
     let multiple = false;
+    
     if (booking.notes) {
       const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(booking.notes);
       if (matchSlots) {
@@ -261,8 +291,8 @@ export default function BookingDetailsScreen() {
 
     const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
     const groundName = (booking.ground?.name ?? '').toLowerCase();
-    const isCricket = pitchType === 'cricket ground';
-    const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
+    const isCricket = pitchType.includes('cricket ground');
+    const isNet = (pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane')) && !isCricket;
 
     let ownerPf = 0;
     if (isNet) {
@@ -271,16 +301,18 @@ export default function BookingDetailsScreen() {
       let totalTeams = 0;
       if (booking.relatedBookings && booking.relatedBookings.length > 0) {
         booking.relatedBookings.forEach((b: any) => {
-          const match = /Teams:\s*([^(]+)/.exec(b.notes);
+          const match = /Teams:\s*([^(\n,]+)/.exec(b.notes);
           const teamLabel = match ? match[1].trim() : 'Both Teams';
           totalTeams += (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
         });
-      } else {
-        const match = /Teams:\s*([^(]+)/.exec(booking.notes);
-        const teamLabel = match ? match[1].trim() : 'Both Teams';
-        totalTeams = (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
       }
       ownerPf = cricketFixedFee * totalTeams;
+      
+      // If we only have one booking record but multiple slots in notes, 
+      // we need to scale the fixed fee by slotCount.
+      if ((!booking.relatedBookings || booking.relatedBookings.length <= 1) && slotCount > 1) {
+        ownerPf = ownerPf * slotCount;
+      }
     } else {
       ownerPf = displayTotalAmount * rate;
     }
@@ -313,11 +345,12 @@ export default function BookingDetailsScreen() {
     if (!booking) return 0;
     
     const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
+    const isCricket = pitchType.includes('cricket ground');
     const isNet = pitchType.includes('net') || pitchType.includes('lane');
 
-    // 1. For Nets, prioritize calculation for remediation of legacy incorrect data
-    if (isNet && calculatedPlatformFee !== null) {
-        console.log('[BookingDebug] Prioritizing calculated Nets fee:', calculatedPlatformFee);
+    // 1. For Nets and Cricket, prioritize calculation for remediation of legacy incorrect data
+    if ((isNet || isCricket) && calculatedPlatformFee !== null) {
+        console.log('[BookingDebug] Prioritizing calculated fee:', calculatedPlatformFee);
         return calculatedPlatformFee;
     }
 

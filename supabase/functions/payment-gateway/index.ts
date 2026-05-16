@@ -42,9 +42,9 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
 
   const isCash = details.payment_method === 'cash' || details.paymentMethod === 'cash';
   const pitchType = String(groundType ?? '').toLowerCase();
-  const isFullCricket = pitchType === 'cricket ground';
+  const isFullCricket = pitchType.includes('cricket ground');
   const groundName = String(details.ground_name ?? details.groundName ?? '').toLowerCase();
-  const isNet = pitchType.includes('net') || pitchType.includes('lane') || groundName.includes('net') || groundName.includes('lane');
+  const isNet = (pitchType.includes('net') || pitchType.includes('lane') || groundName.includes('net') || groundName.includes('lane')) && !isFullCricket;
 
 
   
@@ -103,9 +103,18 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
     if (isNet) {
       platformFeeOwner = NETS_FIXED_FEE * (details.slots?.length || 1);
     } else if (isFullCricket) {
-      const teamType = details.team_type ?? details.teamType ?? 'both';
-      const teamCount = teamType === 'one' ? 1 : 2;
-      platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
+      let totalTeams = 0;
+      if (details.slots && Array.isArray(details.slots) && details.slots.length > 0) {
+        details.slots.forEach((s: string) => {
+          const parts = s.split('__');
+          const slotTeamType = parts[2] || details.team_type || 'both';
+          totalTeams += (slotTeamType === 'one' || slotTeamType === '1 Team') ? 1 : 2;
+        });
+      } else {
+        const teamType = details.team_type ?? details.teamType ?? 'both';
+        totalTeams = (teamType === 'one' || teamType === '1 Team') ? 1 : 2;
+      }
+      platformFeeOwner = CRICKET_FIXED_FEE * totalTeams;
     } else {
       platformFeeOwner = Math.round(discountedGroundPrice * PLATFORM_FEE_RATE * 100) / 100;
     }
@@ -1290,8 +1299,8 @@ serve(async (req) => {
       
       const breakdown = calculateFinalAmounts(details, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false, isOwnerBooking);
       
-      // If owner booking his own ground, only deduct platform fee + gst from wallet
-      const amountToDeduct = isOwnerBooking ? (breakdown.platformFeeOwner + breakdown.gstOwner) : Number(details.total_amount ?? 0);
+      // Use the total amount provided by the client (complete amount)
+      const amountToDeduct = Number(details.total_amount ?? 0);
 
       if (amountToDeduct < 0) throw new Error('Invalid payment amount.');
 

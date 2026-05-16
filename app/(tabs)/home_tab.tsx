@@ -16,11 +16,13 @@ import {
 } from 'react-native';
 import Animated, { 
   useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing, 
+  useAnimatedStyle,
+  withTiming,
+  Easing,
   useAnimatedScrollHandler,
-  runOnJS
+  runOnJS,
+  interpolate,
+  Extrapolation
 } from 'react-native-reanimated';
 import { useUI } from '@/contexts/UIContext';
 import { useIsFocused } from '@react-navigation/native';
@@ -38,6 +40,11 @@ import {
   Users,
   CircleUser,
   ArrowRight,
+  Sunrise,
+  Sun,
+  Sunset,
+  Moon,
+  ChevronDown,
 } from 'lucide-react-native';
 import { useLocation } from '@/contexts/LocationContext';
 import { supabase } from '@/lib/supabase';
@@ -98,7 +105,19 @@ const FEATURES = [
   { icon: Zap, label: 'Instant Book', desc: 'No calls needed' },
 ];
 
-function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
+function GroundCardMobile({ 
+  ground, 
+  index, 
+  timeSlot, 
+  timeSlotPrice,
+  timeSlotValue 
+}: { 
+  ground: any; 
+  index: number; 
+  timeSlot?: string; 
+  timeSlotPrice?: number;
+  timeSlotValue?: string;
+}) {
   const primaryImage =
     ground.ground_images?.find((img: any) => img.is_primary)?.image_url ||
     ground.ground_images?.[0]?.image_url ||
@@ -116,54 +135,61 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
   return (
     <TouchableOpacity
       activeOpacity={0.88}
-      onPress={() => router.push(href as any)}
+      onPress={() => {
+        if (timeSlotValue) {
+          router.push(`${href}?time=${encodeURIComponent(timeSlotValue)}` as any);
+        } else {
+          router.push(href as any);
+        }
+      }}
       style={styles.groundCard}
     >
       <View style={styles.groundImageWrap}>
         <Image source={{ uri: primaryImage }} style={styles.groundImage} />
         <View style={styles.groundImageOverlay} />
-
-        <View style={styles.groundImageContent}>
-          <Text style={styles.groundName} numberOfLines={1}>
-            {ground.name}
-          </Text>
-          <View style={styles.groundLocationRow}>
-            <MapPin size={12} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.cardLocation} numberOfLines={1}>
-              {ground.city}, {ground.state}
-            </Text>
-          </View>
-        </View>
       </View>
 
       <View style={styles.groundCardBody}>
-        <View style={styles.groundMeta}>
-          <Text style={styles.groundType}>{ground.pitch_type || 'Standard'}</Text>
-          {avgRating > 0 ? (
+        <Text style={styles.groundName} numberOfLines={1}>
+          {ground.name}
+        </Text>
+        <View style={styles.groundLocationRow}>
+          <Text style={styles.cardLocation} numberOfLines={1}>
+            {ground.city}, {ground.state}
+          </Text>
+        </View>
+        {avgRating > 0 && (
+          <View style={styles.groundMeta}>
             <View style={styles.ratingRow}>
               <Star size={11} color="#FFA000" fill="#FFA000" />
               <Text style={styles.ratingText}>{avgRating.toFixed(1)}</Text>
             </View>
-          ) : null}
-        </View>
+          </View>
+        )}
         <View style={styles.groundFooter}>
-          <Text style={styles.groundPrice}>
-            {ground.min_price !== null && ground.min_price !== undefined
-              ? `₹${ground.min_price}`
-              : (ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
-                ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
-                : 'See Slots')}
-            <Text style={styles.groundPriceUnit}>
-              {(() => {
-                const isNetOrLane = String(ground.pitch_type ?? '').toLowerCase().includes('net') || 
-                                    String(ground.pitch_type ?? '').toLowerCase().includes('lane') ||
-                                    String(ground.name ?? '').toLowerCase().includes('lane');
-                return isNetOrLane ? '/slot' : String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match';
-              })()}
-            </Text>
-          </Text>
           <View style={styles.bookLinkContainer}>
-            <Text style={styles.bookLinkText}>Book Now</Text>
+            {timeSlot && (
+              <View style={styles.slotTimeBadge}>
+                <Text style={styles.slotTimeText}>{timeSlot}</Text>
+              </View>
+            )}
+            <Text style={styles.bookLinkText}>
+              {timeSlotPrice !== undefined && timeSlotPrice !== null
+                ? `₹${timeSlotPrice}`
+                : (ground.min_price !== null && ground.min_price !== undefined
+                  ? `₹${ground.min_price}`
+                  : (ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                    ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                    : 'See Slots'))}
+              <Text style={styles.groundPriceUnit}>
+                {(() => {
+                  const isNetOrLane = String(ground.pitch_type ?? '').toLowerCase().includes('net') || 
+                                      String(ground.pitch_type ?? '').toLowerCase().includes('lane') ||
+                                      String(ground.name ?? '').toLowerCase().includes('lane');
+                  return isNetOrLane ? '/slot' : String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match';
+                })()}
+              </Text>
+            </Text>
           </View>
         </View>
       </View>
@@ -177,6 +203,13 @@ export default function HomeScreen() {
   const isWide = width > 500;
   const isTablet = width > 768;
 
+  // Calculate width for 3 cards per row on mobile
+  const horizontalGap = 12;
+  const horizontalPadding = 20;
+  const cardsPerRow = 2;
+  const mobileItemWidth = isWide ? 300 : (width - (horizontalPadding * 2) - (horizontalGap * (cardsPerRow - 1))) / cardsPerRow;
+
+
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const { user, profile } = useAuth();
@@ -184,9 +217,25 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sportFilter, setSportFilter] = useState('all');
+  const [sportFilter, setSportFilter] = useState('cricket');
   const { setTabBarVisible } = useUI();
   const { cityName, refreshLocation } = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedTimeTab, setSelectedTimeTab] = useState<string | null>('morning');
+
+  const TIME_TABS = [
+    { id: 'morning', label: '7:30 AM', sub: 'Sunrise', icon: Sunrise, color: '#FF9500', timeValue: '07:30' },
+    { id: 'midday', label: '11:30 AM', sub: 'Midday', icon: Sun, color: '#FFCC00', timeValue: '11:30' },
+    { id: 'afternoon', label: '3:30 PM', sub: 'Dusk', icon: Sunset, color: '#FF5E3A', timeValue: '15:30' },
+    { id: 'night', label: '7:30 PM', sub: 'Night', icon: Moon, color: '#5856D6', timeValue: '19:30' },
+  ];
+
+  const SPORT_CATEGORIES = [
+    { label: 'All', value: 'all' },
+    { label: 'Cricket', value: 'cricket' },
+    { label: 'Box Cricket', value: 'box' },
+    { label: 'Nets', value: 'nets' },
+  ];
   
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isModalActive, setIsModalActive] = useState(false);
@@ -223,11 +272,35 @@ export default function HomeScreen() {
     },
   });
 
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch (e) {
+      console.error('Error fetching unread count:', e);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount, isFocused]);
+
   const loadGrounds = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('grounds')
-        .select(`*, ground_images(*), reviews(rating), time_slots(custom_price, is_available, day_of_week)`)
+        .select(`*, ground_images(*), reviews(rating), time_slots(custom_price, is_available, day_of_week, start_time, end_time)`)
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false });
@@ -323,6 +396,51 @@ export default function HomeScreen() {
     });
   }, [grounds, searchQuery, sportFilter]);
 
+  const timeFilteredGrounds = useMemo(() => {
+    if (!selectedTimeTab) return [];
+    const tab = TIME_TABS.find(t => t.id === selectedTimeTab);
+    if (!tab) return [];
+    
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    
+    const results = grounds.filter((g: any) => {
+      // Must be cricket - check multiple fields
+      const pitchType = (g.pitch_type || '').toLowerCase();
+      const name = (g.name || '').toLowerCase();
+      const sportType = (g.sport_type || '').toLowerCase();
+      
+      const isCricket = pitchType.includes('cricket') || 
+                        name.includes('cricket') || 
+                        sportType.includes('cricket');
+      if (!isCricket) return false;
+      
+      // Check for available slot at that time FOR TODAY
+      // Be flexible with time format (handle 07:30 vs 7:30)
+      const targetTime = tab.timeValue; // e.g. "07:30"
+      const targetTimeAlt = targetTime.startsWith('0') ? targetTime.substring(1) : '0' + targetTime; // e.g. "7:30"
+      
+      const matchingSlot = (g.time_slots || []).find((slot: any) => {
+        const slotDay = String(slot.day_of_week || '').toLowerCase();
+        const slotStart = String(slot.start_time || '');
+        
+        const dayMatch = slotDay === today;
+        const timeMatch = slotStart.includes(targetTime) || slotStart.includes(targetTimeAlt);
+        const available = slot.is_available === true || slot.is_available === null;
+        
+        return dayMatch && timeMatch && available;
+      });
+
+      if (matchingSlot) {
+        g._currentSlotPrice = matchingSlot.custom_price;
+        return true;
+      }
+      return false;
+    }).slice(0, 10);
+
+    console.log(`Filtered for ${tab.label}: found ${results.length} grounds`);
+    return results;
+  }, [grounds, selectedTimeTab]);
+
   useEffect(() => {
     if (!isFocused && showProfileModal) {
       setShowProfileModal(false);
@@ -359,9 +477,27 @@ export default function HomeScreen() {
     transform: [{ translateX: slideAnim.value }],
   }));
 
-  const mainContentAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: (slideAnim.value - width) * 0.75 }],
-  }));
+  const mainContentAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      slideAnim.value,
+      [0, width],
+      [0.92, 1],
+      Extrapolation.CLAMP
+    );
+    const borderRadius = interpolate(
+      slideAnim.value,
+      [0, width],
+      [32, 0],
+      Extrapolation.CLAMP
+    );
+    const translateX = (slideAnim.value - width) * 0.4;
+
+    return {
+      transform: [{ scale }, { translateX }],
+      borderRadius,
+      overflow: 'hidden',
+    };
+  });
 
   const backdropAnimatedStyle = useAnimatedStyle(() => {
     const opacity = isFocused 
@@ -425,46 +561,115 @@ export default function HomeScreen() {
           setSportFilter={setSportFilter}
           profile={profile}
           setShowProfileModal={setShowProfileModal}
+          unreadCount={unreadCount}
         />
 
-        {/* ── Book for Today ───────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionLabel}>Quick Play</Text>
-              <Text style={styles.sectionTitle}>Book for today</Text>
-            </View>
-            <Pressable
-              style={styles.seeAllBtn}
-              onPress={() => router.push('/(tabs)/grounds' as any)}
-            >
-              <Text style={styles.seeAllText}>View All</Text>
-              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
-            </Pressable>
-          </View>
-
-          {loading ? (
-            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
-          ) : bookTodayGrounds.length === 0 ? (
-            <Text style={styles.emptyText}>No grounds available today</Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            >
-              {bookTodayGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
-                  <GroundCardMobile ground={g} index={i} />
-                </View>
-              ))}
-            </ScrollView>
-          )}
+        {/* ── Time Slots Tabs ───────────────────────────── */}
+        <View style={styles.timeTabsContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.timeTabsContent}
+          >
+            {TIME_TABS.map((tab) => {
+              const isSelected = selectedTimeTab === tab.id;
+              const Icon = tab.icon;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedTimeTab(isSelected ? null : tab.id)}
+                  style={[
+                    styles.timeTabChip,
+                    isSelected && { borderColor: tab.color, backgroundColor: tab.color }
+                  ]}
+                >
+                  <View style={[styles.timeTabIconBox, { backgroundColor: isSelected ? 'rgba(0,0,0,0.1)' : '#F1F5F9' }]}>
+                    <Icon size={16} color={isSelected ? '#000000' : '#64748B'} strokeWidth={2.5} />
+                  </View>
+                  <View>
+                    <Text style={[styles.timeTabLabel, isSelected && { color: '#000000' }]}>{tab.label}</Text>
+                    <Text style={[styles.timeTabSub, isSelected && { color: 'rgba(0,0,0,0.6)' }]}>{tab.sub}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
+        {/* ── Time-Filtered Grounds Section ────────────────── */}
+        {selectedTimeTab && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionLabel}>Available Slots</Text>
+                <Text style={styles.sectionTitle}>
+                  Available at {TIME_TABS.find(t => t.id === selectedTimeTab)?.label}
+                </Text>
+              </View>
+            </View>
+
+            {timeFilteredGrounds.length === 0 ? (
+              <Text style={styles.emptyText}>No cricket grounds available at this time</Text>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                snapToInterval={mobileItemWidth + horizontalGap}
+                decelerationRate="fast"
+                snapToAlignment="start"
+              >
+                {timeFilteredGrounds.map((g: any, i: number) => (
+                  <View key={g.id} style={{ width: mobileItemWidth }}>
+                    <GroundCardMobile 
+                      ground={g} 
+                      index={i} 
+                      timeSlot={TIME_TABS.find(t => t.id === selectedTimeTab)?.label}
+                      timeSlotValue={TIME_TABS.find(t => t.id === selectedTimeTab)?.timeValue}
+                      timeSlotPrice={g._currentSlotPrice}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <View style={styles.sectionDivider} />
+          </View>
+        )}
 
 
 
+
+
+
+
+        {/* ── Sport Categories ───────────────────────────── */}
+        <View style={styles.sportCategoriesContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.sportCategoriesContent}
+          >
+            {SPORT_CATEGORIES.map((cat) => {
+              const isActive = sportFilter === cat.value;
+              return (
+                <TouchableOpacity
+                  key={cat.value}
+                  activeOpacity={0.8}
+                  onPress={() => setSportFilter(cat.value)}
+                  style={[
+                    styles.sportCatChip,
+                    isActive && styles.sportCatChipActive
+                  ]}
+                >
+                  <Text style={[styles.sportCatText, isActive && styles.sportCatTextActive]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         {/* ── Search Results (Show at top when active) ── */}
         {(searchQuery.trim() || sportFilter !== 'all') && (
@@ -476,6 +681,16 @@ export default function HomeScreen() {
                   {filteredGrounds.length} {SPORT_SUFFIXES[sportFilter] || 'grounds'} found
                 </Text>
               </View>
+              {filteredGrounds.length > 5 && (
+                <TouchableOpacity 
+                  activeOpacity={0.7} 
+                  onPress={() => router.push(`/explore/${sportFilter}` as any)}
+                  style={styles.viewAllBtn}
+                >
+                  <Text style={styles.viewAllText}>View All</Text>
+                  <ChevronDown size={14} color="#00ea6b" style={{ transform: [{ rotate: '-90deg' }] }} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {loading ? (
@@ -484,7 +699,7 @@ export default function HomeScreen() {
               <Text style={styles.emptyText}>No grounds match your search.</Text>
             ) : (
               <View style={[styles.verticalList, isWide && styles.wideGrid]}>
-                {filteredGrounds.map((g: any, i: number) => (
+                {filteredGrounds.slice(0, 5).map((g: any, i: number) => (
                   <TouchableOpacity
                     key={g.id}
                     activeOpacity={0.88}
@@ -505,7 +720,6 @@ export default function HomeScreen() {
                         {g.name}
                       </Text>
                       <View style={styles.listRowMeta}>
-                        <MapPin size={11} color="#9ca3af" strokeWidth={2} />
                         <Text style={styles.listRowCity} numberOfLines={1}>
                           {g.city}
                         </Text>
@@ -559,9 +773,12 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
+              snapToInterval={mobileItemWidth + horizontalGap}
+              decelerationRate="fast"
+              snapToAlignment="start"
             >
               {popularGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
+                <View key={g.id} style={{ width: mobileItemWidth }}>
                   <GroundCardMobile ground={g} index={i} />
                 </View>
               ))}
@@ -594,9 +811,12 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
+              snapToInterval={mobileItemWidth + horizontalGap}
+              decelerationRate="fast"
+              snapToAlignment="start"
             >
               {cricketGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
+                <View key={g.id} style={{ width: mobileItemWidth }}>
                   <GroundCardMobile ground={g} index={i} />
                 </View>
               ))}
@@ -620,26 +840,33 @@ export default function HomeScreen() {
 
       {/* Profile Drawer Overlay */}
       {Platform.OS !== 'web' && isModalActive && (
-        <View style={StyleSheet.absoluteFill}>
-          <Animated.View 
-            style={[styles.modalBackdrop, backdropAnimatedStyle]}
-          >
-            <TouchableOpacity 
-              style={{ flex: 1 }} 
-              activeOpacity={1} 
-              onPress={() => setShowProfileModal(false)} 
-            />
-          </Animated.View>
-          <Animated.View 
-            style={[
-              styles.profileModalContainer, 
-              profileAnimatedStyle,
-              { width: width * 0.75, height: '100%' }
-            ]}
-          >
-            <ProfileScreen isModal onClose={() => setShowProfileModal(false)} />
-          </Animated.View>
-        </View>
+        <Modal
+          transparent
+          visible={isModalActive}
+          animationType="none"
+          onRequestClose={() => setShowProfileModal(false)}
+        >
+          <View style={StyleSheet.absoluteFill}>
+            <Animated.View 
+              style={[styles.modalBackdrop, backdropAnimatedStyle]}
+            >
+              <TouchableOpacity 
+                style={{ flex: 1 }} 
+                activeOpacity={1} 
+                onPress={() => setShowProfileModal(false)} 
+              />
+            </Animated.View>
+            <Animated.View 
+              style={[
+                styles.profileModalContainer, 
+                profileAnimatedStyle,
+                { width: width * 0.75, height: '100%' }
+              ]}
+            >
+              <ProfileScreen isModal onClose={() => setShowProfileModal(false)} />
+            </Animated.View>
+          </View>
+        </Modal>
       )}
       </View>
     </GestureDetector>
@@ -675,10 +902,87 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#06392e',
   },
   scrollContent: {
     paddingBottom: 24,
+    backgroundColor: '#F8FAFC',
+  },
+
+  // ── Time Tabs ─────────────────────────────────
+  timeTabsContainer: {
+    marginTop: 10,
+    zIndex: 1000,
+  },
+  timeTabsContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 10,
+  },
+  timeTabChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    gap: 12,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  timeTabIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeTabLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  timeTabSub: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+  },
+
+  // ── Sport Categories ──────────────────────────
+  sportCategoriesContainer: {
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  sportCategoriesContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  sportCatChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sportCatChipActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  sportCatText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  sportCatTextActive: {
+    color: '#a5ff8a',
   },
 
   // ── Quick Actions ─────────────────────────────
@@ -730,7 +1034,7 @@ const styles = StyleSheet.create({
 
   // ── Premium Immersive Hero ────────────────────
   premiumHero: {
-    backgroundColor: '#043529',
+    backgroundColor: '#06392e',
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
     paddingBottom: 64,
@@ -895,7 +1199,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   heroCatTextActive: {
-    color: '#043529',
+    color: '#06392e',
   },
 
   // ── Sections ──────────────────────────────────
@@ -937,6 +1241,17 @@ const styles = StyleSheet.create({
     color: '#01b854',
     fontFamily: 'Inter',
   },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#01b854',
+    fontFamily: 'Inter',
+  },
 
   // ── Ground cards (horizontal) ─────────────────
   horizontalList: {
@@ -961,7 +1276,7 @@ const styles = StyleSheet.create({
   },
   groundImageWrap: {
     position: 'relative',
-    height: 130,
+    height: 120,
   },
   groundImage: {
     width: '100%',
@@ -969,7 +1284,16 @@ const styles = StyleSheet.create({
   },
   groundImageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.3)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
+  },
+  priceBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   popularBadge: {
     position: 'absolute',
@@ -999,30 +1323,33 @@ const styles = StyleSheet.create({
     right: 12,
   },
   groundName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
     fontFamily: 'Inter',
+    marginBottom: 0,
   },
   groundLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    marginTop: 2,
+    marginTop: 0,
+    marginBottom: 4,
   },
   cardLocation: {
-    fontSize: 12,
-    color: '#FFFFFF',
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   groundCardBody: {
-    padding: 12,
+    padding: 10,
   },
   groundMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   groundType: {
     fontSize: 11,
@@ -1043,44 +1370,65 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   groundFooter: {
-    flexDirection: 'row',
+    backgroundColor: '#00ea6b',
+    marginHorizontal: -10,
+    marginBottom: -10,
+    marginTop: 2,
+    paddingVertical: 2,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   groundPrice: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   groundPriceUnit: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#06392e',
     fontFamily: 'Inter',
   },
   bookLinkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 6,
+    paddingVertical: 2,
     paddingHorizontal: 4,
   },
   bookLinkText: {
-    color: '#01b854',
-    fontSize: 14,
+    color: '#06392e',
+    fontSize: 11,
     fontWeight: '700',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  slotTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+    marginRight: 8,
+  },
+  slotTimeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#06392e',
     fontFamily: 'Inter',
   },
   bookLinkContainerSmall: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 10,
   },
   bookLinkTextSmall: {
     color: '#01b854',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   // ── Vertical list (search results) ───────────
@@ -1105,16 +1453,18 @@ const styles = StyleSheet.create({
   listRowImage: {
     width: 80,
     height: 80,
+    borderRadius: 16,
+    margin: 8,
   },
   listRowInfo: {
     flex: 1,
-    paddingVertical: 10,
-    paddingLeft: 12,
-    paddingRight: 4,
+    paddingVertical: 12,
+    paddingLeft: 6,
+    paddingRight: 16,
   },
   listRowName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 3,
     fontFamily: 'Inter',
@@ -1133,7 +1483,7 @@ const styles = StyleSheet.create({
   listRowType: {
     fontSize: 11,
     color: '#01b854',
-    fontWeight: '800',
+    fontWeight: '600',
     textTransform: 'capitalize',
     fontFamily: 'Inter',
   },
@@ -1143,7 +1493,7 @@ const styles = StyleSheet.create({
   },
   listRowPrice: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

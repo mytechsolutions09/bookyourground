@@ -589,36 +589,6 @@ export default function GroundDetailsPrettyUrlScreen() {
                     {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
                   </Text>
                 </View>
-                <View style={styles.starsSummaryRow}>
-                  {[1, 2, 3, 4, 5].map((i) => {
-                    const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                    return (
-                      <Star
-                        key={i}
-                        size={16}
-                        color={filled ? '#dcc093' : '#374151'}
-                        fill={filled ? '#dcc093' : 'none'}
-                      />
-                    );
-                  })}
-                  <Text style={styles.rating}>
-                    {reviews.length > 0 ? `${averageRating.toFixed(1)} (${reviews.length})` : 'No reviews'}
-                  </Text>
-                </View>
-                {mapsUrl && (
-                  <Pressable onPress={async () => {
-                    if (mapsUrl) {
-                      try {
-                        await Linking.openURL(mapsUrl);
-                      } catch (err) {
-                        console.error('Failed to open maps URL:', err);
-                      }
-                    }
-                  }} style={styles.mapsLinkWrap}>
-                    <MapPin size={14} color="#01b854" />
-                    <Text style={styles.mapsLinkText}>Get Directions</Text>
-                  </Pressable>
-                )}
                 
                 <View style={styles.formContainer}>
                   <LandingBookingForm
@@ -711,23 +681,6 @@ export default function GroundDetailsPrettyUrlScreen() {
                 ) : (
                   <View style={{ height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 12 }}>
                     <NativeMap ground={ground} />
-                    {mapsUrl && (
-                      <Pressable 
-                        onPress={async () => {
-                          if (mapsUrl) {
-                            try {
-                              await Linking.openURL(mapsUrl);
-                            } catch (err) {
-                              console.error('Failed to open maps URL:', err);
-                            }
-                          }
-                        }} 
-                        style={[styles.mapsLinkWrap, { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]}
-                      >
-                        <Navigation2 size={14} color="#01b854" strokeWidth={2.5} />
-                        <Text style={[styles.mapsLinkText, { marginBottom: 0 }]}>Directions</Text>
-                      </Pressable>
-                    )}
                   </View>
                 )}
               </View>
@@ -1620,8 +1573,8 @@ const styles = StyleSheet.create({
   // ── Name / location / rating ──────────────────────────
   name: {
     fontFamily: 'Inter',
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 8,
     letterSpacing: -0.5,
@@ -2116,7 +2069,7 @@ const styles = StyleSheet.create({
   },
   webGroundNameLarge: {
     fontFamily: 'Inter',
-    fontSize: 22, // Further reduced from 24
+    fontSize: 20, // Further reduced from 22
     fontWeight: '500', // Reduced from 600
     color: '#0F172A',
     letterSpacing: -0.4,

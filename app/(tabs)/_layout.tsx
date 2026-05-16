@@ -113,18 +113,18 @@ export default function TabLayout() {
 
   const webTabBarStyle = hideTabBarOnBigScreens
     ? ({ display: 'none' } as const)
-    : { backgroundColor: '#043529', borderTopWidth: 1, borderTopColor: '#06392e', height: 60 };
+    : { backgroundColor: '#06392e', borderTopWidth: 1, borderTopColor: '#06392e', height: 60 };
 
   const showLoading = needsAuth && (loading || !user) && !pathname.endsWith('/profile');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#043529' }}>
+    <View style={{ flex: 1, backgroundColor: '#06392e' }}>
       {Platform.OS !== 'web' ? (
         <Stack
           screenOptions={{
             headerShown: false,
             gestureEnabled: true,
-            contentStyle: { backgroundColor: '#043529' },
+            contentStyle: { backgroundColor: '#06392e' },
             animation: tabAnimation,
           }}
         >
@@ -270,7 +270,7 @@ export default function TabLayout() {
         </Tabs>
       )}
       {showLoading && (
-        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#043529', zIndex: 9999 }]}>
+        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#06392e', zIndex: 9999 }]}>
           <ActivityIndicator size="large" color="#00ea6b" />
         </View>
       )}

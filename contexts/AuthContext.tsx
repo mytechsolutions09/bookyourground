@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      // Reduced timeout to 3s to avoid long hangs, relying on fallback
+      // Increased timeout to 10s to be more resilient on slow connections
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -80,8 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         // If no profile found, we might want to wait a bit and retry (sometimes auth hook fires before profile trigger)
-        if (retryCount < 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (retryCount < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
           return loadProfile(userObj, retryCount + 1);
         }
         throw new Error('Profile not found');
@@ -97,10 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                           errorMsg.toLowerCase().includes('network') ||
                           errorMsg.toLowerCase().includes('aborted');
 
-      // Retry on timeout or common network errors (reduced to 1 retry)
-      // Retry on timeout or common network errors (reduced to 1 retry)
-      if (retryCount < 1 && isRetryable) {
-        const delay = (retryCount + 1) * 2000; // Exponential-ish backoff
+      // Retry on timeout or common network errors (increased to 2 retries)
+      if (retryCount < 2 && isRetryable) {
+        const delay = (retryCount + 1) * 3000; // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, delay));
         return loadProfile(userObj, retryCount + 1);
       } else {
