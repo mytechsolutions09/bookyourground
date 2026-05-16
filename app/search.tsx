@@ -26,7 +26,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../components/MobileAppNavbar';
-import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, ChevronRight, Calendar, Clock } from 'lucide-react-native';
+import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, ChevronRight, Calendar, Clock, IndianRupee } from 'lucide-react-native';
 import GroundCard from '@/components/grounds/GroundCard';
 import { makeGroundPath } from '@/utils/groundSlug';
 import { formatCurrency } from '@/utils/helpers';
@@ -34,6 +34,13 @@ import Button from '@/components/ui/Button';
 import { Location, GroundType } from '@/types';
 
 type SearchTab = 'all' | 'grounds' | 'matches';
+const PRICE_RANGES = [
+  { label: 'All Prices', min: 0, max: 20000 },
+  { label: 'Under ₹500', min: 0, max: 500 },
+  { label: '₹500 - ₹1000', min: 500, max: 1000 },
+  { label: '₹1000 - ₹2000', min: 1000, max: 2000 },
+  { label: 'Over ₹2000', min: 2000, max: 20000 },
+];
 
 export default function SearchScreen() {
   const params = useLocalSearchParams();
@@ -62,6 +69,8 @@ export default function SearchScreen() {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [priceRange, setPriceRange] = useState(PRICE_RANGES[0]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
   useEffect(() => {
@@ -94,8 +103,8 @@ export default function SearchScreen() {
   }, [params.q, params.location, params.type, params.date, params.time]);
 
   useEffect(() => {
-    performSearch(query, locationKey, typeKey, dateKey, timeKey);
-  }, [query, locationKey, typeKey, dateKey, timeKey]);
+    performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange);
+  }, [query, locationKey, typeKey, dateKey, timeKey, priceRange]);
 
   useEffect(() => {
     const fetchAvailableTimes = async () => {
@@ -149,7 +158,7 @@ export default function SearchScreen() {
     fetchAvailableTimes();
   }, [locationKey, typeKey, dateKey]);
 
-  const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string) => {
+  const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string, price?: { min: number, max: number }) => {
     setLoading(true);
     try {
       const ts = `%${(s || '').trim()}%`;
@@ -172,6 +181,11 @@ export default function SearchScreen() {
 
       if (typKey) {
         gQuery = gQuery.eq('pitch_type', typKey);
+      }
+
+      if (price && price.label !== 'All Prices') {
+        if (price.min > 0) gQuery = gQuery.gte('min_price', price.min);
+        if (price.max < 20000) gQuery = gQuery.lte('min_price', price.max);
       }
 
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -641,6 +655,32 @@ export default function SearchScreen() {
 
 
               <View style={styles.sidebarSection}>
+                <Text style={styles.sidebarSectionTitle}>Price</Text>
+                <Pressable style={styles.filterButton} onPress={() => setShowPriceModal(!showPriceModal)}>
+                  <IndianRupee size={14} color="#01b854" />
+                  <Text style={styles.filterButtonText} numberOfLines={1}>
+                    {priceRange.label}
+                  </Text>
+                  <ChevronDown size={12} color="#9CA3AF" />
+                </Pressable>
+                {showPriceModal && (
+                  <View style={styles.dropdownInline}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      {PRICE_RANGES.map(p => (
+                        <Pressable 
+                          key={p.label} 
+                          style={styles.dropdownOption} 
+                          onPress={() => { setPriceRange(p); setShowPriceModal(false); }}
+                        >
+                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.sidebarSection}>
                 <Text style={styles.sidebarSectionTitle}>Time</Text>
                 <Pressable style={styles.filterButton} onPress={() => setShowTimeModal(!showTimeModal)}>
                   <Clock size={14} color="#01b854" />
@@ -716,6 +756,13 @@ export default function SearchScreen() {
                   </Text>
                 </Pressable>
 
+                <Pressable style={styles.mobileFilterPill} onPress={() => setShowPriceModal(true)}>
+                  <IndianRupee size={12} color={priceRange.label !== 'All Prices' ? '#01b854' : '#6B7280'} />
+                  <Text style={[styles.mobileFilterPillText, priceRange.label !== 'All Prices' && styles.mobileFilterPillTextActive]}>
+                    {priceRange.label === 'All Prices' ? 'Price' : priceRange.label}
+                  </Text>
+                </Pressable>
+
                 <Pressable style={styles.mobileFilterPill} onPress={() => setShowTimeModal(true)}>
                   <Clock size={12} color={timeKey ? '#01b854' : '#6B7280'} />
                   <Text style={[styles.mobileFilterPillText, timeKey && styles.mobileFilterPillTextActive]}>
@@ -732,9 +779,9 @@ export default function SearchScreen() {
               <View style={styles.mobileFilterDropdownContent}>
                 <View style={styles.mobileDropdownHeader}>
                   <Text style={styles.mobileDropdownTitle}>
-                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : 'Select Time'}
+                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : showPriceModal ? 'Select Price' : 'Select Time'}
                   </Text>
-                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); }}>
+                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); setShowPriceModal(false); }}>
                     <Text style={styles.closeText}>Done</Text>
                   </Pressable>
                 </View>
@@ -802,6 +849,18 @@ export default function SearchScreen() {
                           }}
                         />
                       </View>
+                    </>
+                  ) : showPriceModal ? (
+                    <>
+                      {PRICE_RANGES.map(p => (
+                        <Pressable 
+                          key={p.label} 
+                          style={styles.dropdownOption} 
+                          onPress={() => { setPriceRange(p); setShowPriceModal(false); }}
+                        >
+                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
+                        </Pressable>
+                      ))}
                     </>
                   ) : (
                     <>

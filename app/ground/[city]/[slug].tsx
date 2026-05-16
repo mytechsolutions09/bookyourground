@@ -16,7 +16,7 @@ import {
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves } from 'lucide-react-native';
 import { 
   APIProvider, 
   Map, 
@@ -929,7 +929,11 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 
   useEffect(() => {
     if (ground.latitude && ground.longitude) {
-      setCoords({ lat: parseFloat(ground.latitude), lng: parseFloat(ground.longitude) });
+      const lat = parseFloat(ground.latitude);
+      const lng = parseFloat(ground.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setCoords({ lat, lng });
+      }
     } else if (geocodingLibrary) {
       const geocoder = new geocodingLibrary.Geocoder();
       const address = `${ground.address}, ${ground.city}, ${ground.state}`;
@@ -958,7 +962,7 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 
         <Map
           defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
-          center={coords}
+          center={coords || undefined}
           defaultZoom={12}
           mapId={MAP_ID}
           style={{ width: '100%', height: '100%' }}
@@ -1054,6 +1058,7 @@ function AmenitiesList({ ground }: { ground: GroundWithImages }) {
   if ((ground as any).has_new_balls) items.push('2 New Balls');
   if ((ground as any).has_scoring) items.push('Scoring');
   if ((ground as any).has_practice_nets) items.push('Practice Nets');
+  if ((ground as any).has_swimming_pool) items.push('Swimming Pool');
 
   if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
 

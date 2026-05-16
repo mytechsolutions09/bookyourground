@@ -76,6 +76,7 @@ export default function AddNetPage() {
     has_new_balls: false,
     has_scoring: false,
     has_practice_nets: false,
+    has_swimming_pool: false,
     pricing_model: 'hours' as 'hours' | 'overs',
     surface_type: 'Turf', // Default
     latitude: '',
@@ -333,6 +334,7 @@ export default function AddNetPage() {
             has_new_balls: formData.has_new_balls,
             has_scoring: formData.has_scoring,
             has_practice_nets: formData.has_practice_nets,
+            has_swimming_pool: formData.has_swimming_pool,
             lanes_count: 1, // Each listing represents 1 lane
             base_price_per_hour: 0,
             latitude: formData.latitude ? parseFloat(formData.latitude) : null,
@@ -654,6 +656,13 @@ export default function AddNetPage() {
               onValueChange={(val) => setFormData({ ...formData, has_practice_nets: val })}
             />
           </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Swimming Pool</Text>
+            <Switch
+              value={formData.has_swimming_pool}
+              onValueChange={(val) => setFormData({ ...formData, has_swimming_pool: val })}
+            />
+          </View>
         </Card>
 
         <Card style={styles.section}>
@@ -744,7 +753,11 @@ export default function AddNetPage() {
                 <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                   <GoogleMap
                     defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
-                    center={formData.latitude && formData.longitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : undefined}
+                    center={(() => {
+                      const lat = parseFloat(formData.latitude || '');
+                      const lng = parseFloat(formData.longitude || '');
+                      return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : undefined;
+                    })()}
                     defaultZoom={13}
                     mapId={MAP_ID}
                     onClick={(e) => {
@@ -760,7 +773,11 @@ export default function AddNetPage() {
                   >
                     {formData.latitude && formData.longitude && (
                       <Marker 
-                        position={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }} 
+                        position={(() => {
+                          const lat = parseFloat(formData.latitude || '');
+                          const lng = parseFloat(formData.longitude || '');
+                          return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 28.4595, lng: 77.0266 };
+                        })()} 
                         icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
                       />
                     )}

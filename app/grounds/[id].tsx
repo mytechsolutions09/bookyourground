@@ -600,6 +600,7 @@ export default function GroundDetailsScreen() {
               if (ground.has_changing_rooms) items.push('Changing Rooms');
               if (ground.has_pavilion) items.push('Pavilion');
               if (ground.has_washrooms) items.push('Washroom');
+              if ((ground as any).has_swimming_pool) items.push('Swimming Pool');
               if ((ground as any).has_umpires) items.push('2 Umpires');
               if ((ground as any).has_new_balls) items.push('2 New Balls');
               if ((ground as any).has_scoring) items.push('Scoring');
