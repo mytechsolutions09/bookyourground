@@ -61,7 +61,7 @@ BEGIN
         INSERT INTO public.notifications (user_id, title, message, type, data)
         VALUES (
             NEW.user_id,
-            'Booking ' || INITCAP(NEW.status),
+            'Booking ' || INITCAP(NEW.status::TEXT),
             'Your booking #' || UPPER(substring(NEW.id::text, 1, 8)) || ' for ground ' || COALESCE(v_ground_name, 'your ground') || ' is now ' || NEW.status,
             'booking_update',
             jsonb_build_object('booking_id', NEW.id, 'status', NEW.status)

@@ -241,10 +241,33 @@ export default function AdminBookingsScreen() {
                          </View>
                       </View>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(b.status)}15`, height: 24, paddingHorizontal: 8, borderRadius: 12 }]}>
-                      <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
-                        {b.status.toUpperCase()}
-                      </Text>
+                    <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                      <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? '#F1F5F9' : '#DCFCE7') : 'transparent', height: 24, paddingHorizontal: 8, borderRadius: 12, borderWidth: b.status === 'cancelled' ? 1 : 0, borderColor: '#EF4444' }]}>
+                        <Text style={[styles.statusText, { color: b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? '#64748B' : '#166534') : '#EF4444', fontSize: 10, fontWeight: '800' }]}>
+                          {b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? 'DONE' : 'ACTIVE') : b.status.toUpperCase()}
+                        </Text>
+                      </View>
+
+                      {b.status === 'confirmed' && !isDateInPast(b.booking_date) && (
+                        <TouchableOpacity 
+                          onPress={() => handleCancelBooking(b)}
+                          style={{ 
+                            marginTop: 8,
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            backgroundColor: '#FFF1F2',
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: '#FECDD3',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          <X size={10} color="#E11D48" />
+                          <Text style={{ color: '#E11D48', fontSize: 9, fontWeight: '700' }}>CANCEL</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 ))}
@@ -444,6 +467,7 @@ export default function AdminBookingsScreen() {
           setBookings(prev => 
             prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
           );
+          setSelectedSlotBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
           loadCounts();
           if (Platform.OS === 'web') alert('Booking cancelled and refunded to wallet.');
           else Alert.alert('Success', 'Booking cancelled and refunded to wallet.');

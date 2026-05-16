@@ -404,6 +404,7 @@ export default function OwnerBookingsScreen() {
         if (error) throw error;
         if (data && data.success) {
           setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
+          setSelectedSlotBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
           if (Platform.OS === 'web') alert('Booking cancelled and refund processed.');
           else Alert.alert('Success', 'Booking cancelled and refund processed.');
         } else {
@@ -1594,20 +1595,41 @@ export default function OwnerBookingsScreen() {
                           )}
                         </View>
                       </View>
-                      <View style={{ alignItems: 'flex-end', gap: 8, justifyContent: 'space-between' }}>
-                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? '#DCFCE7' : (b.status === 'cancelled' ? 'transparent' : '#F1F5F9'), height: 24, paddingHorizontal: 8, borderRadius: 6 }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
-                            {b.status.toUpperCase()}
+                      <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? '#F1F5F9' : '#DCFCE7') : 'transparent', height: 24, paddingHorizontal: 8, borderRadius: 6, borderWidth: b.status === 'cancelled' ? 1 : 0, borderColor: '#EF4444' }]}>
+                          <Text style={[styles.statusText, { color: b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? '#64748B' : '#166534') : '#EF4444', fontSize: 10, fontWeight: '800' }]}>
+                            {b.status === 'confirmed' ? (isDateInPast(b.booking_date) ? 'DONE' : 'ACTIVE') : b.status.toUpperCase()}
                           </Text>
                         </View>
                         
-                        <View style={{ alignItems: 'flex-end' }}>
+                        <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Banknote size={16} color="#059669" />
                             <Text style={{ color: '#059669', fontWeight: '800', fontSize: 18 }}>
                               ₹{(b.total_amount - calculateBRowFee(b)).toLocaleString()}
                             </Text>
                           </View>
+
+                          {b.status === 'confirmed' && !isDateInPast(b.booking_date) && (
+                            <TouchableOpacity 
+                              onPress={() => handleCancelBooking(b)}
+                              style={{ 
+                                marginTop: 8,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                backgroundColor: '#FFF1F2',
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: '#FECDD3',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              <X size={12} color="#E11D48" />
+                              <Text style={{ color: '#E11D48', fontSize: 11, fontWeight: '700' }}>CANCEL</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     </View>

@@ -30,6 +30,7 @@ import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots'
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CheckoutSkeleton from '@/components/landing/CheckoutSkeleton';
+import UIModal from '@/components/ui/Modal';
 
 // Platform settings fetched from database
 
@@ -78,6 +79,9 @@ export default function CheckoutScreen() {
     const [contactEmail, setContactEmail] = useState('');
     const [contactPhone, setContactPhone] = useState('');
     const [bookingNotes, setBookingNotes] = useState('');
+    const [errorModalVisible, setErrorModalVisible] = useState(false);
+    const [errorModalTitle, setErrorModalTitle] = useState('');
+    const [errorModalMessage, setErrorModalMessage] = useState('');
 
     // Stable random counts for social proof (1-5) based on booking ID
     const { randomBookedCount, randomSlotsLeft } = React.useMemo(() => {
@@ -148,8 +152,8 @@ export default function CheckoutScreen() {
         let userPf = discountedPrice * userPfRate;
         let userGst = userPf * gstRate;
         
-        // If owner is booking (Cash) and commission is off, don't charge user side fee
-        if (isCash && !chargePlatformFee) {
+        // If owner is booking or commission is off for cash, don't charge user side fee
+        if (isGroundOwnerOrAdmin || (isCash && !chargePlatformFee)) {
             userPf = 0;
             userGst = 0;
         }
@@ -178,7 +182,7 @@ export default function CheckoutScreen() {
 
         const tp = Math.round(
             isGroundOwnerOrAdmin 
-                ? (isWallet ? ownerTotalPfGst : discountedPrice) 
+                ? discountedPrice
                 : (isCash ? discountedPrice : (discountedPrice + userTotalPfGst))
         );
 
@@ -947,11 +951,20 @@ export default function CheckoutScreen() {
     const handleWalletPayment = async () => {
         if (!booking) return;
         if (walletAmountUsed === 0) {
-            Alert.alert('Error', 'Please enter an amount of wallet credit to use');
+            setErrorModalTitle('Insufficient Balance');
+            setErrorModalMessage('Your wallet balance is ₹0.00. Please choose another payment method to complete your booking.');
+            setErrorModalVisible(true);
             return;
         }
 
         if (walletAmountUsed < totalPayable) {
+            if (walletBalance < totalPayable) {
+                setErrorModalTitle('Insufficient Balance');
+                setErrorModalMessage(`Your wallet balance (${formatCurrency(walletBalance)}) is insufficient for this booking (${formatCurrency(totalPayable)}). Please choose another payment method.`);
+                setErrorModalVisible(true);
+                return;
+            }
+
             Alert.alert(
                 'Split Payment',
                 `You are using ${formatCurrency(walletAmountUsed)} from wallet. Would you like to pay the remaining ${formatCurrency(totalPayable - walletAmountUsed)} online?`,
@@ -1714,6 +1727,26 @@ export default function CheckoutScreen() {
                     </Card>
                 </View>
             </View>
+
+            <UIModal
+                visible={errorModalVisible}
+                onClose={() => setErrorModalVisible(false)}
+                title={errorModalTitle}
+            >
+                <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                        <X size={30} color="#EF4444" />
+                    </View>
+                    <RNText style={{ fontSize: 16, color: '#475569', textAlign: 'center', lineHeight: 24, marginBottom: 24, fontFamily: 'Inter' }}>
+                        {errorModalMessage}
+                    </RNText>
+                    <Button
+                        title="Got it"
+                        onPress={() => setErrorModalVisible(false)}
+                        style={{ width: '100%' }}
+                    />
+                </View>
+            </UIModal>
 
             <Modal
                 visible={isCouponsModalVisible}

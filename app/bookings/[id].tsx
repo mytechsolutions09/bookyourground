@@ -119,12 +119,18 @@ export default function BookingDetailsScreen() {
           .select('*')
           .eq('ground_id', data.ground_id)
           .eq('user_id', data.user_id)
+          .eq('booking_date', data.booking_date) // Match date to avoid crossing days
           .ilike('notes', `%${slotsPart}%`)
           .order('booking_date', { ascending: true })
           .order('start_time', { ascending: true });
           
         if (!relatedError && related) {
-          relatedBookings = related;
+          // Further filter to ensure the slots string is an EXACT match
+          // This prevents (Slots: 09:00) from matching (Slots: 09:00, 10:00)
+          relatedBookings = related.filter(r => {
+            const rMatch = /\(Slots:\s*([^)]+)\)/.exec(r.notes);
+            return rMatch && rMatch[0] === slotsPart;
+          });
         }
       }
       
@@ -261,8 +267,8 @@ export default function BookingDetailsScreen() {
 
     const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
     const groundName = (booking.ground?.name ?? '').toLowerCase();
-    const isCricket = pitchType === 'cricket ground';
-    const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
+    const isCricket = pitchType.includes('cricket ground');
+    const isNet = (pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane')) && !isCricket;
 
     let ownerPf = 0;
     if (isNet) {
@@ -271,12 +277,12 @@ export default function BookingDetailsScreen() {
       let totalTeams = 0;
       if (booking.relatedBookings && booking.relatedBookings.length > 0) {
         booking.relatedBookings.forEach((b: any) => {
-          const match = /Teams:\s*([^(]+)/.exec(b.notes);
+          const match = /Teams:\s*([^(\n,]+)/.exec(b.notes);
           const teamLabel = match ? match[1].trim() : 'Both Teams';
           totalTeams += (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
         });
       } else {
-        const match = /Teams:\s*([^(]+)/.exec(booking.notes);
+        const match = /Teams:\s*([^(\n,]+)/.exec(booking.notes);
         const teamLabel = match ? match[1].trim() : 'Both Teams';
         totalTeams = (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
       }
