@@ -480,7 +480,7 @@ export default function ProfileScreen({
                   <Package size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Inventory</RNText>
-                <RNText style={styles.venueOwnerCardDesc}>Manage your inventory, equipment, and stock.</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Manage your inventory.</RNText>
               </TouchableOpacity>
 
               <TouchableOpacity 

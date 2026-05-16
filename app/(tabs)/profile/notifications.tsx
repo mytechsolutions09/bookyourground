@@ -103,8 +103,15 @@ function NotificationsInner() {
         booking_id: b.id,
       }));
 
-      // Filter out specific invalid notification requested by user
-      const filteredNotifs = (notifs || []).filter(n => n.id !== '50f06198-7dee-4318-b115-615442b05e9a');
+      // Filter and map notifications
+      const filteredNotifs = (notifs || [])
+        .filter(n => n.id !== '50f06198-7dee-4318-b115-615442b05e9a')
+        .map(n => ({
+          ...n,
+          body: n.message, // Map DB 'message' to 'body' for UI consistency
+          booking_id: n.data?.booking_id || n.booking_id // Ensure booking_id is accessible
+        }));
+
       const combined = [...filteredNotifs, ...mappedBookings];
       
       // Sort by date descending

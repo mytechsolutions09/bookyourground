@@ -1060,7 +1060,7 @@ function OwnerEarningsScreenInner() {
   };
 
   const renderSummaryTable = () => (
-    <View style={styles.summaryTableWrapper}>
+    <View style={[styles.summaryTableWrapper, isCompact && { paddingHorizontal: 0 }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Text style={styles.sectionTitle}>Transaction Summary</Text>
         <TouchableOpacity 
@@ -1319,7 +1319,7 @@ function OwnerEarningsScreenInner() {
   const renderAnalyticsView = () => (
     <View style={styles.analyticsWrapper}>
       <View style={[styles.layoutRow, isStacking && { flexDirection: 'column', gap: 16 }]}>
-        <View style={[styles.leftCol, isStacking && { paddingRight: 0 }]}>
+        <View style={[styles.leftCol, isStacking && { paddingRight: 0, flex: undefined }]}>
           <View style={styles.sectionCard}>
             <View style={{ 
               flexDirection: isCompact ? 'column' : 'row', 
@@ -1391,20 +1391,20 @@ function OwnerEarningsScreenInner() {
           </View>
         </View>
 
-        <View style={styles.rightCol}>
+        <View style={[styles.rightCol, isStacking && { flex: undefined }]}>
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Earnings Bifurcation</Text>
-            <View style={styles.bifurcationRow}>
+            <View style={[styles.bifurcationRow, isUltraNarrow && { flexDirection: 'column', gap: 16 }]}>
                <View style={styles.bifurcationItem}>
                   <Text style={styles.bifurcationLabel}>Online</Text>
                   <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
                </View>
-               <View style={styles.bifurcationDivider} />
+               {!isUltraNarrow && <View style={styles.bifurcationDivider} />}
                <View style={styles.bifurcationItem}>
                   <Text style={styles.bifurcationLabel}>Offline</Text>
                   <Text style={[styles.bifurcationValue, { color: '#F59E0B' }]}>{formatCurrency(offlineEarnings)}</Text>
                </View>
-               <View style={styles.bifurcationDivider} />
+               {!isUltraNarrow && <View style={styles.bifurcationDivider} />}
                <View style={styles.bifurcationItem}>
                   <Text style={styles.bifurcationLabel}>Store Credits</Text>
                   <Text style={[styles.bifurcationValue, { color: '#3B82F6' }]}>{formatCurrency(storeCredits)}</Text>
@@ -1479,7 +1479,7 @@ function OwnerEarningsScreenInner() {
     payouts.sort((a, b) => b.date.localeCompare(a.date));
 
     return (
-      <View style={styles.summaryTableWrapper}>
+      <View style={[styles.summaryTableWrapper, isCompact && { paddingHorizontal: 0 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
           <View style={[styles.viewToggleContainer, { flex: 1, marginBottom: 0, marginTop: 0, borderBottomWidth: 0 }]}>
             <TouchableOpacity 
@@ -1626,7 +1626,7 @@ function OwnerEarningsScreenInner() {
 
   const renderLeftColumn = () => {
     return (
-      <View style={styles.leftCol}>
+      <>
         <LinearGradient 
           colors={['#00ea6b', '#a5ff8a']}
           start={{ x: 0, y: 0 }}
@@ -1673,41 +1673,43 @@ function OwnerEarningsScreenInner() {
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
-            <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
-            <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
-          </View>
-            {transactions.map((tx) => (
-                <View key={tx.id} style={styles.tableRow}>
-                  <View style={{ width: 120 }}>
-                    <Text style={styles.cellTextMain}>
-                      {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={[styles.table, { minWidth: isCompact ? 500 : '100%' }]}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
+              <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
+              <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
+            </View>
+              {transactions.map((tx) => (
+                  <View key={tx.id} style={styles.tableRow}>
+                    <View style={{ width: 120 }}>
+                      <Text style={styles.cellTextMain}>
+                        {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                      </Text>
+                      <Text style={styles.cellTextSub}>
+                        {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </Text>
+                    </View>
+                    <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
+                      {tx.ground?.name || 'Venue'}
                     </Text>
-                    <Text style={styles.cellTextSub}>
-                      {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '400', color: '#1E293B' }]}>
+                      {formatCurrency(tx.calculated_net || 0)}
                     </Text>
                   </View>
-                  <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
-                    {tx.ground?.name || 'Venue'}
-                  </Text>
-                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '400', color: '#1E293B' }]}>
-                    {formatCurrency(tx.calculated_net || 0)}
-                  </Text>
-                </View>
-            ))}
+              ))}
 
-          {hasMore && (
-            <TouchableOpacity 
-              style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
-              onPress={loadMore}
-              disabled={loading}
-            >
-              <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            {hasMore && (
+              <TouchableOpacity 
+                style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
+                onPress={loadMore}
+                disabled={loading}
+              >
+                <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
           <View style={styles.transactionActions}>
             <TouchableOpacity 
               style={[styles.statementBtn, { flex: 1 }]}
@@ -1745,22 +1747,22 @@ function OwnerEarningsScreenInner() {
               </View>
             ))
           )}
+          </View>
         </View>
-      </View>
-    </View>
+      </>
     );
   };
 
   const renderRightColumn = () => (
-    <View style={styles.rightCol}>
+    <>
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Earnings Bifurcation</Text>
-        <View style={styles.bifurcationRow}>
+        <View style={[styles.bifurcationRow, isUltraNarrow && { flexDirection: 'column', gap: 16 }]}>
            <View style={styles.bifurcationItem}>
               <Text style={styles.bifurcationLabel}>Online Earnings (Net)</Text>
               <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
            </View>
-           <View style={styles.bifurcationDivider} />
+           {!isUltraNarrow && <View style={styles.bifurcationDivider} />}
            <View style={styles.bifurcationItem}>
               <Text style={styles.bifurcationLabel}>Offline Earnings (Net)</Text>
               <Text style={[styles.bifurcationValue, { color: '#64748B' }]}>{formatCurrency(offlineEarnings)}</Text>
@@ -1880,7 +1882,7 @@ function OwnerEarningsScreenInner() {
           </ScrollView>
         </View>
       </Modal>
-    </View>
+    </>
   );
 
   return (
@@ -1893,7 +1895,7 @@ function OwnerEarningsScreenInner() {
         styles.scrollContent,
         { flexGrow: 1, paddingBottom: 24 },
         Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any,
-        viewMode === 'summary' && Platform.OS === 'web' && { maxWidth: '100%', paddingHorizontal: isCompact ? 16 : 40 }
+        viewMode === 'summary' && Platform.OS === 'web' && { maxWidth: '100%', paddingHorizontal: isCompact ? 0 : 40 }
       ]}
     >
       <View style={styles.viewToggleOuter}>
@@ -1943,10 +1945,10 @@ function OwnerEarningsScreenInner() {
               styles.layoutRow, 
               isStacking && { flexDirection: 'column', gap: 16 }
             ]}>
-              <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16 }]}>
+              <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16, flex: undefined }]}>
                 {renderLeftColumn()}
               </View>
-              <View style={[styles.rightCol, isStacking && { paddingTop: 0 }]}>
+              <View style={[styles.rightCol, isStacking && { paddingTop: 0, flex: undefined }]}>
                 {renderRightColumn()}
               </View>
             </View>
@@ -2237,9 +2239,12 @@ function OwnerEarningsScreenInner() {
 }
 
 export default function OwnerEarningsScreen() {
+  const { width } = useWindowDimensions();
+  const isSmallWeb = Platform.OS === 'web' && width < 768;
+
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
+      <WebLayout hideHeader={isSmallWeb}>
         <OwnerEarningsScreenInner />
       </WebLayout>
     );

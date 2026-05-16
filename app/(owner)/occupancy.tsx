@@ -107,10 +107,10 @@ export default function OccupancyDashboard() {
             <Text style={{ marginTop: 16, color: '#6B7280', fontFamily: 'Inter' }}>Loading real-time analytics...</Text>
           </View>
         ) : (
-          <View style={styles.container}>
+          <View style={[styles.container, isSmallScreen && { padding: 0 }]}>
           
           {/* Header */}
-          <View style={[styles.header, isCompact && styles.headerVertical]}>
+          <View style={[styles.header, isCompact && styles.headerVertical, isSmallScreen && { paddingHorizontal: 8, marginTop: 16 }]}>
             <View>
               <Text style={styles.subTitle}>Occupancy Analytics</Text>
               <Text style={styles.title}>Venue Occupancy</Text>
@@ -143,10 +143,10 @@ export default function OccupancyDashboard() {
           </View>
 
           {/* Main Card */}
-          <View style={styles.mainCard}>
+          <View style={[styles.mainCard, isSmallScreen && { borderRadius: 0, borderWidth: 0, boxShadow: 'none' } as any]}>
             
             {/* Top Section */}
-            <View style={[styles.topSection, isCompact && styles.topSectionVertical]}>
+            <View style={[styles.topSection, isCompact && styles.topSectionVertical, isSmallScreen && { padding: 8, paddingVertical: 16 }]}>
               
               {/* Left Stats */}
               <View style={[styles.leftStatsCard, isCompact && { width: '100%' }]}>
@@ -255,7 +255,7 @@ export default function OccupancyDashboard() {
             </View>
 
             {/* Bottom Cards */}
-            <View style={[styles.bottomGrid, isSmallScreen && styles.bottomGridVertical]}>
+            <View style={[styles.bottomGrid, isSmallScreen && styles.bottomGridVertical, isSmallScreen && { padding: 8, paddingTop: 0 }]}>
               
               {/* Peak */}
               <View style={styles.statCard}>

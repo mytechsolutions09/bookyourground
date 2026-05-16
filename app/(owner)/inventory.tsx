@@ -81,21 +81,21 @@ export default function OwnerInventoryScreen() {
   
   const headerTranslateY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
-  const HEADER_HEIGHT = 100;
+  const HEADER_HEIGHT = 60;
   
   const onScrollWeb = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
     DeviceEventEmitter.emit('mainScroll', { y: currentY });
     
     const diff = currentY - lastScrollY.value;
-    if (diff > 1 && currentY > 50) {
+    if (diff > 5 && currentY > 50) {
       if (headerTranslateY.value === 0) {
-        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top - 20, { duration: 400 });
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { duration: 300 });
         setTabBarVisible(false);
       }
-    } else if (diff < -2 || currentY < 20) {
+    } else if (diff < -5 || currentY < 20) {
       if (headerTranslateY.value < 0) {
-        headerTranslateY.value = withTiming(0, { duration: 400 });
+        headerTranslateY.value = withTiming(0, { duration: 300 });
         setTabBarVisible(true);
       }
     }
@@ -532,35 +532,40 @@ export default function OwnerInventoryScreen() {
         </WebLayout>
       ) : (
         <View style={{ flex: 1 }}>
-          <MobileAppNavbar title="Inventory" titleColor="#01b854" />
+          <Animated.View style={headerAnimatedStyle}>
+            <MobileAppNavbar title="Inventory" titleColor="#01b854" />
+          </Animated.View>
           
-          <View style={styles.pageHeader}>
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileFiltersRow}>
-                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('ground')}>
-                  <Building2 size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText} numberOfLines={1}>{currentGround?.name || 'Venue'}</Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('status')}>
-                  <Filter size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText}>{statusFilter}</Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('range')}>
-                  <Clock size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText}>{daysToShow}D</Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
-             </ScrollView>
-          </View>
-
           <ScrollView 
             style={styles.mainScroll} 
-            contentContainerStyle={styles.mainScrollContent}
+            contentContainerStyle={[styles.mainScrollContent, { paddingTop: HEADER_HEIGHT + insets.top }]}
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+            stickyHeaderIndices={[0]}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
           >
+            <View style={[styles.pageHeader, { backgroundColor: '#FFFFFF', zIndex: 10 }]}>
+               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileFiltersRow}>
+                  <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('ground')}>
+                    <Building2 size={14} color="#00ea6b" />
+                    <Text style={styles.mobileDropdownText} numberOfLines={1}>{currentGround?.name || 'Venue'}</Text>
+                    <ChevronDown size={14} color="#6B7280" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('status')}>
+                    <Filter size={14} color="#00ea6b" />
+                    <Text style={styles.mobileDropdownText}>{statusFilter}</Text>
+                    <ChevronDown size={14} color="#6B7280" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('range')}>
+                    <Clock size={14} color="#00ea6b" />
+                    <Text style={styles.mobileDropdownText}>{daysToShow}D</Text>
+                    <ChevronDown size={14} color="#6B7280" />
+                  </TouchableOpacity>
+               </ScrollView>
+            </View>
+
             {loading && grounds.length === 0 ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#00ea6b" />

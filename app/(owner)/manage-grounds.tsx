@@ -591,24 +591,36 @@ export default function OwnerGroundsScreen() {
         <MobileAppNavbar 
           title="My Venues" 
           titleColor="#01b854" 
+          rightAction={
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity onPress={handleImportGround} style={{ padding: 4 }}>
+                <Text style={{ color: '#01b854', fontSize: 12, fontWeight: '700' }}>Import</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(owner)/add-ground')} style={{ padding: 4 }}>
+                <Plus size={20} color="#01b854" />
+              </TouchableOpacity>
+            </View>
+          }
         />
       ) : (
-        <View style={styles.webHeader}>
-          <Text style={styles.webTitle}>My Venues</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={[styles.webHeader, { paddingHorizontal: 16, paddingTop: 10 }]}>
+          <Text style={[styles.webTitle, width < 768 && { fontSize: 18 }]}>My Venues</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
             <Button
-              title="Import Venue"
+              title={width < 768 ? "Import" : "Import Venue"}
               onPress={handleImportGround}
               variant="outline"
               size="small"
-              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }}
-              textStyle={{ color: '#16A34A' }}
+              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', height: 36, paddingHorizontal: 12 }}
+              textStyle={{ color: '#16A34A', fontSize: 12, fontWeight: '700' }}
             />
             <Button
-              title="Add Venue"
+              title={width < 768 ? "Add" : "Add Venue"}
               onPress={() => router.push('/(owner)/add-ground')}
               variant="primary"
               size="small"
+              style={{ height: 36, paddingHorizontal: 12 }}
+              textStyle={{ fontSize: 12, fontWeight: '700' }}
             />
           </View>
         </View>
@@ -727,9 +739,9 @@ export default function OwnerGroundsScreen() {
             </View>
 
             <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-              <View style={[styles.compactFormGrid, (IS_WEB || isTablet) && { flexDirection: 'row', gap: 24 }, isUltraNarrow && { padding: 8 }]}>
+              <View style={[styles.compactFormGrid, width >= 768 && { flexDirection: 'row', gap: 24 }, isUltraNarrow && { padding: 8 }]}>
                 {/* Left Column: Basic Info & Media */}
-                <View style={[styles.compactFormCol, (IS_WEB || isTablet) && { flex: 1 }]}>
+                <View style={[styles.compactFormCol, width >= 768 && { flex: 1 }]}>
                   <Text style={styles.compactSectionTitle}>Basic Details</Text>
                   <TextInput
                     style={styles.compactInput}
@@ -827,7 +839,7 @@ export default function OwnerGroundsScreen() {
                 </View>
 
                 {/* Right Column: Location & Map */}
-                <View style={[styles.compactFormCol, (IS_WEB || isTablet) && { flex: 1 }]}>
+                <View style={[styles.compactFormCol, width >= 768 && { flex: 1 }]}>
                   <Text style={styles.compactSectionTitle}>Location</Text>
                   <TextInput
                     style={styles.compactInput}
@@ -933,7 +945,11 @@ export default function OwnerGroundsScreen() {
                   { key: 'has_swimming_pool', label: 'Swimming Pool' },
                   { key: 'active', label: 'Visible' },
                 ].map((item) => (
-                  <View key={item.key} style={[styles.amenityItemCompact, !IS_WEB && { width: width < 350 ? '100%' : '48%' }]}>
+                  <View key={item.key} style={[
+                    styles.amenityItemCompact, 
+                    { width: width >= 1024 ? '15%' : (width >= 768 ? '30%' : '48%') },
+                    !IS_WEB && { width: width < 350 ? '100%' : '48%' }
+                  ]}>
                     <Text style={styles.switchLabelCompact}>{item.label}</Text>
                     <Switch
                       value={!!editForm?.[item.key]}
@@ -970,7 +986,7 @@ export default function OwnerGroundsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{finalContent}</WebLayout>;
+    return <WebLayout hideHeader>{finalContent}</WebLayout>;
   }
 
   return finalContent;
@@ -1364,7 +1380,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   amenityItemCompact: {
-    width: IS_WEB ? '15%' : '48%',
+    width: '15%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

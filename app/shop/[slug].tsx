@@ -440,7 +440,6 @@ export default function ProductDetailScreen() {
         style={[styles.scroll, { zIndex: 10 }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: isUltraNarrow ? 320 : 440 }]}
-        pointerEvents="box-none"
       >
         <View style={styles.contentWrapper} pointerEvents="auto">
           {/* Basic Info */}

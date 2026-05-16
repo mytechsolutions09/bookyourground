@@ -644,7 +644,13 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   );
 
   const shouldHideAppHeader = useMemo(() => {
-    if (isCompact) return false;
+    if (isCompact) {
+      // Hide header for owners on settings pages to save space on mobile web
+      if (isGroundOwner && (cleanPath === '/settings' || cleanPath === '/(owner)/settings')) {
+        return true;
+      }
+      return false;
+    }
     
     if (isGroundOwner) {
       const ownerRoutes = [
