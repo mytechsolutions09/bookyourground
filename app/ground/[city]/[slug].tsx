@@ -16,7 +16,7 @@ import {
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves } from 'lucide-react-native';
 import { 
   APIProvider, 
   Map, 
@@ -367,43 +367,51 @@ export default function GroundDetailsPrettyUrlScreen() {
 
                 {/* Map Column */}
                 <View style={styles.webMapCol}>
-                  <View style={styles.webMapBox}>
+                  <View style={styles.webMapFullContainer}>
                     <WebMap ground={ground} mapsUrl={mapsUrl} />
-                  </View>
-                  <View style={styles.webMapActionsRow}>
-                    <TouchableOpacity 
-                      style={[styles.webActionIconButton]}
-                      onPress={toggleFavorite}
-                    >
-                      <Heart size={20} color={isFavorite ? "#01b854" : "#64748B"} fill={isFavorite ? "#01b854" : "none"} />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.webActionIconButton}
-                      onPress={async () => {
-                        if (mapsUrl) {
-                          try {
-                            await Linking.openURL(mapsUrl);
-                          } catch (err) {
-                            console.error('Failed to open maps URL:', err);
+                    
+                    {/* Floating Map Actions Overlay */}
+                    <View style={styles.webMapActionsOverlay}>
+                      <TouchableOpacity 
+                        style={[styles.webFloatingMapActionBtn]}
+                        onPress={toggleFavorite}
+                      >
+                        <Heart size={20} color={isFavorite ? "#01b854" : "#0F172A"} fill={isFavorite ? "#01b854" : "none"} />
+                      </TouchableOpacity>
+                      
+                      <View style={styles.webActionDivider} />
+
+                      <TouchableOpacity 
+                        style={styles.webFloatingMapActionBtn}
+                        onPress={async () => {
+                          if (mapsUrl) {
+                            try {
+                              await Linking.openURL(mapsUrl);
+                            } catch (err) {
+                              console.error('Failed to open maps URL:', err);
+                            }
                           }
-                        }
-                      }}
-                    >
-                      <Navigation2 size={20} color="#64748B" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.webActionIconButton}
-                      onPress={() => {
-                        const url = typeof window !== 'undefined' ? window.location.href : '';
-                        Share.share({
-                          message: `Check out ${ground.name} on BookYourGround!`,
-                          url: url,
-                          title: ground.name
-                        });
-                      }}
-                    >
-                      <Share2 size={20} color="#64748B" />
-                    </TouchableOpacity>
+                        }}
+                      >
+                        <Navigation2 size={20} color="#0F172A" />
+                      </TouchableOpacity>
+
+                      <View style={styles.webActionDivider} />
+                      
+                      <TouchableOpacity 
+                        style={styles.webFloatingMapActionBtn}
+                        onPress={() => {
+                          const url = typeof window !== 'undefined' ? window.location.href : '';
+                          Share.share({
+                            message: `Check out ${ground.name} on BookYourGround!`,
+                            url: url,
+                            title: ground.name
+                          });
+                        }}
+                      >
+                        <Share2 size={20} color="#0F172A" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -834,7 +842,30 @@ function WebHeroGallery({
   const isSmall = width < 768;
 
   return (
-    <View style={[styles.webGalleryWrapper, isSmall && { height: 320, borderRadius: 20, overflow: 'hidden' }]}>
+    <View style={[styles.webGalleryWrapper, isSmall && styles.webGalleryWrapperMobile]}>
+      {/* Side Thumbnails for Desktop */}
+      {!isSmall && imageUrls.length > 1 && (
+        <View style={styles.webSideThumbnails}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.webSideThumbnailsContent}
+          >
+            {imageUrls.slice(0, 8).map((uri: string, idx: number) => (
+              <Pressable
+                key={`${uri}-${idx}`}
+                onPress={() => setHeroImageIndex(idx)}
+                style={[
+                  styles.webSideThumb,
+                  idx === heroIdx && styles.webSideThumbSelected
+                ]}
+              >
+                <Image source={{ uri }} style={styles.webSideThumbImg} resizeMode="cover" />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={styles.webGalleryMain}>
         <Image
           source={{ uri: imageUrls[heroIdx] }}
@@ -866,16 +897,16 @@ function WebHeroGallery({
           </View>
         )}
 
-        {imageUrls.length > 1 && (
-          <View style={[styles.webThumbnailsWrapper, isSmall && { bottom: 12 }]}>
-            <View style={[styles.webThumbnailsOverlay, isSmall && { padding: 6, gap: 8, borderRadius: 12 }]}>
-              {imageUrls.slice(0, isSmall ? 5 : 8).map((uri: string, idx: number) => (
+        {/* Bottom Thumbnails for Mobile Web */}
+        {isSmall && imageUrls.length > 1 && (
+          <View style={styles.webThumbnailsWrapperMobile}>
+            <View style={styles.webThumbnailsOverlayMobile}>
+              {imageUrls.slice(0, 5).map((uri: string, idx: number) => (
                 <Pressable
                   key={`${uri}-${idx}`}
                   onPress={() => setHeroImageIndex(idx)}
                   style={[
-                    styles.webThumb,
-                    isSmall && { width: 45, height: 32, borderRadius: 6 },
+                    styles.webThumbMobile,
                     idx === heroIdx && styles.webThumbSelected
                   ]}
                 >
@@ -898,7 +929,11 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 
   useEffect(() => {
     if (ground.latitude && ground.longitude) {
-      setCoords({ lat: parseFloat(ground.latitude), lng: parseFloat(ground.longitude) });
+      const lat = parseFloat(ground.latitude);
+      const lng = parseFloat(ground.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setCoords({ lat, lng });
+      }
     } else if (geocodingLibrary) {
       const geocoder = new geocodingLibrary.Geocoder();
       const address = `${ground.address}, ${ground.city}, ${ground.state}`;
@@ -927,10 +962,10 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 
         <Map
           defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
-          center={coords}
+          center={coords || undefined}
           defaultZoom={12}
           mapId={MAP_ID}
-          style={{ width: '100%', height: '100%', borderRadius: 16 }}
+          style={{ width: '100%', height: '100%' }}
           gestureHandling={'greedy'}
           disableDefaultUI={true}
           styles={CLEAN_MAP_STYLES}
@@ -1019,6 +1054,11 @@ function AmenitiesList({ ground }: { ground: GroundWithImages }) {
   if (ground.has_changing_rooms) items.push('Changing Rooms');
   if (ground.has_pavilion) items.push('Pavilion');
   if (ground.has_washrooms) items.push('Washroom');
+  if ((ground as any).has_umpires) items.push('2 Umpires');
+  if ((ground as any).has_new_balls) items.push('2 New Balls');
+  if ((ground as any).has_scoring) items.push('Scoring');
+  if ((ground as any).has_practice_nets) items.push('Practice Nets');
+  if ((ground as any).has_swimming_pool) items.push('Swimming Pool');
 
   if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
 
@@ -1144,10 +1184,23 @@ const styles = StyleSheet.create({
   webGalleryWrapper: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    gap: 16,
+  },
+  webGalleryWrapperMobile: {
+    height: 320,
+    borderRadius: 20,
+    overflow: 'hidden',
+    flexDirection: 'column',
+    gap: 0,
     backgroundColor: '#E2E8F0',
   },
   webGalleryMain: {
     flex: 1,
+    height: '100%',
+    borderRadius: 24,
+    overflow: 'hidden',
     position: 'relative',
   },
   webTwoColumnLayout: {
@@ -1268,37 +1321,56 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  webThumbnailsWrapper: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'box-none' as any,
+  webSideThumbnails: {
+    width: 80,
+    height: '100%',
   },
-  webThumbnailsOverlay: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 10,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    borderRadius: 18,
-    backdropFilter: 'blur(12px)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  } as any,
-  webThumb: {
-    width: 60,
-    height: 40,
-    borderRadius: 8,
+  webSideThumbnailsContent: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+  webSideThumb: {
+    width: 76,
+    height: 54,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: 'transparent',
     overflow: 'hidden',
     cursor: 'pointer' as any,
+  },
+  webSideThumbSelected: {
+    borderColor: '#01b854',
+  },
+  webSideThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  webThumbnailsWrapperMobile: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
+    pointerEvents: 'box-none' as any,
+  },
+  webThumbnailsOverlayMobile: {
+    flexDirection: 'row',
+    padding: 6,
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backdropFilter: 'blur(12px)',
+  } as any,
+  webThumbMobile: {
+    width: 45,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
   },
   webThumbSelected: {
     borderColor: '#01b854',
@@ -1643,7 +1715,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#111827',
     marginBottom: 12,
   },
@@ -1923,53 +1995,63 @@ const styles = StyleSheet.create({
   webTopRow: {
     flexDirection: 'row',
     gap: 32, // Added spacing between image and map
-    height: 250,
+    height: 380, // Increased height for side-by-side thumbnails
   },
   webImageCol: {
     flex: 2.0,
-    borderRadius: 24,
-    overflow: 'hidden',
     backgroundColor: 'transparent',
   },
   webMapCol: {
     flex: 1,
-    gap: 0,
+    height: '100%',
   },
-  webMapBox: {
+  webMapFullContainer: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: 'transparent',
+    position: 'relative',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    borderBottomWidth: 0,
   },
-  webMapActionsRow: {
+  webMapActionsOverlay: {
+    position: 'absolute',
+    bottom: -1,
+    left: -1,
+    right: -1,
     flexDirection: 'row',
-    gap: 0,
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    borderTopWidth: 0,
-  },
-  webActionIconButton: {
-    flex: 1,
-    height: 44, // Reduced from 60
-    borderRadius: 0,
-    backgroundColor: '#FFFFFF',
+    height: 60,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 0,
-    borderRightWidth: 1,
-    borderRightColor: '#F1F5F9',
-  },
-  webActionIconButtonActive: {
-    backgroundColor: '#FFFFFF', // Keep same as unselected
+    zIndex: 10,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(20px)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+        borderBottomWidth: 0,
+      }
+    }),
+  } as any,
+  webFloatingMapActionBtn: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        transition: 'all 0.2s ease',
+        cursor: 'pointer' as any,
+      }
+    }),
+  } as any,
+  webActionDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(15, 23, 42, 0.1)',
   },
   webTabsWrapper: {
     borderBottomWidth: 1,

@@ -180,7 +180,7 @@ export default function LoginScreen() {
                     label="Email Address"
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="email@example.com"
+                    placeholder=""
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
@@ -190,7 +190,7 @@ export default function LoginScreen() {
                     label="Password"
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Enter password"
+                    placeholder=""
                     secureTextEntry={!showPassword}
                     showToggle={true}
                     onToggle={() => setShowPassword(!showPassword)}
@@ -316,7 +316,7 @@ export default function LoginScreen() {
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Enter your email"
+                placeholder=""
                 placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -344,7 +344,7 @@ export default function LoginScreen() {
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter your password"
+                placeholder=""
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 autoComplete="password"

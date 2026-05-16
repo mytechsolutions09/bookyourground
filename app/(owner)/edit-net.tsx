@@ -74,6 +74,11 @@ export default function EditNetPage() {
     has_bowling_machine: false,
     has_floodlights: false,
     has_manual_throwdown: false,
+    has_umpires: false,
+    has_new_balls: false,
+    has_scoring: false,
+    has_practice_nets: false,
+    has_swimming_pool: false,
     pricing_model: 'hours' as 'hours' | 'overs',
     surface_type: 'Turf', // Default
     latitude: '',
@@ -171,6 +176,11 @@ export default function EditNetPage() {
           has_bowling_machine: data.has_bowling_machine || false,
           has_floodlights: data.has_floodlights || false,
           has_manual_throwdown: data.has_manual_throwdown || false,
+          has_umpires: (data as any).has_umpires || false,
+          has_new_balls: (data as any).has_new_balls || false,
+          has_scoring: (data as any).has_scoring || false,
+          has_practice_nets: (data as any).has_practice_nets || false,
+          has_swimming_pool: (data as any).has_swimming_pool || false,
           pricing_model: data.pricing_model || 'hours',
           surface_type: data.cricket_pitch_surface || 'Turf',
           latitude: data.latitude ? String(data.latitude) : '',
@@ -380,6 +390,11 @@ export default function EditNetPage() {
           is_indoor: formData.is_indoor,
           has_bowling_machine: formData.has_bowling_machine,
           has_manual_throwdown: formData.has_manual_throwdown,
+          has_umpires: formData.has_umpires,
+          has_new_balls: formData.has_new_balls,
+          has_scoring: formData.has_scoring,
+          has_practice_nets: formData.has_practice_nets,
+          has_swimming_pool: formData.has_swimming_pool,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         })
@@ -639,6 +654,41 @@ export default function EditNetPage() {
               onValueChange={(val) => setFormData({ ...formData, has_floodlights: val })}
             />
           </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 Umpires</Text>
+            <Switch
+              value={formData.has_umpires}
+              onValueChange={(val) => setFormData({ ...formData, has_umpires: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 New Balls</Text>
+            <Switch
+              value={formData.has_new_balls}
+              onValueChange={(val) => setFormData({ ...formData, has_new_balls: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Scoring</Text>
+            <Switch
+              value={formData.has_scoring}
+              onValueChange={(val) => setFormData({ ...formData, has_scoring: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Practice Nets</Text>
+            <Switch
+              value={formData.has_practice_nets}
+              onValueChange={(val) => setFormData({ ...formData, has_practice_nets: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Swimming Pool</Text>
+            <Switch
+              value={formData.has_swimming_pool}
+              onValueChange={(val) => setFormData({ ...formData, has_swimming_pool: val })}
+            />
+          </View>
           
           <Text style={styles.subLabel}>Surface Type</Text>
           <View style={styles.typeChipsRow}>
@@ -746,7 +796,11 @@ export default function EditNetPage() {
                 <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                   <GoogleMap
                     defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
-                    center={formData.latitude && formData.longitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : undefined}
+                    center={(() => {
+                      const lat = parseFloat(formData.latitude || '');
+                      const lng = parseFloat(formData.longitude || '');
+                      return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : undefined;
+                    })()}
                     defaultZoom={13}
                     mapId={MAP_ID}
                     onClick={(e) => {
@@ -762,7 +816,11 @@ export default function EditNetPage() {
                   >
                     {formData.latitude && formData.longitude && (
                       <Marker 
-                        position={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }} 
+                        position={(() => {
+                          const lat = parseFloat(formData.latitude || '');
+                          const lng = parseFloat(formData.longitude || '');
+                          return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 28.4595, lng: 77.0266 };
+                        })()} 
                         icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
                       />
                     )}

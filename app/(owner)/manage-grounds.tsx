@@ -153,6 +153,11 @@ export default function OwnerGroundsScreen() {
       has_changing_rooms: !!(ground as any).has_changing_rooms,
       has_pavilion: !!(ground as any).has_pavilion,
       has_washrooms: !!(ground as any).has_washrooms,
+      has_umpires: !!(ground as any).has_umpires,
+      has_new_balls: !!(ground as any).has_new_balls,
+      has_scoring: !!(ground as any).has_scoring,
+      has_practice_nets: !!(ground as any).has_practice_nets,
+      has_swimming_pool: !!(ground as any).has_swimming_pool,
       active: !!(ground as any).active,
       mediaUrls: (ground.ground_images ?? []).map((img) => img.image_url),
       latitude: ground.latitude ? String(ground.latitude) : '',
@@ -328,6 +333,11 @@ export default function OwnerGroundsScreen() {
         has_changing_rooms: !!editForm.has_changing_rooms,
         has_pavilion: !!editForm.has_pavilion,
         has_washrooms: !!editForm.has_washrooms,
+        has_umpires: !!editForm.has_umpires,
+        has_new_balls: !!editForm.has_new_balls,
+        has_scoring: !!editForm.has_scoring,
+        has_practice_nets: !!editForm.has_practice_nets,
+        has_swimming_pool: !!editForm.has_swimming_pool,
         active: !!editForm.active,
         latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
         longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
@@ -627,9 +637,9 @@ export default function OwnerGroundsScreen() {
 
               </View>
 
-              <View style={{ padding: 16, gap: 8 }}>
+              <View style={styles.modalGridContainer}>
                 <TouchableOpacity 
-                  style={styles.compactModalBtn} 
+                  style={styles.compactModalBtnGrid} 
                   onPress={() => {
                     const ground = grounds.find(g => g.id === selectedGroundId);
                     if (ground) {
@@ -644,11 +654,11 @@ export default function OwnerGroundsScreen() {
                   }}
                 >
                   <Pencil size={18} color="#0F172A" />
-                  <Text style={styles.compactModalBtnText}>Edit Venue & Pricing</Text>
+                  <Text style={[styles.compactModalBtnText, { flex: 1 }]}>Edit Venue & Pricing</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.compactModalBtn} 
+                  style={styles.compactModalBtnGrid} 
                   onPress={() => {
                     const ground = grounds.find(g => g.id === selectedGroundId);
                     if (ground) {
@@ -658,22 +668,22 @@ export default function OwnerGroundsScreen() {
                   }}
                 >
                   <Eye size={18} color="#0F172A" />
-                  <Text style={styles.compactModalBtnText}>View Public Page</Text>
+                  <Text style={[styles.compactModalBtnText, { flex: 1 }]}>View Public Page</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.compactModalBtn} 
+                  style={styles.compactModalBtnGrid} 
                   onPress={() => {
                     router.push(`/(owner)/inventory?id=${selectedGroundId}`);
                     setSelectedGroundId(null);
                   }}
                 >
                   <Calendar size={18} color="#0F172A" />
-                  <Text style={styles.compactModalBtnText}>Manage Bookings</Text>
+                  <Text style={[styles.compactModalBtnText, { flex: 1 }]}>Manage Bookings</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.compactModalBtn} 
+                  style={styles.compactModalBtnGrid} 
                   onPress={() => {
                     const ground = grounds.find(g => g.id === selectedGroundId);
                     if (ground) {
@@ -683,7 +693,7 @@ export default function OwnerGroundsScreen() {
                   }}
                 >
                   <Download size={18} color="#0F172A" />
-                  <Text style={styles.compactModalBtnText}>Export Data (JSON)</Text>
+                  <Text style={[styles.compactModalBtnText, { flex: 1 }]}>Export Data (JSON)</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -849,7 +859,11 @@ export default function OwnerGroundsScreen() {
                     {Platform.OS === 'web' ? (
                       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                         <GoogleMap
-                          center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : { lat: 28.4595, lng: 77.0266 }}
+                          center={(() => {
+                            const lat = parseFloat(editForm?.latitude || '');
+                            const lng = parseFloat(editForm?.longitude || '');
+                            return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 28.4595, lng: 77.0266 };
+                          })()}
                           defaultZoom={15}
                           mapId={MAP_ID}
                           onClick={(e) => {
@@ -865,7 +879,11 @@ export default function OwnerGroundsScreen() {
                         >
                             {editForm?.latitude && editForm?.longitude && (
                               <Marker 
-                                position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
+                                position={(() => {
+                                  const lat = parseFloat(editForm?.latitude || '');
+                                  const lng = parseFloat(editForm?.longitude || '');
+                                  return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 28.4595, lng: 77.0266 };
+                                })()} 
                                 icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
                               />
                             )}
@@ -908,6 +926,11 @@ export default function OwnerGroundsScreen() {
                   { key: 'has_changing_rooms', label: 'Changing Rms' },
                   { key: 'has_pavilion', label: 'Pavilion' },
                   { key: 'has_washrooms', label: 'Washrooms' },
+                  { key: 'has_umpires', label: '2 Umpires' },
+                  { key: 'has_new_balls', label: '2 New Balls' },
+                  { key: 'has_scoring', label: 'Scoring' },
+                  { key: 'has_practice_nets', label: 'Practice Nets' },
+                  { key: 'has_swimming_pool', label: 'Swimming Pool' },
                   { key: 'active', label: 'Visible' },
                 ].map((item) => (
                   <View key={item.key} style={[styles.amenityItemCompact, !IS_WEB && { width: width < 350 ? '100%' : '48%' }]}>
@@ -1420,7 +1443,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
   },
-  compactModalBtn: {
+   compactModalBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
@@ -1436,6 +1459,33 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     ...Platform.select({
       web: { backdropFilter: 'blur(8px)' }
+    }) as any,
+  },
+  modalGridContainer: {
+    padding: 16,
+    paddingBottom: 28,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  compactModalBtnGrid: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { backdropFilter: 'blur(10px)' }
     }) as any,
   },
   compactModalBtnText: {

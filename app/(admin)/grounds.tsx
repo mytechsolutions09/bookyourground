@@ -346,6 +346,7 @@ export default function GroundsAdminScreen() {
       has_parking: !!(ground as any).has_parking,
       has_changing_rooms: !!(ground as any).has_changing_rooms,
       has_pavilion: !!(ground as any).has_pavilion,
+      has_swimming_pool: !!(ground as any).has_swimming_pool,
       verified: !!(ground as any).verified,
       approved: !!(ground as any).approved,
       active: !!(ground as any).active,
@@ -400,6 +401,7 @@ export default function GroundsAdminScreen() {
         has_parking: !!editForm.has_parking,
         has_changing_rooms: !!editForm.has_changing_rooms,
         has_pavilion: !!editForm.has_pavilion,
+        has_swimming_pool: !!editForm.has_swimming_pool,
         verified: !!editForm.verified,
         approved: !!editForm.approved,
         active: !!editForm.active,
@@ -949,6 +951,7 @@ export default function GroundsAdminScreen() {
               has_changing_rooms: data.Changing_Rooms === 'Yes',
               has_pavilion: data.Pavilion === 'Yes',
               has_washrooms: data.Washrooms === 'Yes',
+              has_swimming_pool: data.Swimming_Pool === 'Yes',
               verified: data.Verified === 'Yes',
               approved: data.Approved === 'Yes',
               active: data.Active === 'Yes',
@@ -1225,6 +1228,13 @@ export default function GroundsAdminScreen() {
                     onValueChange={(v) => setCreateForm({ ...createForm, has_pavilion: v })}
                   />
                 </View>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Swimming Pool</Text>
+                  <Switch
+                    value={!!createForm.has_swimming_pool}
+                    onValueChange={(v) => setCreateForm({ ...createForm, has_swimming_pool: v })}
+                  />
+                </View>
 
                 <View style={styles.switchRow}>
                   <Text style={styles.switchLabel}>Verified</Text>
@@ -1296,9 +1306,9 @@ export default function GroundsAdminScreen() {
                   <View style={[styles.tableCell, styles.colGround]}>
                     <View style={styles.tableGroundInfo}>
                       <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
-                      <View>
-                        <Text style={styles.groundName}>{latestGround.name}</Text>
-                        <Text style={styles.groundType}>{latestGround.pitch_type}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.groundName} numberOfLines={1} ellipsizeMode="tail">{latestGround.name}</Text>
+                        <Text style={styles.groundType} numberOfLines={1}>{latestGround.pitch_type}</Text>
                       </View>
                     </View>
                   </View>
@@ -1356,9 +1366,9 @@ export default function GroundsAdminScreen() {
                     <View style={[styles.tableCell, styles.colGround]}>
                       <View style={styles.tableGroundInfo}>
                         <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
-                        <View>
-                          <Text style={styles.groundName}>{latestGround.name}</Text>
-                          <Text style={styles.groundType}>{latestGround.pitch_type}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.groundName} numberOfLines={1} ellipsizeMode="tail">{latestGround.name}</Text>
+                          <Text style={styles.groundType} numberOfLines={1}>{latestGround.pitch_type}</Text>
                         </View>
                       </View>
                     </View>
@@ -1495,7 +1505,8 @@ export default function GroundsAdminScreen() {
                         {(latestGround.has_floodlights ? 'Floodlights, ' : '') +
                           (latestGround.has_parking ? 'Parking, ' : '') +
                           (latestGround.has_changing_rooms ? 'Changing, ' : '') +
-                          (latestGround.has_pavilion ? 'Pavilion' : '')}
+                          (latestGround.has_pavilion ? 'Pavilion, ' : '') +
+                          (latestGround.has_swimming_pool ? 'Pool' : '')}
                       </Text>
                     </View>
                   </View>
@@ -1818,6 +1829,15 @@ export default function GroundsAdminScreen() {
                   value={!!editForm?.has_pavilion}
                   onValueChange={(v) =>
                     setEditForm((prev: any) => ({ ...prev, has_pavilion: v }))
+                  }
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Swimming Pool</Text>
+                <Switch
+                  value={!!editForm?.has_swimming_pool}
+                  onValueChange={(v) =>
+                    setEditForm((prev: any) => ({ ...prev, has_swimming_pool: v }))
                   }
                 />
               </View>

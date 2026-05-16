@@ -151,6 +151,11 @@ export default function AddGroundScreen() {
     has_changing_rooms: false,
     has_pavilion: false,
     has_washrooms: false,
+    has_umpires: false,
+    has_new_balls: false,
+    has_scoring: false,
+    has_practice_nets: false,
+    has_swimming_pool: false,
     mediaUrls: [] as string[],
     latitude: '',
     longitude: '',
@@ -324,6 +329,11 @@ export default function AddGroundScreen() {
           has_changing_rooms: formData.has_changing_rooms,
           has_pavilion: formData.has_pavilion,
           has_washrooms: formData.has_washrooms,
+          has_umpires: formData.has_umpires,
+          has_new_balls: formData.has_new_balls,
+          has_scoring: formData.has_scoring,
+          has_practice_nets: formData.has_practice_nets,
+          has_swimming_pool: formData.has_swimming_pool,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         })
@@ -622,7 +632,11 @@ export default function AddGroundScreen() {
                 <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                   <GoogleMap
                     defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
-                    center={formData.latitude && formData.longitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : undefined}
+                    center={(() => {
+                      const lat = parseFloat(formData.latitude || '');
+                      const lng = parseFloat(formData.longitude || '');
+                      return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : undefined;
+                    })()}
                     defaultZoom={13}
                     mapId={MAP_ID}
                     onClick={(e) => {
@@ -638,7 +652,11 @@ export default function AddGroundScreen() {
                   >
                     {formData.latitude && formData.longitude && (
                       <Marker 
-                        position={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }} 
+                        position={(() => {
+                          const lat = parseFloat(formData.latitude || '');
+                          const lng = parseFloat(formData.longitude || '');
+                          return (!isNaN(lat) && !isNaN(lng)) ? { lat, lng } : { lat: 28.4595, lng: 77.0266 };
+                        })()} 
                         icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
                       />
                     )}
@@ -760,6 +778,41 @@ export default function AddGroundScreen() {
             <Switch
               value={formData.has_washrooms}
               onValueChange={(value) => setFormData({ ...formData, has_washrooms: value })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 Umpires</Text>
+            <Switch
+              value={formData.has_umpires}
+              onValueChange={(value) => setFormData({ ...formData, has_umpires: value })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 New Balls</Text>
+            <Switch
+              value={formData.has_new_balls}
+              onValueChange={(value) => setFormData({ ...formData, has_new_balls: value })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Scoring</Text>
+            <Switch
+              value={formData.has_scoring}
+              onValueChange={(value) => setFormData({ ...formData, has_scoring: value })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Practice Nets</Text>
+            <Switch
+              value={formData.has_practice_nets}
+              onValueChange={(value) => setFormData({ ...formData, has_practice_nets: value })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Swimming Pool</Text>
+            <Switch
+              value={formData.has_swimming_pool}
+              onValueChange={(value) => setFormData({ ...formData, has_swimming_pool: value })}
             />
           </View>
         </Card>

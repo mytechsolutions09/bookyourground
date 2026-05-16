@@ -25,7 +25,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY, formatTime } from '@/utils/helpers';
 import { makeGroundPath } from '@/utils/groundSlug';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1405,6 +1405,15 @@ export default function CheckoutScreen() {
                                                 <View style={styles.amenityIconBox}><Bath size={16} color="#64748B" /></View>
                                                 <View style={styles.amenityInfo}>
                                                     <RNText style={styles.amenityLabel}>Washrooms</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                        )}
+                                        {groundData?.has_swimming_pool && (
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Waves size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Pool</RNText>
                                                     <RNText style={styles.amenityValue}>Yes</RNText>
                                                 </View>
                                             </View>

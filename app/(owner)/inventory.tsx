@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
   tagFull: { backgroundColor: '#DEF7EC' },
   filterTagText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: Platform.OS === 'web' ? '600' : '800',
     color: '#6B7280',
   },
   filterTagTextActive: {
@@ -1000,14 +1000,14 @@ const styles = StyleSheet.create({
   dateDay: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'web' ? '500' : '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
   dateNum: {
     fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'web' ? '500' : '600',
     color: '#111827',
   },
   slotsWrapper: {
@@ -1034,11 +1034,11 @@ const styles = StyleSheet.create({
   },
   slotTime: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'web' ? '500' : '600',
   },
   slotStatus: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: Platform.OS === 'web' ? '500' : '700',
     marginTop: 1,
     textTransform: 'uppercase',
   },
@@ -1248,7 +1248,7 @@ const styles = StyleSheet.create({
   },
   venueTabText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: Platform.OS === 'web' ? '600' : '700',
     color: '#374151',
     maxWidth: 90,
   },
@@ -1328,7 +1328,7 @@ const styles = StyleSheet.create({
   },
   headerVenueNameText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: Platform.OS === 'web' ? '600' : '700',
     color: '#065F46',
     maxWidth: 200,
   },
