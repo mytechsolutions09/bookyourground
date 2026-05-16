@@ -696,11 +696,36 @@ function OwnerEarningsScreenInner() {
       setTransactions(limitedRows);
 
 
-      const { data: allData } = await supabase
+      let allDataQuery = supabase
         .from('bookings')
         .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, status, ground_price, notes, team_type, ground:grounds!inner(name, city, owner_id, pitch_type)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
+
+      if (venueId) {
+        allDataQuery = allDataQuery.eq('ground_id', venueId);
+      }
+      if (method === 'online') {
+        allDataQuery = allDataQuery.neq('payment_method', 'cash');
+      } else if (method === 'cash') {
+        allDataQuery = allDataQuery.eq('payment_method', 'cash');
+      }
+
+      if (dateRange === '7days') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        allDataQuery = allDataQuery.gte('created_at', d.toISOString());
+      } else if (dateRange === '30days') {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        allDataQuery = allDataQuery.gte('created_at', d.toISOString());
+      } else if (dateRange === 'month') {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        allDataQuery = allDataQuery.gte('created_at', firstDay);
+      }
+
+      const { data: allData } = await allDataQuery;
 
       const allRows = (allData ?? []) as any[];
       let total = 0;
@@ -772,9 +797,7 @@ function OwnerEarningsScreenInner() {
         total += netAmt;
 
         if (row.payment_method && row.payment_method.toLowerCase() === 'cash') {
-          if (row.payment_received) {
-            offlineEarningsTotal += netAmt;
-          }
+          offlineEarningsTotal += netAmt;
         } else {
           // Wallet, Credits, and Online Gateway payments are all considered 'Online' for bifurcation
           onlineEarningsTotal += netAmt;
@@ -1077,7 +1100,7 @@ function OwnerEarningsScreenInner() {
           horizontal 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.filterRow, { flexDirection: 'row', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap' }]}
-          style={{ marginBottom: 16 }}
+          style={{ width: '100%', marginBottom: 16 }}
         >
           {/* ... existing filter content ... */}
           <View style={[styles.filterGroup, { minWidth: 140 }]}>
@@ -1216,7 +1239,7 @@ function OwnerEarningsScreenInner() {
           style={styles.tableScroll}
         >
           <View style={[styles.table, { minWidth: isCompact ? 600 : '100%' }]}>
-            <View style={[styles.tableHeader, { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
+            <View style={[styles.tableHeader, { borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
               <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
               <Text style={[styles.headerText, { flex: 1 }]}>Venue & Customer</Text>
               <Text style={[styles.headerText, { width: 80 }]}>Payment</Text>
@@ -1246,7 +1269,7 @@ function OwnerEarningsScreenInner() {
                 </View>
               ) : (
                 combined.map((item) => (
-                  <View key={item.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
+                  <View key={item.id} style={styles.tableRow}>
                     <View style={{ width: 100 }}>
                       <Text style={styles.cellTextMain}>
                         {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
@@ -1671,18 +1694,19 @@ function OwnerEarningsScreenInner() {
 
   
 
-      <View style={styles.sectionCard}>
+      <View style={[styles.sectionCard, { width: '100%' }]}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: '100%' }} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={[styles.table, { minWidth: isCompact ? 500 : '100%' }]}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
+              <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
               <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
-              <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
+              <Text style={[styles.headerText, { width: 90 }]}>Payment</Text>
+              <Text style={[styles.headerText, { width: 90, textAlign: 'right' }]}>Amount</Text>
             </View>
               {transactions.map((tx) => (
                   <View key={tx.id} style={styles.tableRow}>
-                    <View style={{ width: 120 }}>
+                    <View style={{ width: 100 }}>
                       <Text style={styles.cellTextMain}>
                         {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
                       </Text>
@@ -1690,12 +1714,34 @@ function OwnerEarningsScreenInner() {
                         {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </Text>
                     </View>
-                    <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
-                      {tx.ground?.name || 'Venue'}
-                    </Text>
-                    <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '400', color: '#1E293B' }]}>
-                      {formatCurrency(tx.calculated_net || 0)}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.cellTextMain, { color: '#1E293B' }]} numberOfLines={1}>
+                        {tx.ground?.name || 'Venue'}
+                      </Text>
+                      <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
+                        ID: #{tx.id.split('-')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    
+                    <View style={{ width: 90 }}>
+                      <View style={[
+                        styles.methodBadge, 
+                        { backgroundColor: tx.payment_method === 'cash' ? (tx.payment_received ? '#F1F5F9' : '#FEF3C7') : '#F1F5F9' }
+                      ]}>
+                        <Text style={[
+                          styles.methodBadgeText,
+                          { color: tx.payment_method === 'cash' ? (tx.payment_received ? '#475569' : '#92400E') : '#475569' }
+                        ]}>
+                          {tx.payment_method === 'cash' ? (tx.payment_received ? 'PAID' : 'CASH') : (tx.payment_method === 'wallet' ? 'WALLET' : 'ONLINE')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ width: 90, alignItems: 'flex-end' }}>
+                      <Text style={[styles.cellTextMain, { fontWeight: '500', color: '#1E293B' }]}>
+                        {formatCurrency(tx.calculated_net || 0)}
+                      </Text>
+                    </View>
                   </View>
               ))}
 
@@ -1894,8 +1940,7 @@ function OwnerEarningsScreenInner() {
       contentContainerStyle={[
         styles.scrollContent,
         { flexGrow: 1, paddingBottom: 24 },
-        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any,
-        viewMode === 'summary' && Platform.OS === 'web' && { maxWidth: '100%', paddingHorizontal: isCompact ? 0 : 40 }
+        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
       ]}
     >
       <View style={styles.viewToggleOuter}>
@@ -1953,11 +1998,35 @@ function OwnerEarningsScreenInner() {
               </View>
             </View>
           ) : viewMode === 'summary' ? (
-            renderSummaryTable()
+            <View style={[
+              styles.layoutRow, 
+              isStacking && { flexDirection: 'column', gap: 16 }
+            ]}>
+              <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16, flex: undefined }]}>
+                {renderSummaryTable()}
+              </View>
+              {!isStacking && (
+                <View style={[styles.rightCol, { paddingTop: 16 }]}>
+                  {renderRightColumn()}
+                </View>
+              )}
+            </View>
           ) : viewMode === 'analytics' ? (
             renderAnalyticsView()
           ) : (
-            renderPayoutsHistory()
+            <View style={[
+              styles.layoutRow, 
+              isStacking && { flexDirection: 'column', gap: 16 }
+            ]}>
+              <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16, flex: undefined }]}>
+                {renderPayoutsHistory()}
+              </View>
+              {!isStacking && (
+                <View style={[styles.rightCol, { paddingTop: 16 }]}>
+                  {renderRightColumn()}
+                </View>
+              )}
+            </View>
           )}
         </Animated.View>
       </ScrollView>
@@ -2326,6 +2395,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    width: '100%',
+    alignSelf: 'stretch',
   },
   sectionTitle: {
     fontSize: 16,
@@ -2763,20 +2834,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   summaryTableWrapper: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingTop: 16,
     paddingBottom: 40,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
     marginBottom: 24,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
   filterGroup: {
     flex: 1,

@@ -406,6 +406,41 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     }
   }, [grounds, selectedGroundId, initialGroundId, useLandingSearchFlow]);
 
+  // Sync initial props to state when they change
+  useEffect(() => {
+    if (initialDate) setBookingDate(initialDate);
+  }, [initialDate]);
+
+  useEffect(() => {
+    if (initialStartTime) {
+      const hhmm = normalizeDbTimeToHHMM(initialStartTime);
+      if (hhmm) setStartTime(hhmm as TimeString);
+    }
+  }, [initialStartTime]);
+
+  // For cricket/nets, auto-select the initial slot in selectedNetsSlots
+  useEffect(() => {
+    if (
+      initialStartTime && 
+      initialDate && 
+      supportMultipleSlots && 
+      selectedGroundId && 
+      selectedNetsSlots.length === 0
+    ) {
+      const hhmm = normalizeDbTimeToHHMM(initialStartTime);
+      if (hhmm) {
+        const prefix = `${initialDate}__${hhmm}__`;
+        // We use a simplified version of the price logic here since the full price map might still be loading
+        // The goal is just to get the slot selected; price will be refined as data loads
+        const basePrice = (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+        const factor = isNets ? 1.0 : (teamType === 'one' ? 0.5 : 1.0);
+        const price = basePrice * factor;
+        const slotWithPrice = `${prefix}${teamType}__${price}`;
+        setSelectedNetsSlots([slotWithPrice]);
+      }
+    }
+  }, [initialStartTime, initialDate, supportMultipleSlots, selectedGroundId, teamType, isNets, selectedGround]);
+
   const selectedGround = useMemo(
     () => grounds.find((g) => g.id === selectedGroundId) ?? null,
     [grounds, selectedGroundId],
@@ -431,11 +466,11 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     const map = new Map<string, string>();
     locationRows.forEach((row) => {
       const key = `${row.city}__${row.state}`;
-      map.set(key, row.label?.trim() || `${row.city}, ${row.state}`);
+      map.set(key, row.label?.split(',')[0].trim() || row.city);
     });
     grounds.forEach((g) => {
       const key = locationKeyForGround(g);
-      if (!map.has(key)) map.set(key, `${g.city}, ${g.state}`);
+      if (!map.has(key)) map.set(key, g.city);
     });
     const options = Array.from(map.entries()).map(([key, label]) => ({ key, label }));
     return [{ key: '', label: 'All Locations' }, ...options];
@@ -2563,14 +2598,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         <ColumnComponent
           style={[
             isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
-            isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#FFFFFF', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }
+            isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { position: 'sticky', top: 60, zIndex: 10, backgroundColor: '#FFFFFF', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }
           ]}
           showsVerticalScrollIndicator={false}
         >
           {isScrolled ? (
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 16 }}>
               <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{locationOptions.find(o => o.key === locationKey)?.label || locationKey?.replace('__', ', ') || 'Location'}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{locationOptions.find(o => o.key === locationKey)?.label || locationKey?.split('__')[0] || 'Location'}</Text>
               </View>
               <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
                 <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{typeKey || 'Type'}</Text>

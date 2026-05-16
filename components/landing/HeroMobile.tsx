@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Image, Platform } from 'react-native';
-import { Search, MapPin, Bell, ChevronDown, LayoutGrid, Circle, Trophy, Square, Grid, Layers } from 'lucide-react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Image, Platform, TouchableOpacity } from 'react-native';
+import { Search, MapPin, Bell, ChevronDown, Sunrise, Sun, Sunset, Moon } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 interface HeroMobileProps {
@@ -9,20 +9,11 @@ interface HeroMobileProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   handleSearch: () => void;
-  sportFilter: string;
-  setSportFilter: (sport: string) => void;
   profile: any;
   setShowProfileModal: (show: boolean) => void;
+  unreadCount?: number;
 }
 
-const SPORT_CATEGORIES = [
-  { label: 'All', value: 'all', icon: LayoutGrid },
-  { label: 'Football', value: 'football', icon: Circle },
-  { label: 'Cricket', value: 'cricket', icon: Trophy },
-  { label: 'Box Cricket', value: 'box', icon: Square },
-  { label: 'Nets', value: 'nets', icon: Grid },
-  { label: 'Multi-Sport', value: 'multi', icon: Layers },
-];
 
 export default function HeroMobile({
   cityName,
@@ -30,10 +21,9 @@ export default function HeroMobile({
   searchQuery,
   setSearchQuery,
   handleSearch,
-  sportFilter,
-  setSportFilter,
   profile,
   setShowProfileModal,
+  unreadCount = 0,
 }: HeroMobileProps) {
   return (
     <View style={styles.container}>
@@ -52,7 +42,11 @@ export default function HeroMobile({
         <View style={styles.headerActions}>
           <Pressable style={styles.iconButton} onPress={() => router.push('/profile/notifications' as any)}>
             <Bell size={20} color="#01e669" />
-            <View style={styles.notificationDot} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationDot}>
+                <Text style={styles.notificationDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
           </Pressable>
           <Pressable onPress={() => setShowProfileModal(true)} style={styles.avatarButton}>
             {profile?.avatar_url ? (
@@ -69,14 +63,22 @@ export default function HeroMobile({
       {/* Greeting */}
       <View style={styles.greetingContainer}>
         <Text style={styles.greetingSub}>
-          {new Date().getHours() < 12 
-            ? 'GOOD MORNING' 
-            : new Date().getHours() < 16 
-              ? 'GOOD AFTERNOON' 
-              : 'GOOD EVENING'}
+          {(() => {
+            const hour = new Date().getHours();
+            if (hour >= 0 && hour < 5) return 'Good Night';
+            if (hour < 12) return 'Good Morning';
+            if (hour < 17) return 'Good Afternoon';
+            return 'Good Evening';
+          })()}
         </Text>
         <Text style={styles.greetingMain}>
-          Hey, {(profile?.full_name?.split(' ')[0] || profile?.username || 'Albie').toUpperCase()}
+          {(() => {
+            const fullName = profile?.full_name || profile?.username || 'Albie';
+            return fullName
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+          })()}
         </Text>
       </View>
 
@@ -95,31 +97,6 @@ export default function HeroMobile({
           />
         </View>
       </View>
-
-      {/* Categories */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}
-      >
-        {SPORT_CATEGORIES.map((cat) => {
-          const isActive = sportFilter === cat.value;
-          return (
-            <Pressable
-              key={cat.value}
-              onPress={() => setSportFilter(cat.value)}
-              style={[
-                styles.categoryChip,
-                isActive ? styles.categoryChipActive : styles.categoryChipInactive,
-              ]}
-            >
-              <Text style={[styles.categoryText, isActive ? styles.categoryTextActive : styles.categoryTextInactive]}>
-                {cat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
     </View>
   );
 }
@@ -127,8 +104,8 @@ export default function HeroMobile({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#06392e', // Dark green background
-    paddingTop: 60,
-    paddingBottom: 60,
+    paddingTop: 50,
+    paddingBottom: 10,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -188,21 +165,32 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   notificationDot: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 2,
     backgroundColor: '#00EA6B',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#06392E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  notificationDotText: {
+    color: '#06392E',
+    fontSize: 7.5,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+    textAlign: 'center',
   },
   avatarButton: {
     width: 40,
@@ -226,7 +214,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   greetingContainer: {
-    marginBottom: 45,
+    marginBottom: 25,
   },
   greetingSub: {
     color: '#00EA6B',
@@ -285,8 +273,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 30,
+    paddingVertical: 14,
+    marginTop: 35,
+    marginBottom: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

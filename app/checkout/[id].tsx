@@ -27,6 +27,7 @@ import { formatCurrency, formatDateDDMMYYYY, formatTime } from '@/utils/helpers'
 import { makeGroundPath } from '@/utils/groundSlug';
 import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CheckoutSkeleton from '@/components/landing/CheckoutSkeleton';
@@ -292,31 +293,97 @@ export default function CheckoutScreen() {
     const fetchWalletBalance = async () => {
         if (!user) return;
         try {
+            const isOwner = profile?.role === 'ground_owner';
+            
+            // 1. Fetch DB balance
             const { data: walletData, error: walletError } = await supabase
                 .from('wallets')
                 .select('balance')
                 .eq('user_id', user.id)
                 .single();
             
-            if (walletError) throw walletError;
+            if (walletError && walletError.code !== 'PGRST116') throw walletError;
 
-            // Subtract pending withdrawals to get actual available balance
-            const { data: withdrawals, error: withdrawalError } = await supabase
-                .from('withdrawals')
-                .select('amount')
-                .eq('owner_id', user.id)
-                .in('status', ['pending', 'processing']);
+            let finalBalance = walletData?.balance || 0;
 
-            if (withdrawalError) {
-                console.error('Error fetching pending withdrawals:', withdrawalError);
-                if (walletData) setWalletBalance(walletData.balance);
-                return;
+            if (isOwner) {
+                // Fetch platform settings for accurate fee recalculation
+                const { data: settingsData } = await supabase
+                    .from('platform_settings')
+                    .select('key, value');
+                
+                const settings: any = {};
+                settingsData?.forEach(s => { settings[s.key] = s.value; });
+
+                const cricketFixedFee = Number(settings.cricket_owner_fee_fixed ?? 100);
+                const netsFixedFee = Number(settings.nets_owner_fee_fixed ?? 25);
+                const rate = Number(settings.user_platform_fee_rate ?? 0.05);
+                const gstRate = Number(settings.gst_rate ?? 0.18);
+
+                // Fetch bookings summary
+                const { data: bookings } = await supabase
+                    .from('bookings')
+                    .select('total_amount, platform_fee_owner, gst_owner, payment_method, notes, ground:grounds!inner(owner_id, pitch_type, name)')
+                    .eq('ground.owner_id', user.id)
+                    .in('status', ['confirmed', 'completed']);
+
+                let pool = 0;
+                (bookings || []).forEach(b => {
+                    const ground = Array.isArray(b.ground) ? b.ground[0] : b.ground;
+                    const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+                    const groundName = (ground?.name ?? '').toLowerCase();
+                    const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
+                    const isCricket = pitchType === 'cricket ground';
+
+                    // Recalculate fee to match Earnings/Wallet logic
+                    let ownerPf = 0;
+                    if (isNet) {
+                        let slotsCount = 1;
+                        if (b.notes) {
+                            const match = b.notes.match(/Slots: ([^)]+)/);
+                            if (match) slotsCount = match[1].split(',').length;
+                        }
+                        ownerPf = netsFixedFee * slotsCount;
+                    } else if (isCricket) {
+                        const label = cricketTeamsLabelFromBooking(ground?.pitch_type, b.notes);
+                        const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+                        ownerPf = cricketFixedFee * teams;
+                    } else {
+                        ownerPf = Number(b.total_amount || 0) * rate;
+                    }
+                    
+                    const fee = ownerPf * (1 + gstRate);
+                    const isOnline = b.payment_method && b.payment_method.toLowerCase() !== 'cash';
+                    
+                    if (isOnline) {
+                        pool += (Number(b.total_amount) - fee);
+                    } else {
+                        pool -= fee;
+                    }
+                });
+
+                // Fetch all non-rejected withdrawals
+                const { data: withdrawals } = await supabase
+                    .from('withdrawals')
+                    .select('amount')
+                    .eq('owner_id', user.id)
+                    .neq('status', 'rejected');
+
+                const totalWithdrawn = (withdrawals || []).reduce((acc, w) => acc + (Number(w.amount) || 0), 0);
+
+                // Fetch system-level wallet transactions
+                const { data: wtx } = await supabase
+                    .from('wallet_transactions')
+                    .select('amount')
+                    .eq('user_id', user.id)
+                    .not('description', 'ilike', '%Synchronization%');
+
+                const totalWtx = (wtx || []).reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+
+                finalBalance = pool - totalWithdrawn + totalWtx;
             }
 
-            const pendingAmount = (withdrawals || []).reduce((acc, w) => acc + (Number(w.amount) || 0), 0);
-            const availableBalance = (walletData?.balance || 0) - pendingAmount;
-            
-            setWalletBalance(availableBalance);
+            setWalletBalance(finalBalance);
         } catch (e) {
             console.error('Error fetching wallet balance:', e);
         }
@@ -1606,7 +1673,9 @@ export default function CheckoutScreen() {
                                     <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>Wallet Balance</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Available: {formatCurrency(walletBalance)}</RNText>
+                                        <RNText style={styles.methodSubtitleNew}>
+                                            Available: {walletBalance < 0 ? `₹-(${formatCurrency(Math.abs(walletBalance)).replace('₹', '')})` : formatCurrency(walletBalance)}
+                                        </RNText>
                                     </View>
                                     <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
                                         {selectedGateway === 'wallet' && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
