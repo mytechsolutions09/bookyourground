@@ -971,7 +971,7 @@ export default function OwnerDashboardScreen() {
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 24, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
           >
@@ -985,7 +985,7 @@ export default function OwnerDashboardScreen() {
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 24, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderPersonalActivity()}
@@ -998,7 +998,7 @@ export default function OwnerDashboardScreen() {
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 24, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderProfileTab()}
@@ -1012,7 +1012,7 @@ export default function OwnerDashboardScreen() {
               onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
               scrollEventThrottle={16}
               style={styles.container}
-              contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+              contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 24, paddingHorizontal: 16 }]}
               showsVerticalScrollIndicator={false}
             >
               {renderPayoutSetup()}

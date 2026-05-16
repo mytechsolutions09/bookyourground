@@ -9,9 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
-  TextInput,
   Pressable,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -57,6 +57,7 @@ interface SavedSlot {
 
 export default function EditNetPage() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -602,7 +603,7 @@ export default function EditNetPage() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, Platform.OS === 'web' && width < 768 && { paddingHorizontal: 12 }]}>
         <Text style={styles.title}>Edit Cricket Net</Text>
 
         <Card style={styles.section}>
@@ -900,7 +901,7 @@ export default function EditNetPage() {
         <Card style={[styles.section, { marginBottom: 0 }]}>
           <Text style={styles.sectionTitle}>Add Time Slots</Text>
           
-          <View style={styles.splitRow}>
+          <View style={[styles.splitRow, width < 768 && { flexDirection: 'column' }]}>
             <View style={styles.leftCol}>
               <Text style={styles.subLabel}>Duration (minutes) *</Text>
               <SimpleDropdown

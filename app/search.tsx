@@ -306,11 +306,20 @@ export default function SearchScreen() {
             totalMatchPrice = currentSlotPrice * hours;
           }
 
-          return { ...m, total_amount: Math.round((totalMatchPrice / 2) * 100) / 100 };
+          const enhancedMatch = { ...m, total_amount: Math.round((totalMatchPrice / 2) * 100) / 100 };
+          
+          // Price filter for matches
+          if (price && price.label !== 'All Prices') {
+            if (enhancedMatch.total_amount < price.min || enhancedMatch.total_amount > price.max) {
+              return null; // Exclude
+            }
+          }
+
+          return enhancedMatch;
         } catch (e) {
           return m;
         }
-      }));
+      })).then(results => results.filter(m => m !== null));
 
       setResults({
         grounds: gs || [],
@@ -774,12 +783,12 @@ export default function SearchScreen() {
           )}
 
           {/* Inline Modals for Mobile */}
-          {isCompact && (showLocationModal || showTypeModal || showTimeModal || showDateModal) && (
+          {isCompact && (showLocationModal || showTypeModal || showTimeModal || showDateModal || showPriceModal) && (
             <View style={styles.mobileFilterDropdownOverlay}>
               <View style={styles.mobileFilterDropdownContent}>
                 <View style={styles.mobileDropdownHeader}>
                   <Text style={styles.mobileDropdownTitle}>
-                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : showPriceModal ? 'Select Price' : 'Select Time'}
+                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : showPriceModal ? 'Select Price' : showTimeModal ? 'Select Time' : 'Filter'}
                   </Text>
                   <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); setShowPriceModal(false); }}>
                     <Text style={styles.closeText}>Done</Text>
@@ -799,12 +808,26 @@ export default function SearchScreen() {
                     </>
                   ) : showTypeModal ? (
                     <>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setTypeKey(''); setShowTypeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All</Text>
+                      <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(''); setShowTypeModal(false); }}>
+                        <Text style={styles.dropdownOptionText}>All Venues</Text>
+                      </Pressable>
+                      <Pressable 
+                        style={styles.dropdownOption} 
+                        onPress={() => { setActiveTab('matches'); setTypeKey(''); setShowTypeModal(false); }}
+                      >
+                        <Text style={styles.dropdownOptionText}>Find Opposition</Text>
                       </Pressable>
                       {types.map(t => (
-                        <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setTypeKey(t.name); setShowTypeModal(false); }}>
+                        <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); setShowTypeModal(false); }}>
                           <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
+                        </Pressable>
+                      ))}
+                    </>
+                  ) : showPriceModal ? (
+                    <>
+                      {PRICE_RANGES.map(p => (
+                        <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); setShowPriceModal(false); }}>
+                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
                         </Pressable>
                       ))}
                     </>
@@ -849,18 +872,6 @@ export default function SearchScreen() {
                           }}
                         />
                       </View>
-                    </>
-                  ) : showPriceModal ? (
-                    <>
-                      {PRICE_RANGES.map(p => (
-                        <Pressable 
-                          key={p.label} 
-                          style={styles.dropdownOption} 
-                          onPress={() => { setPriceRange(p); setShowPriceModal(false); }}
-                        >
-                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
-                        </Pressable>
-                      ))}
                     </>
                   ) : (
                     <>
@@ -1091,15 +1102,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     zIndex: 1000,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   mobileFilterDropdownContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
   },
   mobileDropdownHeader: {
     flexDirection: 'row',
