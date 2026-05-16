@@ -83,7 +83,7 @@ export default function ForgotPasswordScreen() {
                     label="Email Address"
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="Enter your email"
+                    placeholder=""
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
@@ -177,7 +177,7 @@ export default function ForgotPasswordScreen() {
                   style={styles.textInput}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Enter your email"
+                  placeholder=""
                   placeholderTextColor="#94A3B8"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -224,7 +224,8 @@ function WebInput(props: any) {
           fontSize: 14,
           backgroundColor: '#06392e',
           color: '#f9fafb',
-        }}
+          outlineStyle: 'none',
+        } as any}
         placeholderTextColor="#6b7280"
         {...rest}
       />

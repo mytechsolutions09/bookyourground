@@ -92,6 +92,10 @@ export interface Database {
           pricing_model: 'hours' | 'overs';
           is_indoor: boolean;
           has_bowling_machine: boolean;
+          has_umpires: boolean;
+          has_new_balls: boolean;
+          has_scoring: boolean;
+          has_practice_nets: boolean;
           lanes_count: number;
           created_at: string;
           updated_at: string;
@@ -124,6 +128,10 @@ export interface Database {
           pricing_model?: 'hours' | 'overs';
           is_indoor?: boolean;
           has_bowling_machine?: boolean;
+          has_umpires?: boolean;
+          has_new_balls?: boolean;
+          has_scoring?: boolean;
+          has_practice_nets?: boolean;
           lanes_count?: number;
           created_at?: string;
           updated_at?: string;
@@ -156,6 +164,10 @@ export interface Database {
           pricing_model?: 'hours' | 'overs';
           is_indoor?: boolean;
           has_bowling_machine?: boolean;
+          has_umpires?: boolean;
+          has_new_balls?: boolean;
+          has_scoring?: boolean;
+          has_practice_nets?: boolean;
           lanes_count?: number;
           created_at?: string;
           updated_at?: string;

@@ -166,16 +166,9 @@ export default function GroundCard({
               </View>
 
               {showBookButton ? (
-                <TouchableOpacity 
-                  style={styles.glassBookBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onPress();
-                  }}
-                >
-                  <Text style={styles.glassBookBtnText}>BOOK NOW</Text>
-                  <ChevronRight size={14} color="#FFFFFF" strokeWidth={3} />
-                </TouchableOpacity>
+                <View style={styles.glassBookLink}>
+                  <Text style={styles.glassBookLinkText}>Book Now</Text>
+                </View>
               ) : (
                 <View style={styles.glassViewDetails}>
                   <Text style={styles.glassViewDetailsText}>View Details</Text>
@@ -865,25 +858,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: 'Inter',
   },
-  glassBookBtn: {
+  glassBookLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#01b854',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 100,
     gap: 4,
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  glassBookBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
+  glassBookLinkText: {
+    color: '#01b854',
+    fontSize: 12,
+    fontWeight: '800',
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   glassViewDetails: {

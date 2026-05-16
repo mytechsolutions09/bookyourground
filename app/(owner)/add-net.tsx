@@ -72,6 +72,10 @@ export default function AddNetPage() {
     has_bowling_machine: false,
     has_floodlights: false,
     has_manual_throwdown: false,
+    has_umpires: false,
+    has_new_balls: false,
+    has_scoring: false,
+    has_practice_nets: false,
     pricing_model: 'hours' as 'hours' | 'overs',
     surface_type: 'Turf', // Default
     latitude: '',
@@ -325,6 +329,10 @@ export default function AddNetPage() {
             is_indoor: formData.is_indoor,
             has_bowling_machine: formData.has_bowling_machine,
             has_manual_throwdown: formData.has_manual_throwdown,
+            has_umpires: formData.has_umpires,
+            has_new_balls: formData.has_new_balls,
+            has_scoring: formData.has_scoring,
+            has_practice_nets: formData.has_practice_nets,
             lanes_count: 1, // Each listing represents 1 lane
             base_price_per_hour: 0,
             latitude: formData.latitude ? parseFloat(formData.latitude) : null,
@@ -616,6 +624,34 @@ export default function AddNetPage() {
             <Switch
               value={formData.has_floodlights}
               onValueChange={(val) => setFormData({ ...formData, has_floodlights: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 Umpires</Text>
+            <Switch
+              value={formData.has_umpires}
+              onValueChange={(val) => setFormData({ ...formData, has_umpires: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>2 New Balls</Text>
+            <Switch
+              value={formData.has_new_balls}
+              onValueChange={(val) => setFormData({ ...formData, has_new_balls: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Scoring</Text>
+            <Switch
+              value={formData.has_scoring}
+              onValueChange={(val) => setFormData({ ...formData, has_scoring: val })}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Practice Nets</Text>
+            <Switch
+              value={formData.has_practice_nets}
+              onValueChange={(val) => setFormData({ ...formData, has_practice_nets: val })}
             />
           </View>
         </Card>

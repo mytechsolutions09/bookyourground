@@ -162,9 +162,8 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
               })()}
             </Text>
           </Text>
-          <View style={styles.bookNowBtn}>
-            <Text style={styles.bookNowText}>Book</Text>
-            <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.5} />
+          <View style={styles.bookLinkContainer}>
+            <Text style={styles.bookLinkText}>Book Now</Text>
           </View>
         </View>
       </View>
@@ -522,8 +521,8 @@ export default function HomeScreen() {
                               ? `₹${Math.min(...g.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
                               : 'See Slots')}
                         </Text>
-                        <View style={styles.bookSmallBtn}>
-                          <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
+                        <View style={styles.bookLinkContainerSmall}>
+                          <Text style={styles.bookLinkTextSmall}>Book Now</Text>
                         </View>
                       </View>
                     )}
@@ -1060,19 +1059,28 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  bookNowBtn: {
+  bookLinkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#01b854',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
-  bookNowText: {
-    color: '#FFFFFF',
+  bookLinkText: {
+    color: '#01b854',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  bookLinkContainerSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bookLinkTextSmall: {
+    color: '#01b854',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
   // ── Vertical list (search results) ───────────

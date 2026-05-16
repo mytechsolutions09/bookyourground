@@ -334,7 +334,8 @@ export default function AdminBookingsScreen() {
           ),
           user:profiles(full_name, phone)
         `)
-        .order('booking_date', { ascending: false });
+        .order('booking_date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (typeFilter !== 'all') {
         // Since we alias as 'ground', we filter on the joined table's column

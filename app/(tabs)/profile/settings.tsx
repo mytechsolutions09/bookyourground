@@ -23,6 +23,11 @@ function UserSettingsInner() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const hasChanges = 
+    fullName.trim() !== (profile?.full_name || '') ||
+    phone.trim() !== (profile?.phone || '') ||
+    teamName.trim() !== (profile?.team_name || '');
+
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
 
@@ -168,15 +173,17 @@ function UserSettingsInner() {
             />
           </View>
 
-          <View style={styles.actionsRow}>
-            <Button
-              title={submitting ? 'Saving...' : 'Save Changes'}
-              onPress={handleUpdateProfile}
-              loading={submitting}
-              disabled={submitting}
-              style={styles.submitButton}
-            />
-          </View>
+          {hasChanges && (
+            <View style={styles.actionsRow}>
+              <Button
+                title={submitting ? 'Saving...' : 'Save Changes'}
+                onPress={handleUpdateProfile}
+                loading={submitting}
+                disabled={submitting}
+                style={styles.submitButton}
+              />
+            </View>
+          )}
         </Card>
 
         <Card style={[styles.panel, { marginTop: 16 }]}>

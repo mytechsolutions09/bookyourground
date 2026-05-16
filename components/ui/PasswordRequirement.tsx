@@ -17,35 +17,26 @@ export default function PasswordRequirement({ label, met, theme = 'dark' }: Pass
   const metText = theme === 'light' ? '#065f46' : '#6ee7b7';
   
   return (
-    <View style={[
-      styles.chip, 
-      { backgroundColor: met ? metBg : unmetBg }
-    ]}>
+    <View style={styles.container}>
       <Text style={[
         styles.text, 
         { color: met ? metText : unmetText }
       ]}>
-        {label}
+        {met ? '✓ ' : '○ '}{label}
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  chip: { 
-    paddingHorizontal: 10, 
-    paddingVertical: 4, 
-    borderRadius: 20, 
-    marginRight: 6,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  container: { 
+    marginRight: 12,
+    marginTop: 6,
   },
   text: { 
-    fontSize: 10, 
+    fontSize: 11, 
     fontFamily: 'Inter',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

@@ -47,10 +47,23 @@ function AdminPayoutsInner() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 50;
 
-  const loadData = async () => {
+  const loadData = async (isLoadMore = false) => {
     try {
-      setLoading(true);
+      if (isLoadMore) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setPage(0);
+        setHasMore(true);
+      }
+
+      const currentPage = isLoadMore ? page + 1 : 0;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -72,10 +85,11 @@ function AdminPayoutsInner() {
           user:profiles!user_id(full_name, email)
         `)
         .eq('payout_status', 'completed')
-        .order('payout_processed_at', { ascending: false });
+        .order('payout_processed_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      setBookings(data || []);
 
       const { data: withdrawalData, error: withdrawalError } = await supabase
         .from('withdrawals')
@@ -87,19 +101,37 @@ function AdminPayoutsInner() {
           owner_id,
           owner:profiles!owner_id(full_name, email)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (withdrawalError) throw withdrawalError;
-      setWithdrawals(withdrawalData || []);
+      
+      if (isLoadMore) {
+        setBookings(prev => {
+          const combined = [...prev, ...(data || [])];
+          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        });
+        setWithdrawals(prev => {
+          const combined = [...prev, ...(withdrawalData || [])];
+          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        });
+      } else {
+        setBookings(data || []);
+        setWithdrawals(withdrawalData || []);
+      }
+
+      setPage(currentPage);
+      setHasMore(((data?.length || 0) === PAGE_SIZE) || ((withdrawalData?.length || 0) === PAGE_SIZE));
     } catch (e) {
       console.error('Error loading payouts:', e);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, []);
 
   // Group bookings by Date and Owner/Ground
@@ -278,7 +310,28 @@ function AdminPayoutsInner() {
       <FlatList
         data={payoutSubTab === 'requests' ? filteredWithdrawals : filteredGroups}
         keyExtractor={item => item.id}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+        refreshControl={<RefreshControl refreshing={loading && !loadingMore} onRefresh={() => loadData(false)} />}
+        onEndReached={() => {
+          if (hasMore && !loadingMore) {
+            loadData(true);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() => (
+          hasMore ? (
+            <TouchableOpacity 
+              style={{ padding: 16, alignItems: 'center' }}
+              onPress={() => loadData(true)}
+              disabled={loadingMore}
+            >
+              <Text style={{ color: '#10B981', fontWeight: '600' }}>
+                {loadingMore ? 'LOADING...' : 'LOAD MORE'}
+              </Text>
+            </TouchableOpacity>
+          ) : (bookings.length > 0 || withdrawals.length > 0) ? (
+            <Text style={{ textAlign: 'center', padding: 16, color: '#9CA3AF' }}>That's all for now!</Text>
+          ) : null
+        )}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           payoutSubTab === 'requests' ? (

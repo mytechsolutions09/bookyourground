@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal, Pressable } from 'react-native';
 import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote, LandPlot } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -210,10 +210,16 @@ export default function OwnerBookingsScreen() {
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
   const isLight = true; // Uniform light theme across platforms
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
+  const [tempFromDate, setTempFromDate] = useState<string | null>(null);
+  const [tempToDate, setTempToDate] = useState<string | null>(null);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'wallet' | 'online' | 'cash'>('all');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('booked_at');
   const [sortAsc, setSortAsc] = useState(false);
@@ -522,10 +528,126 @@ export default function OwnerBookingsScreen() {
 
     setSelectedSlotBookings(relatedBookings);
     setIsSlotModalVisible(true);
+  };  const setQuickRange = (range: string) => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (range) {
+      case 'all':
+        setTempFromDate(null);
+        setTempToDate(null);
+        return;
+      case 'today':
+        start = today;
+        end = today;
+        break;
+      case 'yesterday':
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        break;
+      case 'this_week':
+        const day = today.getDay();
+        start.setDate(today.getDate() - day);
+        end.setDate(today.getDate() + (6 - day));
+        break;
+      case 'last_week':
+        const lastWeekDay = today.getDay();
+        start.setDate(today.getDate() - lastWeekDay - 7);
+        end.setDate(today.getDate() - lastWeekDay - 1);
+        break;
+      case 'this_month':
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'last_month':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+    }
+    setTempFromDate(start.toISOString().split('T')[0]);
+    setTempToDate(end.toISOString().split('T')[0]);
   };
 
+  const handleDateClick = (dateStr: string) => {
+    if (!tempFromDate || (tempFromDate && tempToDate)) {
+      setTempFromDate(dateStr);
+      setTempToDate(null);
+    } else {
+      if (dateStr < tempFromDate) {
+        setTempToDate(tempFromDate);
+        setTempFromDate(dateStr);
+      } else {
+        setTempToDate(dateStr);
+      }
+    }
+  };
 
-
+  const renderCalendar = (monthOffset: number) => {
+    const today = new Date();
+    const date = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const monthName = date.toLocaleString('default', { month: 'long' });
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    
+    const days = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+    
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+    
+    return (
+      <View style={styles.calMonth}>
+        <Text style={styles.calMonthTitle}>{monthName} {year}</Text>
+        <View style={styles.calGrid}>
+           <View style={styles.calHeaderRow}>
+             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+               <Text key={d} style={styles.calHeaderCell}>{d}</Text>
+             ))}
+           </View>
+           {weeks.map((week, wi) => (
+             <View key={wi} style={styles.calRow}>
+               {week.map((day, di) => {
+                 if (!day) return <View key={di} style={styles.calCell} />;
+                 
+                 const dateStr = day.toISOString().split('T')[0];
+                 const isSelected = tempFromDate === dateStr || tempToDate === dateStr;
+                 const isInRange = tempFromDate && tempToDate && dateStr > tempFromDate && dateStr < tempToDate;
+                 const isStart = tempFromDate === dateStr;
+                 const isEnd = tempToDate === dateStr;
+                 
+                 return (
+                   <TouchableOpacity 
+                     key={di} 
+                     style={[
+                       styles.calCell,
+                       isInRange && styles.calCellInRange,
+                       isStart && styles.calCellStart,
+                       isEnd && styles.calCellEnd,
+                       isSelected && styles.calCellSelected
+                     ]}
+                     onPress={() => handleDateClick(dateStr)}
+                   >
+                     <Text style={[
+                       styles.calDayText,
+                       isInRange && styles.calDayTextInRange,
+                       isSelected && styles.calDayTextSelected
+                     ]}>
+                       {day.getDate()}
+                     </Text>
+                   </TouchableOpacity>
+                 );
+               })}
+             </View>
+           ))}
+        </View>
+      </View>
+    );
+  };
 
   const availableDates = useMemo(
     () => Array.from(new Set(bookings.map((b) => b.booking_date))).sort(),
@@ -547,17 +669,29 @@ export default function OwnerBookingsScreen() {
           : b.ground.owner_id !== user?.id;
       });
 
-      const byDate = !selectedDate
-        ? byScope
-        : byScope.filter((b) => b.booking_date === selectedDate);
+      const byDate = byScope.filter((b) => {
+        if (fromDate && b.booking_date < fromDate) return false;
+        if (toDate && b.booking_date > toDate) return false;
+        return true;
+      });
+
+      const byPayment = paymentFilter === 'all'
+        ? byDate
+        : byDate.filter((b) => {
+            const method = (b.payment_method || '').toLowerCase();
+            if (paymentFilter === 'wallet') return method === 'wallet';
+            if (paymentFilter === 'cash') return method === 'cash';
+            if (paymentFilter === 'online') return method !== 'wallet' && method !== 'cash' && method !== '';
+            return true;
+          });
 
       const byStatus = activeTab === 'all'
-        ? byDate
+        ? byPayment
         : activeTab === 'upcoming'
-          ? byDate.filter((b) => b.booking_date >= todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
+          ? byPayment.filter((b) => b.booking_date >= todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
           : activeTab === 'past'
-            ? byDate.filter((b) => b.booking_date < todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
-            : byDate.filter((b) => b.status === 'cancelled');
+            ? byPayment.filter((b) => b.booking_date < todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
+            : byPayment.filter((b) => b.status === 'cancelled');
 
       const q = searchQuery.toLowerCase();
       const base = !searchQuery.trim() ? byStatus : byStatus.filter((b) => {
@@ -657,57 +791,61 @@ export default function OwnerBookingsScreen() {
 
       return sorted;
     },
-    [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, sortAsc, sortKey],
+    [bookings, activeTab, ownerScope, fromDate, toDate, paymentFilter, searchQuery, user?.id, sortAsc, sortKey],
   );
 
-  const todayIsoForCounts = useMemo(() => {
+  const getConsolidatedCount = (tab: string) => {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = `${d.getMonth() + 1}`.padStart(2, '0');
     const dd = `${d.getDate()}`.padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
+    const todayIso = `${yyyy}-${mm}-${dd}`;
 
-  const upcomingCount = useMemo(
-    () =>
-      bookings.filter(
-        (b) => {
-          const scopeMatch = ownerScope === 'all'
-            ? true
-            : ownerScope === 'own'
-              ? b.ground.owner_id === user?.id
-              : b.ground.owner_id !== user?.id;
-          return scopeMatch && b.booking_date >= todayIsoForCounts;
-        }
-      ).length,
-    [bookings, todayIsoForCounts, ownerScope, user?.id],
-  );
+    const byScope = bookings.filter((b) => {
+      if (ownerScope === 'all') return true;
+      return ownerScope === 'own'
+        ? b.ground.owner_id === user?.id
+        : b.ground.owner_id !== user?.id;
+    });
 
-  const pastCount = useMemo(
-    () =>
-      bookings.filter(
-        (b) => {
-          const scopeMatch = ownerScope === 'all'
-            ? true
-            : ownerScope === 'own'
-              ? b.ground.owner_id === user?.id
-              : b.ground.owner_id !== user?.id;
-          return scopeMatch && b.booking_date < todayIsoForCounts;
-        }
-      ).length,
-    [bookings, todayIsoForCounts, ownerScope, user?.id],
-  );
+    // Typically, status counts might ignore selectedDate or searchQuery to show global totals for that tab,
+    // but to be consistent with what 'All' means in this view, we'll respect the scope filter.
+    // We will NOT filter by selectedDate here so the tabs show total counts for the scope.
+    
+    const byPayment = paymentFilter === 'all'
+      ? byScope
+      : byScope.filter((b) => {
+          const method = (b.payment_method || '').toLowerCase();
+          if (paymentFilter === 'wallet') return method === 'wallet';
+          if (paymentFilter === 'cash') return method === 'cash';
+          if (paymentFilter === 'online') return method !== 'wallet' && method !== 'cash' && method !== '';
+          return true;
+        });
 
-  const timeAllCount = useMemo(
-    () =>
-      bookings.filter(
-        (b) =>
-          ownerScope === 'all' || (ownerScope === 'own'
-            ? b.ground.owner_id === user?.id
-            : b.ground.owner_id !== user?.id)
-      ).length,
-    [bookings, ownerScope, user?.id],
-  );
+    const byStatus = tab === 'all'
+      ? byPayment
+      : tab === 'upcoming'
+        ? byPayment.filter((b) => b.booking_date >= todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
+        : tab === 'past'
+          ? byPayment.filter((b) => b.booking_date < todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
+          : byPayment.filter((b) => b.status === 'cancelled');
+
+    const consolidatedMap = new Map<string, boolean>();
+    byStatus.forEach(b => {
+      const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
+      const slotsKey = matchSlots ? matchSlots[1] : `single_${b.start_time}`;
+      const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
+      const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
+      consolidatedMap.set(groupKey, true);
+    });
+
+    return consolidatedMap.size;
+  };
+
+  const timeAllCount = useMemo(() => getConsolidatedCount('all'), [bookings, ownerScope, paymentFilter, user?.id, fromDate, toDate]);
+  const upcomingCount = useMemo(() => getConsolidatedCount('upcoming'), [bookings, ownerScope, paymentFilter, user?.id, fromDate, toDate]);
+  const pastCount = useMemo(() => getConsolidatedCount('past'), [bookings, ownerScope, paymentFilter, user?.id, fromDate, toDate]);
+  const cancelledCount = useMemo(() => getConsolidatedCount('cancelled'), [bookings, ownerScope, paymentFilter, user?.id, fromDate, toDate]);
 
   const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
     const isOpen = activeDropdown === id;
@@ -783,7 +921,11 @@ export default function OwnerBookingsScreen() {
         <View style={styles.controlsRow}>
           <View style={styles.searchBoxMobileWrapper}>
             <TextInput
-              style={[styles.searchBarMobile, isUltraNarrow && { fontSize: 11, paddingHorizontal: 8 }]}
+              style={[
+                styles.searchBarMobile, 
+                isUltraNarrow && { fontSize: 11, paddingHorizontal: 8 },
+                Platform.OS === 'web' && { outlineStyle: 'none' } as any
+              ]}
               placeholder={isUltraNarrow ? "Search" : "Search..."}
               placeholderTextColor="#94A3B8"
               value={searchQuery}
@@ -799,7 +941,7 @@ export default function OwnerBookingsScreen() {
               { key: 'all', label: 'All Status' },
               { key: 'upcoming', label: 'Upcoming' },
               { key: 'past', label: 'Past' },
-              { key: 'cancelled', label: 'Cancelled' },
+              { key: 'cancelled', label: `Cancelled (${cancelledCount})` },
             ]}
             onSelect={setActiveTab}
           />
@@ -815,15 +957,28 @@ export default function OwnerBookingsScreen() {
             onSelect={setOwnerScope}
           />
           <FilterDropdown
-            id="date"
-            label="Date"
-            value={selectedDate || 'all'}
+            id="payment"
+            label="Pay"
+            value={paymentFilter}
             options={[
-              { key: 'all', label: 'Any Date' },
-              ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
+              { key: 'all', label: 'All Payment' },
+              { key: 'online', label: 'Online' },
+              { key: 'wallet', label: 'Wallet' },
+              { key: 'cash', label: 'Cash' },
             ]}
-            onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)}
+            onSelect={setPaymentFilter}
           />
+          <TouchableOpacity 
+            style={[styles.filterByDateBtn, { marginLeft: 8, paddingHorizontal: 8 }]}
+            onPress={() => {
+              setTempFromDate(fromDate);
+              setTempToDate(toDate);
+              setIsDatePickerVisible(true);
+            }}
+          >
+            <Calendar size={16} color="#64748B" />
+            <Text style={styles.filterByDateText}>Date</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -831,128 +986,80 @@ export default function OwnerBookingsScreen() {
         <View style={styles.filterContainer}>
           <View style={styles.filterRow}>
             <View style={styles.tabsAndFilterLeft}>
-              <TouchableOpacity
-                onPress={() => setActiveTab('all')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'all' && styles.tabChipActive,
-                ]}
+              {/* Native select styled as a dropdown chip */}
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value as any)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#4B5563',
+                  border: '1px solid #E5E7EB',
+                  fontWeight: '600',
+                  fontSize: '11px',
+                  fontFamily: 'Inter',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
               >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    activeTab === 'all' && styles.tabChipTextActive,
-                  ]}
-                >
-                  {`All (${timeAllCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('upcoming')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'upcoming' && styles.tabChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    activeTab === 'upcoming' && styles.tabChipTextActive,
-                  ]}
-                >
-                  {`Upcoming (${upcomingCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('past')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'past' && styles.tabChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    activeTab === 'past' && styles.tabChipTextActive,
-                  ]}
-                >
-                  {`Past (${pastCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('cancelled' as any)}
-                style={[
-                  styles.tabChip,
-                  activeTab === ('cancelled' as any) && styles.tabChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    activeTab === ('cancelled' as any) && styles.tabChipTextActive,
-                  ]}
-                >
-                  {`Cancelled (${bookings.filter(b => b.status === 'cancelled').length})`}
-                </Text>
-              </TouchableOpacity>
+                <option value="all">All ({timeAllCount})</option>
+                <option value="upcoming">Upcoming ({upcomingCount})</option>
+                <option value="past">Past ({pastCount})</option>
+                <option value="cancelled">Cancelled ({cancelledCount})</option>
+              </select>
 
               <View style={styles.verticalDivider} />
 
-              <TouchableOpacity
-                onPress={() => setOwnerScope('all')}
-                style={[
-                  styles.tabChip,
-                  ownerScope === 'all' && styles.tabChipActive,
-                ]}
+              <select
+                value={ownerScope}
+                onChange={(e) => setOwnerScope(e.target.value as any)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#4B5563',
+                  border: '1px solid #E5E7EB',
+                  fontWeight: '600',
+                  fontSize: '11px',
+                  fontFamily: 'Inter',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
               >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    ownerScope === 'all' && styles.tabChipTextActive,
-                  ]}
-                >
-                  All venues
-                </Text>
-              </TouchableOpacity>
+                <option value="all">All venues</option>
+                <option value="own">Own venues</option>
+                <option value="other">Other venues</option>
+              </select>
 
-              <TouchableOpacity
-                onPress={() => setOwnerScope('own')}
-                style={[
-                  styles.tabChip,
-                  ownerScope === 'own' && styles.tabChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    ownerScope === 'own' && styles.tabChipTextActive,
-                  ]}
-                >
-                  Own venues
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.verticalDivider} />
 
-              <TouchableOpacity
-                onPress={() => setOwnerScope('other')}
-                style={[
-                  styles.tabChip,
-                  ownerScope === 'other' && styles.tabChipActive,
-                ]}
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value as any)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  color: '#4B5563',
+                  border: '1px solid #E5E7EB',
+                  fontWeight: '600',
+                  fontSize: '11px',
+                  fontFamily: 'Inter',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
               >
-                <Text
-                  style={[
-                    styles.tabChipText,
-                    ownerScope === 'other' && styles.tabChipTextActive,
-                  ]}
-                >
-                  Other venues
-                </Text>
-              </TouchableOpacity>
+                <option value="all">All Payment</option>
+                <option value="online">Online</option>
+                <option value="wallet">Wallet</option>
+                <option value="cash">Cash</option>
+              </select>
             </View>
 
             <View style={styles.searchFilterWrap}>
               <TextInput
-                style={styles.searchBarWeb}
+                style={[styles.searchBarWeb, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
                 placeholder="Search..."
                 placeholderTextColor="#9ca3af"
                 value={searchQuery}
@@ -967,65 +1074,17 @@ export default function OwnerBookingsScreen() {
               <Text style={[styles.tabChipText, { color: '#FFFFFF', fontWeight: '800' }]}>+ Add Booking</Text>
             </TouchableOpacity>
 
-            <View style={styles.dateFilterWrap}>
-              <View
-                style={[
-                  styles.tabChip,
-                  selectedDate && styles.tabChipActive,
-                  { paddingRight: selectedDate ? 32 : 12 }
-                ]}
-              >
-                <Calendar
-                  size={14}
-                  color={selectedDate ? '#FFFFFF' : '#64748B'}
-                />
-                {selectedDate && (
-                  <Text
-                    style={[
-                      styles.tabChipText,
-                      styles.tabChipTextActive,
-                      { marginLeft: 6 }
-                    ]}
-                  >
-                    {formatDateDDMMYY(selectedDate)}
-                  </Text>
-                )}
-
-                {/* Native input overlay for web picker triggering */}
-                {isWeb && (
-                  // @ts-ignore web only element
-                  <input
-                    type="date"
-                    value={selectedDate ?? ''}
-                    onChange={(e: any) =>
-                      setSelectedDate(e.target.value ? e.target.value : null)
-                    }
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      opacity: 0,
-                      cursor: 'pointer',
-                      width: '100%',
-                      height: '100%',
-                      zIndex: 1,
-                      border: 'none',
-                    }}
-                  />
-                )}
-              </View>
-
-              {selectedDate && (
-                <TouchableOpacity
-                  onPress={() => setSelectedDate(null)}
-                  style={styles.dateClearBtn}
-                >
-                  <X size={12} color="#6B7280" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity 
+              style={[styles.filterByDateBtn, { marginLeft: 12 }]}
+              onPress={() => {
+                setTempFromDate(fromDate);
+                setTempToDate(toDate);
+                setIsDatePickerVisible(true);
+              }}
+            >
+              <Calendar size={16} color="#64748B" />
+              <Text style={styles.filterByDateText}>Date</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -1428,7 +1487,23 @@ export default function OwnerBookingsScreen() {
         }
         onEndReached={() => loadBookings(true)}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={null}
+        ListFooterComponent={() => (
+          hasMore ? (
+            <TouchableOpacity 
+              style={styles.loadMoreBtn} 
+              onPress={() => loadBookings(true)}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <Text style={styles.loadMoreText}>LOADING...</Text>
+              ) : (
+                <Text style={styles.loadMoreText}>LOAD MORE BOOKINGS</Text>
+              )}
+            </TouchableOpacity>
+          ) : bookings.length > 0 ? (
+            <Text style={styles.noMoreText}>That's all for now! No more bookings to load.</Text>
+          ) : null
+        )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No bookings yet</Text>
@@ -1520,7 +1595,7 @@ export default function OwnerBookingsScreen() {
                         </View>
                       </View>
                       <View style={{ alignItems: 'flex-end', gap: 8, justifyContent: 'space-between' }}>
-                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? '#DCFCE7' : '#F1F5F9', height: 24, paddingHorizontal: 8, borderRadius: 6 }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? '#DCFCE7' : (b.status === 'cancelled' ? 'transparent' : '#F1F5F9'), height: 24, paddingHorizontal: 8, borderRadius: 6 }]}>
                           <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
                             {b.status.toUpperCase()}
                           </Text>
@@ -1550,15 +1625,119 @@ export default function OwnerBookingsScreen() {
       </Modal>
     </View>
   );
+  const datePickerModal = (
+      <Modal
+        visible={isDatePickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDatePickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsDatePickerVisible(false)} />
+          <View style={styles.datePickerModalWrap}>
+            <View style={styles.dpMain}>
+              {/* Sidebar Quick Range */}
+              <View style={styles.dpSidebar}>
+                <Text style={styles.dpSidebarTitle}>Quick Range</Text>
+                {[
+                  { id: 'all', label: 'All Time' },
+                  { id: 'today', label: 'Today' },
+                  { id: 'yesterday', label: 'Yesterday' },
+                  { id: 'this_week', label: 'This Week' },
+                  { id: 'last_week', label: 'Last Week' },
+                  { id: 'this_month', label: 'This Month' },
+                  { id: 'last_month', label: 'Last Month' },
+                  { id: 'custom', label: 'Custom Range' },
+                ].map((range) => (
+                  <TouchableOpacity 
+                    key={range.id} 
+                    style={[styles.quickRangeItem, range.id === 'custom' && styles.quickRangeItemActive]}
+                    onPress={() => setQuickRange(range.id)}
+                  >
+                    <Calendar size={14} color={range.id === 'custom' ? '#059669' : '#64748B'} />
+                    <Text style={[styles.quickRangeText, range.id === 'custom' && styles.quickRangeTextActive]}>
+                      {range.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Main Selection Area */}
+              <View style={styles.dpSelectionArea}>
+                <View style={styles.dpInputsRow}>
+                  <View style={styles.dpInputBox}>
+                    <Text style={styles.dpInputLabel}>Start Date</Text>
+                    <View style={styles.dpInput}>
+                      <Calendar size={16} color="#64748B" />
+                      <Text style={styles.dpInputText}>
+                        {tempFromDate ? new Date(tempFromDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.dpArrow}>
+                    <Text style={{ color: '#94A3B8', fontSize: 20 }}>→</Text>
+                  </View>
+                  <View style={styles.dpInputBox}>
+                    <Text style={styles.dpInputLabel}>End Date</Text>
+                    <View style={styles.dpInput}>
+                      <Calendar size={16} color="#64748B" />
+                      <Text style={styles.dpInputText}>
+                        {tempToDate ? new Date(tempToDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Calendar View */}
+                <View style={styles.calendarPlaceholder}>
+                   {renderCalendar(0)}
+                   {renderCalendar(1)}
+                </View>
+                
+                <Text style={styles.calHint}>Select range from the sidebar or click a date to begin</Text>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.dpFooter}>
+              <TouchableOpacity onPress={() => { setTempFromDate(null); setTempToDate(null); }}>
+                <Text style={styles.dpClearBtn}>Clear</Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity style={styles.dpCancelBtn} onPress={() => setIsDatePickerVisible(false)}>
+                  <Text style={styles.dpCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.dpApplyBtn} 
+                  onPress={() => {
+                    setFromDate(tempFromDate);
+                    setToDate(tempToDate);
+                    setIsDatePickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.dpApplyText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+  );
 
   if (Platform.OS === 'web') {
-    return <WebLayout noCard hideHeader={isSmallScreen}>{content}</WebLayout>;
+    return (
+      <WebLayout noCard hideHeader={isSmallScreen}>
+        {content}
+        {datePickerModal}
+      </WebLayout>
+    );
   }
 
   return (
     <View style={styles.nativeContainer}>
       <MobileAppNavbar title="Ground Bookings" titleColor="#059669" />
       {content}
+      {datePickerModal}
     </View>
   );
 }
@@ -2340,6 +2519,32 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  loadMoreBtn: {
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E5E7EB' : '#00ea6b',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  loadMoreText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IS_WEB ? '#111827' : '#00ea6b',
+    letterSpacing: 1,
+  },
+  noMoreText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 40,
+    letterSpacing: 1,
+  },
   slotCustomerPhone: {
     fontSize: 12,
     color: '#475569',
@@ -2353,5 +2558,234 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     letterSpacing: 1,
     marginBottom: 2,
+  },
+  filterByDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  filterByDateText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  datePickerModalWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '95%',
+    maxWidth: 800,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
+    alignSelf: 'center',
+    marginTop: '5%',
+  },
+  dpMain: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    minHeight: Platform.OS === 'web' ? 400 : 500,
+  },
+  dpSidebar: {
+    width: Platform.OS === 'web' ? 200 : '100%',
+    borderRightWidth: Platform.OS === 'web' ? 1 : 0,
+    borderRightColor: '#F1F5F9',
+    borderBottomWidth: Platform.OS === 'web' ? 0 : 1,
+    borderBottomColor: '#F1F5F9',
+    padding: 16,
+    gap: 4,
+  },
+  dpSidebarTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+  },
+  quickRangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 10,
+  },
+  quickRangeItemActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  quickRangeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  quickRangeTextActive: {
+    color: '#00ea6b',
+  },
+  dpSelectionArea: {
+    flex: 1,
+    padding: 24,
+  },
+  dpInputsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  dpInputBox: {
+    flex: 1,
+  },
+  dpInputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  dpInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#00ea6b',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  dpInputText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  dpArrow: {
+    paddingTop: 18,
+  },
+  calendarPlaceholder: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 12,
+  },
+  calMonth: {
+    flex: 1,
+  },
+  calMonthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  calGrid: {
+    width: '100%',
+  },
+  calHeaderRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  calHeaderCell: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  calRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  calCell: {
+    flex: 1,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  calCellSelected: {
+    backgroundColor: '#00ea6b',
+  },
+  calCellInRange: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 0,
+  },
+  calCellStart: {
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  calCellEnd: {
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  calDayText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  calDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  calDayTextInRange: {
+    color: '#065F46',
+    fontWeight: '600',
+  },
+  calHint: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
+  dpFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+  },
+  dpClearBtn: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  dpCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  dpCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  dpApplyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#00ea6b',
+  },
+  dpApplyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
   },
 });

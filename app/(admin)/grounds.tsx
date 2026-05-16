@@ -1296,9 +1296,9 @@ export default function GroundsAdminScreen() {
                   <View style={[styles.tableCell, styles.colGround]}>
                     <View style={styles.tableGroundInfo}>
                       <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
-                      <View>
-                        <Text style={styles.groundName}>{latestGround.name}</Text>
-                        <Text style={styles.groundType}>{latestGround.pitch_type}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.groundName} numberOfLines={1} ellipsizeMode="tail">{latestGround.name}</Text>
+                        <Text style={styles.groundType} numberOfLines={1}>{latestGround.pitch_type}</Text>
                       </View>
                     </View>
                   </View>
@@ -1356,9 +1356,9 @@ export default function GroundsAdminScreen() {
                     <View style={[styles.tableCell, styles.colGround]}>
                       <View style={styles.tableGroundInfo}>
                         <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
-                        <View>
-                          <Text style={styles.groundName}>{latestGround.name}</Text>
-                          <Text style={styles.groundType}>{latestGround.pitch_type}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.groundName} numberOfLines={1} ellipsizeMode="tail">{latestGround.name}</Text>
+                          <Text style={styles.groundType} numberOfLines={1}>{latestGround.pitch_type}</Text>
                         </View>
                       </View>
                     </View>

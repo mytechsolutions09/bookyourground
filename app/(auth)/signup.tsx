@@ -51,7 +51,6 @@ export default function SignupScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [stateName, setStateName] = useState('');
-  const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -62,7 +61,6 @@ export default function SignupScreen() {
   const lastNameRef = React.useRef<TextInput>(null);
   const emailRef = React.useRef<TextInput>(null);
   const phoneRef = React.useRef<TextInput>(null);
-  const teamRef = React.useRef<TextInput>(null);
   const addressRef = React.useRef<TextInput>(null);
   const passwordRef = React.useRef<TextInput>(null);
   const confirmPasswordRef = React.useRef<TextInput>(null);
@@ -102,7 +100,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, 'Player', turnstileToken || undefined);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, undefined, 'Player', turnstileToken || undefined);
     setLoading(false);
 
     if (error) {
@@ -177,7 +175,7 @@ export default function SignupScreen() {
                         label="Email"
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="email@example.com"
+                        placeholder=""
                         keyboardType="email-address"
                       />
                     </View>
@@ -202,12 +200,6 @@ export default function SignupScreen() {
                     </View>
                   </View>
   
-                  <WebInput
-                    label="Team Name (Squad)"
-                    value={teamName}
-                    onChangeText={setTeamName}
-                    placeholder="e.g. Yankees XI"
-                  />
  
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
@@ -215,7 +207,7 @@ export default function SignupScreen() {
                         label="Password"
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Min 8 characters"
+                        placeholder=""
                         secureTextEntry={!showPassword}
                         showToggle={true}
                         onToggle={() => setShowPassword(!showPassword)}
@@ -227,7 +219,7 @@ export default function SignupScreen() {
                         label="Confirm Password"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
-                        placeholder="Repeat password"
+                        placeholder=""
                         secureTextEntry={!showConfirmPassword}
                         showToggle={true}
                         onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -388,7 +380,7 @@ export default function SignupScreen() {
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Enter your email"
+                placeholder=""
                 placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -421,27 +413,6 @@ export default function SignupScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.fieldWrap}>
-            <Pressable onPress={() => teamRef.current?.focus()}>
-              <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
-            </Pressable>
-            <Pressable 
-              onPress={() => teamRef.current?.focus()}
-              style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}
-            >
-              <Users size={15} color={isFocused('teamName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
-              <TextInput
-                ref={teamRef}
-                style={styles.textInput}
-                value={teamName}
-                onChangeText={setTeamName}
-                placeholder="Yankees XI"
-                placeholderTextColor="#94A3B8"
-                onFocus={() => setFocusedField('teamName')}
-                onBlur={() => setFocusedField(null)}
-              />
-            </Pressable>
-          </View>
 
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1.5 }]}>
@@ -493,7 +464,7 @@ export default function SignupScreen() {
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Min 8 characters"
+                placeholder=""
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 onFocus={() => setFocusedField('password')}
@@ -530,7 +501,7 @@ export default function SignupScreen() {
                 style={styles.textInput}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Repeat password"
+                placeholder=""
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showConfirmPassword}
                 onFocus={() => setFocusedField('confirmPassword')}

@@ -162,7 +162,7 @@ export default function OwnerSignupScreen() {
                         label="Email"
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="business@example.com"
+                        placeholder=""
                         keyboardType="email-address"
                         autoCapitalize="none"
                       />
@@ -184,7 +184,7 @@ export default function OwnerSignupScreen() {
                         label="Password"
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Min 8 chars"
+                        placeholder=""
                         secureTextEntry={!showPassword}
                         showToggle={true}
                         onToggle={() => setShowPassword(!showPassword)}
@@ -196,7 +196,7 @@ export default function OwnerSignupScreen() {
                         label="Confirm"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
-                        placeholder="Repeat password"
+                        placeholder=""
                         secureTextEntry={!showConfirmPassword}
                         showToggle={true}
                         onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -338,7 +338,7 @@ export default function OwnerSignupScreen() {
                     style={styles.textInput}
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="email@example.com"
+                    placeholder=""
                     placeholderTextColor="#94a3b8"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -397,7 +397,7 @@ export default function OwnerSignupScreen() {
                     style={styles.textInput}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Min 8 characters"
+                    placeholder=""
                     placeholderTextColor="#94a3b8"
                     secureTextEntry={!showPassword}
                   />
@@ -421,7 +421,7 @@ export default function OwnerSignupScreen() {
                     style={styles.textInput}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    placeholder="Repeat password"
+                    placeholder=""
                     placeholderTextColor="#94a3b8"
                     secureTextEntry={!showConfirmPassword}
                   />
