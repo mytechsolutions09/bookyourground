@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator, Share, Modal, Linking } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2, Globe, FileText, Copy, Check, Navigation2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, formatTime } from '@/utils/helpers';
@@ -53,6 +54,7 @@ export default function BookingDetailsScreen() {
   const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [fadeAnim] = useState(new Animated.Value(0));
   
   const [copied, setCopied] = useState(false);
@@ -451,228 +453,236 @@ export default function BookingDetailsScreen() {
     'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
   const content = (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Hero */}
-      <View style={styles.heroContainer}>
-        <View style={styles.hero}>
-          <Image source={{ uri: primaryImage }} style={styles.heroImage} />
-          <View style={styles.heroOverlay} />
-          <View style={styles.statusPill}>
-            <Text style={styles.statusText}>{booking.status.toUpperCase()}</Text>
-          </View>
-          <View style={styles.heroBottom}>
-            <View style={{ flex: 1, marginRight: 20 }}>
-              <Text style={[styles.groundTitle, width < 768 && { fontSize: 18, fontWeight: '600' }]}>{booking.ground?.name || 'N/A'}</Text>
-              <View style={styles.groundSport}>
-                <Globe size={12} color="#FFF" />
-                <Text style={styles.sportText}>{booking.ground?.pitch_type || 'Cricket'}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + Math.max(insets.bottom, 20) }]}>
+      {/* Body Container */}
+      <View style={[styles.pageBody, { padding: width < 360 ? 12 : 24, marginTop: width < 360 ? 10 : 20 }]}>
+        
+        {/* Responsive Header */}
+        {width < 600 ? (
+          // Mobile Stacked Header (Samsung Fold closed & standard mobile)
+          <View style={styles.mobileHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 4 }}>
+              <Pressable style={styles.backButton} onPress={() => completed === 'true' ? router.replace('/') : router.back()}>
+                <ChevronLeft size={20} color="#1A2215" />
+              </Pressable>
+            </View>
+            
+            <View style={styles.mobileHeaderTop}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <View style={[styles.statusPill, { position: 'relative', top: 0, right: 0 }]}>
+                  <Text style={styles.statusText}>{booking.status.toUpperCase()}</Text>
+                </View>
+                
+                <Pressable style={[styles.bookingIdChipInline, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0' }]} onPress={handleCopy}>
+                  <Text style={[styles.idLabelInline, { color: '#8A9580' }]}>ID: </Text>
+                  <Text style={[styles.idValueInline, { color: '#1A2215' }]}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
+                  {copied ? <Check size={11} color="#01C45A" style={{ marginLeft: 4 }} /> : <Copy size={11} color="#8A9580" style={{ marginLeft: 4 }} />}
+                  {copied && <Text style={styles.copiedBadgeInline}>Copied ✓</Text>}
+                </Pressable>
+              </View>
+              
+              <Text style={[styles.groundTitle, { fontSize: width < 340 ? 20 : 24, fontWeight: '700', color: '#1A2215' }]}>
+                {booking.ground?.name || 'N/A'}
+              </Text>
+              
+              <View style={[styles.groundSport, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0', marginTop: 8 }]}>
+                <Globe size={12} color="#7A8575" />
+                <Text style={[styles.sportText, { color: '#7A8575' }]}>{booking.ground?.pitch_type || 'Cricket'}</Text>
               </View>
             </View>
-            <Pressable style={styles.bookingIdChip} onPress={handleCopy}>
-              <Text style={styles.idLabel}>Booking ID</Text>
+          </View>
+        ) : (
+          // Desktop & Tablet Row Header (Samsung Fold open & desktop)
+          <View style={styles.desktopHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16, flex: 1 }}>
+              <Pressable style={[styles.backButton, { marginTop: 4 }]} onPress={() => completed === 'true' ? router.replace('/') : router.back()}>
+                <ChevronLeft size={20} color="#1A2215" />
+              </Pressable>
+              
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <Text style={[styles.groundTitle, { color: '#1A2215', fontSize: 28 }]}>{booking.ground?.name || 'N/A'}</Text>
+                  <View style={[styles.statusPill, { position: 'relative', top: 0, right: 0 }]}>
+                    <Text style={styles.statusText}>{booking.status.toUpperCase()}</Text>
+                  </View>
+                </View>
+                <View style={[styles.groundSport, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0', marginTop: 6 }]}>
+                  <Globe size={12} color="#7A8575" />
+                  <Text style={[styles.sportText, { color: '#7A8575' }]}>{booking.ground?.pitch_type || 'Cricket'}</Text>
+                </View>
+              </View>
+            </View>
+
+            <Pressable style={[styles.bookingIdChip, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0' }]} onPress={handleCopy}>
+              <Text style={[styles.idLabel, { color: '#8A9580' }]}>Booking ID</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={styles.idValue}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
-                {copied ? <Check size={12} color="#01C45A" /> : <Copy size={12} color="rgba(255,255,255,0.6)" />}
+                <Text style={[styles.idValue, { color: '#1A2215' }]}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
+                {copied ? <Check size={12} color="#01C45A" /> : <Copy size={12} color="#8A9580" />}
               </View>
               {copied && <Text style={styles.copiedBadge}>Copied ✓</Text>}
             </Pressable>
           </View>
-        </View>
-      </View>
+        )}
 
-      {/* Body */}
-      <View style={[styles.pageBody, isDesktop && styles.pageBodyDesktop]}>
-        {/* Left Column */}
-        <View style={styles.leftColumn}>
-          {/* Slot Card */}
-          <View style={styles.card}>
-            <View style={styles.cardInner}>
-              <View style={styles.addressRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, gap: 8 }}>
-                  <MapPin size={14} color="#01C45A" style={{ marginTop: 2 }} />
-                  <Text style={styles.addressText}>{booking.ground?.address || ''}, {booking.ground?.city || ''}</Text>
-                </View>
-                {mapsUrl && (
-                  <Pressable 
-                    onPress={() => Linking.openURL(mapsUrl)}
-                    style={styles.directionsBtn}
-                  >
-                    <Navigation2 size={12} color="#01C45A" />
-                    <Text style={styles.directionsBtnText}>Directions</Text>
-                  </Pressable>
-                )}
-              </View>
-              <View style={styles.slotGrid}>
-                <View style={styles.slotItem}>
-                  <View style={styles.slotLabel}>
-                    <Calendar size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>Date</Text>
+        <View style={[styles.divider, { marginVertical: 20 }]} />
+
+        {/* Two Column Layout container */}
+        <View style={[isDesktop && styles.pageBodyDesktop, { gap: 20 }]}>
+          {/* Left Column */}
+          <View style={styles.leftColumn}>
+            {/* Image Container Card */}
+            <View style={styles.imageCard}>
+              <Image source={{ uri: primaryImage }} style={styles.cardImage} />
+            </View>
+
+            {/* Slot Card */}
+            <View style={styles.card}>
+              <View style={[styles.cardInner, { padding: width < 360 ? 12 : 22 }]}>
+                <View style={[styles.addressRow, width < 360 && { flexDirection: 'column', gap: 10 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: width < 360 ? 0 : 1, gap: 8 }}>
+                    <MapPin size={14} color="#01C45A" style={{ marginTop: 2 }} />
+                    <Text style={styles.addressText}>{booking.ground?.address || ''}, {booking.ground?.city || ''}</Text>
                   </View>
-                  <Text style={styles.slotValue}>{formatDate(booking.booking_date)}</Text>
+                  {mapsUrl && (
+                    <Pressable 
+                      onPress={() => Linking.openURL(mapsUrl)}
+                      style={[styles.directionsBtn, width < 360 && { alignSelf: 'flex-start' }]}
+                    >
+                      <Navigation2 size={12} color="#01C45A" />
+                      <Text style={styles.directionsBtnText}>Directions</Text>
+                    </Pressable>
+                  )}
                 </View>
-                {!isNetsWithMultipleSlots && (
-                  <View style={styles.slotItem}>
+                <View style={styles.slotGrid}>
+                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                    <View style={styles.slotLabel}>
+                      <Calendar size={11} color="#01C45A" strokeWidth={2.5} />
+                      <Text style={styles.slotLabelText}>Date</Text>
+                    </View>
+                    <Text style={styles.slotValue}>{formatDate(booking.booking_date)}</Text>
+                  </View>
+                  {!isNetsWithMultipleSlots && (
+                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                      <View style={styles.slotLabel}>
+                        <Clock size={11} color="#01C45A" strokeWidth={2.5} />
+                        <Text style={styles.slotLabelText}>Start Time</Text>
+                      </View>
+                      <Text style={styles.slotValue}>{timeSlotLabel}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
                     <View style={styles.slotLabel}>
                       <Clock size={11} color="#01C45A" strokeWidth={2.5} />
-                      <Text style={styles.slotLabelText}>Start Time</Text>
-                    </View>
-                    <Text style={styles.slotValue}>{timeSlotLabel}</Text>
-                  </View>
-                )}
-                <View style={styles.slotItem}>
-                  <View style={styles.slotLabel}>
-                    <Clock size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>Duration</Text>
-                  </View>
-                  <Text style={styles.slotValue}>
-                    {(() => {
-                      const isNets = booking.ground?.pitch_type?.toLowerCase().includes('nets');
-                      if (isNets && !booking.calculatedDuration) {
-                        const m = 20 * slotCount;
-                        const h = Math.floor(m / 60);
-                        const rem = m % 60;
-                        return `${h > 0 ? `${h} hr ` : ''}${rem > 0 ? `${rem} mins` : ''}`.trim() || '20 mins';
-                      }
-                      const hours = Number(booking.calculatedDuration || booking.total_hours || 1) * slotCount;
-                      const h = Math.floor(hours);
-                      const m = Math.round((hours - h) * 60);
-                      return `${h > 0 ? `${h} hr ` : ''}${m > 0 ? `${m} mins` : ''}`.trim() || '1 hr';
-                    })()}
-                  </Text>
-                </View>
-                {!isNetsWithMultipleSlots && (
-                  <View style={styles.slotItem}>
-                    <View style={styles.slotLabel}>
-                      <Users size={11} color="#01C45A" strokeWidth={2.5} />
-                      <Text style={styles.slotLabelText}>{booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
+                      <Text style={styles.slotLabelText}>Duration</Text>
                     </View>
                     <Text style={styles.slotValue}>
-                      {booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
+                      {(() => {
+                        const isNets = booking.ground?.pitch_type?.toLowerCase().includes('nets');
+                        if (isNets && !booking.calculatedDuration) {
+                          const m = 20 * slotCount;
+                          const h = Math.floor(m / 60);
+                          const rem = m % 60;
+                          return `${h > 0 ? `${h} hr ` : ''}${rem > 0 ? `${rem} mins` : ''}`.trim() || '20 mins';
+                        }
+                        const hours = Number(booking.calculatedDuration || booking.total_hours || 1) * slotCount;
+                        const h = Math.floor(hours);
+                        const m = Math.round((hours - h) * 60);
+                        return `${h > 0 ? `${h} hr ` : ''}${m > 0 ? `${m} mins` : ''}`.trim() || '1 hr';
+                      })()}
                     </Text>
                   </View>
-                )}
+                  {!isNetsWithMultipleSlots && (
+                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                      <View style={styles.slotLabel}>
+                        <Users size={11} color="#01C45A" strokeWidth={2.5} />
+                        <Text style={styles.slotLabelText}>{booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
+                      </View>
+                      <Text style={styles.slotValue}>
+                        {booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Slots in this Booking */}
+            {booking.relatedBookings && booking.relatedBookings.length > 1 && (
+              <View style={styles.card}>
+                <View style={[styles.cardInner, { padding: width < 360 ? 12 : 22 }]}>
+                  <Text style={styles.sectionTitle}>Slots in this booking</Text>
+                  {booking.relatedBookings.map((b: any, i: number) => {
+                    const teamTypeMatch = /Teams:\s*([^(]+)/.exec(b.notes);
+                    const teamLabel = teamTypeMatch ? teamTypeMatch[1].trim() : 'Both Teams';
+                    
+                    // For display, prioritize ground_price. 
+                    // If ground_price matches total_charged, it means fees were accidentally bundled (the bug we're fixing).
+                    // In that case, we subtract them for display.
+                    let displayPrice = b.ground_price || b.total_amount || 0;
+                    if (b.platform_fee_user > 0 && Math.abs(displayPrice - b.total_charged) < 1) {
+                       displayPrice = displayPrice - b.platform_fee_user - (b.gst_user || 0);
+                    }
+                    
+                    return (
+                      <View key={i} style={styles.slotDetailRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Clock size={14} color="#01C45A" />
+                          <Text style={styles.slotDetailTime}>{`${b.booking_date} | ${formatTime(b.start_time)}`}</Text>
+                          {!isNetBooking && (
+                            <View style={styles.teamTag}>
+                              <Text style={styles.teamTagText}>{teamLabel}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.slotDetailPrice}>{formatCurrency(displayPrice)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* Venue Rules */}
+            <View style={styles.card}>
+              <View style={[styles.cardInner, { padding: width < 360 ? 12 : 22 }]}>
+                <Text style={styles.sectionTitle}>Venue rules</Text>
+                {[
+                  "Please arrive 15 minutes before your slot.",
+                  "Proper footwear is mandatory for the pitch.",
+                  "Respect the venue staff and other players.",
+                  "No littering or smoking allowed inside the premises.",
+                ].map((rule, i) => (
+                  <View key={i} style={styles.ruleItem}>
+                    <View style={styles.ruleDot} />
+                    <Text style={styles.ruleText}>{rule}</Text>
+                  </View>
+                ))}
               </View>
             </View>
           </View>
 
-          {/* Slots in this Booking */}
-          {booking.relatedBookings && booking.relatedBookings.length > 1 && (
+          {/* Right Column */}
+          <View style={styles.rightColumn}>
             <View style={styles.card}>
-              <View style={styles.cardInner}>
-                <Text style={styles.sectionTitle}>Slots in this booking</Text>
-                {booking.relatedBookings.map((b: any, i: number) => {
-                  const teamTypeMatch = /Teams:\s*([^(]+)/.exec(b.notes);
-                  const teamLabel = teamTypeMatch ? teamTypeMatch[1].trim() : 'Both Teams';
-                  
-                  // For display, prioritize ground_price. 
-                  // If ground_price matches total_charged, it means fees were accidentally bundled (the bug we're fixing).
-                  // In that case, we subtract them for display.
-                  let displayPrice = b.ground_price || b.total_amount || 0;
-                  if (b.platform_fee_user > 0 && Math.abs(displayPrice - b.total_charged) < 1) {
-                     displayPrice = displayPrice - b.platform_fee_user - (b.gst_user || 0);
-                  }
-                  
-                  return (
-                    <View key={i} style={styles.slotDetailRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Clock size={14} color="#01C45A" />
-                        <Text style={styles.slotDetailTime}>{`${b.booking_date} | ${formatTime(b.start_time)}`}</Text>
+              <View style={[styles.cardInner, { padding: width < 360 ? 12 : 22 }]}>
+                <Text style={styles.sectionTitle}>Payment summary</Text>
+                
+                {isOwnerView ? (
+                  <>
+                    <View style={styles.summaryRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.summaryLabel}>Venue price</Text>
                         {!isNetBooking && (
-                          <View style={styles.teamTag}>
-                            <Text style={styles.teamTagText}>{teamLabel}</Text>
+                          <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                            <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={styles.slotDetailPrice}>{formatCurrency(displayPrice)}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatCurrency(debugVenuePrice)}
+                      </Text>
                     </View>
-                  );
-                })}
-              </View>
-            </View>
-          )}
 
-          {/* Venue Rules */}
-          <View style={styles.card}>
-            <View style={styles.cardInner}>
-              <Text style={styles.sectionTitle}>Venue rules</Text>
-              {[
-                "Please arrive 15 minutes before your slot.",
-                "Proper footwear is mandatory for the pitch.",
-                "Respect the venue staff and other players.",
-                "No littering or smoking allowed inside the premises.",
-              ].map((rule, i) => (
-                <View key={i} style={styles.ruleItem}>
-                  <View style={styles.ruleDot} />
-                  <Text style={styles.ruleText}>{rule}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Right Column */}
-        <View style={styles.rightColumn}>
-          <View style={styles.card}>
-            <View style={styles.cardInner}>
-              <Text style={styles.sectionTitle}>Payment summary</Text>
-              
-              {isOwnerView ? (
-                <>
-                  <View style={styles.summaryRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.summaryLabel}>Venue price</Text>
-                      {!isNetBooking && (
-                        <View style={[styles.teamTag, { marginLeft: 6 }]}>
-                          <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.summaryValue}>
-                      {formatCurrency(debugVenuePrice)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.summaryRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.summaryLabel}>Platform fee</Text>
-                      <View style={styles.gstTagSmall}>
-                        <Text style={styles.gstTagTextSmall}>inc. GST</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-                      -{formatCurrency(debugOwnerPlatformFee)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.divider} />
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Total Receivable</Text>
-                    <Text style={styles.totalValue}>
-                      {formatCurrency(debugVenuePrice - (isPlatformFeeOff ? 0 : debugOwnerPlatformFee))}
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.summaryRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.summaryLabel}>Venue price</Text>
-                      {!booking.ground?.pitch_type?.toLowerCase().includes('nets') && (
-                        <View style={[styles.teamTag, { marginLeft: 6 }]}>
-                          <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.summaryValue}>
-                      {formatCurrency(
-                        booking.relatedBookings && booking.relatedBookings.length > 0
-                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
-                          : (booking.ground_price || debugVenuePrice)
-                      )}
-                    </Text>
-                  </View>
-
-                  {(booking.platform_fee_user > 0 || booking.gst_user > 0 || (booking.relatedBookings && booking.relatedBookings.length > 0)) ? (
                     <View style={styles.summaryRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.summaryLabel}>Platform fee</Text>
@@ -680,62 +690,104 @@ export default function BookingDetailsScreen() {
                           <Text style={styles.gstTagTextSmall}>inc. GST</Text>
                         </View>
                       </View>
+                      <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
+                        -{formatCurrency(debugOwnerPlatformFee)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.divider} />
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Total Receivable</Text>
+                      <Text style={styles.totalValue}>
+                        {formatCurrency(debugVenuePrice - (isPlatformFeeOff ? 0 : debugOwnerPlatformFee))}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.summaryRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.summaryLabel}>Venue price</Text>
+                        {!booking.ground?.pitch_type?.toLowerCase().includes('nets') && (
+                          <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                            <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.summaryValue}>
                         {formatCurrency(
                           booking.relatedBookings && booking.relatedBookings.length > 0
-                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_user || 0) + Number(b.gst_user || 0), 0)
-                            : ((booking.platform_fee_user || booking.gst_user) ? (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) : debugUserPlatformFee)
+                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
+                            : (booking.ground_price || debugVenuePrice)
                         )}
                       </Text>
                     </View>
-                  ) : (
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Taxes & fees</Text>
-                      <Text style={styles.summaryValueMuted}>₹0.00</Text>
+
+                    {(booking.platform_fee_user > 0 || booking.gst_user > 0 || (booking.relatedBookings && booking.relatedBookings.length > 0)) ? (
+                      <View style={styles.summaryRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={styles.summaryLabel}>Platform fee</Text>
+                          <View style={styles.gstTagSmall}>
+                            <Text style={styles.gstTagTextSmall}>inc. GST</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.summaryValue}>
+                          {formatCurrency(
+                            booking.relatedBookings && booking.relatedBookings.length > 0
+                              ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_user || 0) + Number(b.gst_user || 0), 0)
+                              : ((booking.platform_fee_user || booking.gst_user) ? (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) : debugUserPlatformFee)
+                          )}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Taxes & fees</Text>
+                        <Text style={styles.summaryValueMuted}>₹0.00</Text>
+                      </View>
+                    )}
+
+                    <View style={styles.divider} />
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Grand total</Text>
+                      <Text style={styles.totalValue}>
+                        {formatCurrency(
+                          Math.round(
+                            booking.relatedBookings && booking.relatedBookings.length > 0
+                              ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.total_charged || b.total_amount || 0), 0)
+                              : Number(booking.total_charged || displayTotalAmount) * slotCount
+                          )
+                        )}
+                      </Text>
                     </View>
-                  )}
+                  </>
+                )}
 
-                  <View style={styles.divider} />
-                  <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Grand total</Text>
-                    <Text style={styles.totalValue}>
-                      {formatCurrency(
-                        Math.round(
-                          booking.relatedBookings && booking.relatedBookings.length > 0
-                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.total_charged || b.total_amount || 0), 0)
-                            : Number(booking.total_charged || displayTotalAmount) * slotCount
-                        )
-                      )}
-                    </Text>
+                <View style={styles.paymentMethodCard}>
+                  <View style={styles.pmIcon}>
+                    <CreditCard size={18} color="#5A6555" strokeWidth={1.5} />
                   </View>
-                </>
-              )}
-
-              <View style={styles.paymentMethodCard}>
-                <View style={styles.pmIcon}>
-                  <CreditCard size={18} color="#5A6555" strokeWidth={1.5} />
+                  <View>
+                    <Text style={styles.pmLabel}>Payment method</Text>
+                    <Text style={styles.pmValue}>{booking.payment_method === 'cash' ? 'Cash at Venue' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.pmLabel}>Payment method</Text>
-                  <Text style={styles.pmValue}>{booking.payment_method === 'cash' ? 'Cash at Venue' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}</Text>
-                </View>
-              </View>
 
-              <View style={styles.secureNote}>
-                <ShieldCheck size={12} color="#01C45A" strokeWidth={2} />
-                <Text style={styles.secureNoteText}>Secure booking via Book Your Ground</Text>
+                <View style={styles.secureNote}>
+                  <ShieldCheck size={12} color="#01C45A" strokeWidth={2} />
+                  <Text style={styles.secureNoteText}>Secure booking via Book Your Ground</Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          <Pressable style={[styles.actionBtn, styles.btnOutline]} onPress={handleShare}>
-            <Share2 size={14} color="#01A34B" strokeWidth={2} />
-            <Text style={styles.btnOutlineText}>Share booking</Text>
-          </Pressable>
-          <Pressable style={[styles.actionBtn, styles.btnSolid]} onPress={() => setReceiptOpen(true)}>
-            <FileText size={14} color="#FFF" strokeWidth={2} />
-            <Text style={styles.btnSolidText}>View receipt</Text>
-          </Pressable>
+            <Pressable style={[styles.actionBtn, styles.btnOutline]} onPress={handleShare}>
+              <Share2 size={14} color="#01A34B" strokeWidth={2} />
+              <Text style={styles.btnOutlineText}>Share booking</Text>
+            </Pressable>
+            <Pressable style={[styles.actionBtn, styles.btnSolid]} onPress={() => setReceiptOpen(true)}>
+              <FileText size={14} color="#FFF" strokeWidth={2} />
+              <Text style={styles.btnSolidText}>View receipt</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -807,44 +859,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 100,
   },
-  heroContainer: {
-    width: '100%',
-    backgroundColor: '#000',
-    alignItems: 'center',
-  },
-  hero: {
-    height: Platform.OS === 'web' ? 380 : 300,
-    width: '100%',
-    maxWidth: 1200,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  backBtn: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   statusPill: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
     backgroundColor: '#01C45A',
     paddingHorizontal: 14,
     paddingVertical: 5,
@@ -857,19 +872,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontFamily: 'Inter',
   },
-  heroBottom: {
-    position: 'absolute',
-    bottom: 20,
-    left: 24,
-    right: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
   groundTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFF',
+    color: '#1A2215',
     fontFamily: 'Inter',
     letterSpacing: -0.5,
   },
@@ -877,33 +883,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: '#E8EDE4',
+    backgroundColor: '#F4F6F0',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
     marginTop: 6,
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
   },
   sportText: {
-    color: '#FFF',
+    color: '#7A8575',
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   bookingIdChip: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#F4F6F0',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: '#E8EDE4',
     alignItems: 'flex-end',
   },
   idLabel: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#8A9580',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -912,7 +918,7 @@ const styles = StyleSheet.create({
   idValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFF',
+    color: '#1A2215',
     fontFamily: 'monospace',
   },
   copiedBadge: {
@@ -923,13 +929,41 @@ const styles = StyleSheet.create({
     color: '#01C45A',
     fontWeight: '700',
   },
+  bookingIdChipInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F4F6F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E8EDE4',
+    position: 'relative',
+  },
+  idLabelInline: {
+    fontSize: 10,
+    color: '#8A9580',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  idValueInline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1A2215',
+    fontFamily: 'monospace',
+  },
+  copiedBadgeInline: {
+    position: 'absolute',
+    bottom: -14,
+    right: 0,
+    fontSize: 8,
+    color: '#01C45A',
+    fontWeight: '700',
+  },
   pageBody: {
     maxWidth: 900,
     width: '100%',
     alignSelf: 'center',
-    padding: 24,
-    gap: 20,
-    marginTop: 20,
   },
   pageBodyDesktop: {
     flexDirection: 'row',
@@ -941,6 +975,45 @@ const styles = StyleSheet.create({
   rightColumn: {
     width: Platform.OS === 'web' ? 340 : '100%',
     gap: 16,
+  },
+  desktopHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  mobileHeader: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 12,
+  },
+  mobileHeaderTop: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F4F6F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8EDE4',
+  },
+  imageCard: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: '#E8EDE4',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   card: {
     backgroundColor: '#FFF',
@@ -1036,6 +1109,7 @@ const styles = StyleSheet.create({
     color: '#3A4535',
     lineHeight: 18,
     fontFamily: 'Inter',
+    flex: 1,
   },
   summaryRow: {
     flexDirection: 'row',

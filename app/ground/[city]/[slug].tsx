@@ -16,7 +16,7 @@ import {
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves, SlidersHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react-native';
 import { 
   APIProvider, 
   Map, 
@@ -29,7 +29,7 @@ import {
 } from '@vis.gl/react-google-maps';
 import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/utils/helpers';
-import { slugifyGroundSegment } from '@/utils/groundSlug';
+import { slugifyGroundSegment, makeGroundPath } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
@@ -40,6 +40,7 @@ import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { Share } from 'react-native';
 import GroundDetailSkeleton from '@/components/landing/GroundDetailSkeleton';
 import NativeMap from '@/components/grounds/NativeMap';
+import GroundCard from '@/components/grounds/GroundCard';
 
 const MAP_ID = "DEMO_MAP_ID";
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -95,6 +96,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [nearbyGrounds, setNearbyGrounds] = useState<GroundWithImages[]>([]);
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('book');
   const [aboutExpanded, setAboutExpanded] = useState(false);
@@ -165,12 +167,55 @@ export default function GroundDetailsPrettyUrlScreen() {
       }
 
       setGround(match as GroundWithImages);
+      fetchNearbyGrounds(match as GroundWithImages);
       setLoading(false);
     } catch (error) {
       console.error('Error loading ground (pretty URL):', error);
       Alert.alert('Error', 'Failed to load ground details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNearbyGrounds = async (currentGround: GroundWithImages) => {
+    try {
+      let { data, error } = await supabase
+        .from('grounds')
+        .select(`
+          *,
+          ground_images(*),
+          reviews(rating)
+        `)
+        .eq('active', true)
+        .eq('approved', true)
+        .eq('city', currentGround.city)
+        .neq('id', currentGround.id)
+        .limit(4);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const fallbackRes = await supabase
+          .from('grounds')
+          .select(`
+            *,
+            ground_images(*),
+            reviews(rating)
+          `)
+          .eq('active', true)
+          .eq('approved', true)
+          .neq('id', currentGround.id)
+          .limit(4);
+        if (!fallbackRes.error && fallbackRes.data) {
+          data = fallbackRes.data;
+        }
+      }
+
+      if (data) {
+        setNearbyGrounds(data as GroundWithImages[]);
+      }
+    } catch (err) {
+      console.warn('Error fetching nearby grounds:', err);
     }
   };
 
@@ -692,6 +737,55 @@ export default function GroundDetailsPrettyUrlScreen() {
               />
             </>
           )}
+
+          {nearbyGrounds && nearbyGrounds.length > 0 && (
+            <View style={styles.nearbySection}>
+              <View style={styles.nearbyHeaderRow}>
+                <View style={styles.nearbyHeaderLeft}>
+                  <View style={styles.nearbyPinCircle}>
+                    <MapPin size={20} color="#059669" fill="#059669" />
+                  </View>
+                  <View>
+                    <Text style={styles.nearbyTitle}>Venues near by</Text>
+                    <Text style={styles.nearbySubtitle}>Explore other grounds in the area</Text>
+                  </View>
+                </View>
+              </View>
+              {Platform.OS === 'web' ? (
+                <View style={styles.nearbyGrid}>
+                  {nearbyGrounds.map((g) => (
+                    <View key={g.id} style={styles.nearbyCardWrapper}>
+                      <GroundCard
+                        ground={g}
+                        onPress={() => {
+                          const path = makeGroundPath(g);
+                          router.push(path as any);
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.nearbyScroll}
+                >
+                  {nearbyGrounds.map((g) => (
+                    <View key={g.id} style={styles.nearbyCardWrapper}>
+                      <GroundCard
+                        ground={g}
+                        onPress={() => {
+                          const path = makeGroundPath(g);
+                          router.push(path as any);
+                        }}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
         </ScrollView>
       </>
     );
@@ -712,15 +806,31 @@ export default function GroundDetailsPrettyUrlScreen() {
           headerLeft: () => null,
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
-              <Pressable
-                onPress={toggleFavorite}
-                disabled={favoriteLoading}
-                style={{ marginRight: 15 }}
-                accessibilityRole="button"
-                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart size={24} color={isFavorite ? "#01b854" : "#64748B"} fill={isFavorite ? "#01b854" : "none"} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>
+                {mapsUrl && (
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        await Linking.openURL(mapsUrl);
+                      } catch (err) {
+                        console.error('Failed to open maps URL:', err);
+                      }
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Get Directions on Google Maps"
+                  >
+                    <Navigation2 size={24} color="#64748B" />
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={toggleFavorite}
+                  disabled={favoriteLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart size={24} color={isFavorite ? "#01b854" : "#64748B"} fill={isFavorite ? "#01b854" : "none"} />
+                </Pressable>
+              </View>
             ) : null
           )
         }} 
@@ -2157,6 +2267,86 @@ const styles = StyleSheet.create({
   webBookingCardFullFlat: {
     padding: 0,
     backgroundColor: 'transparent',
+  },
+  nearbySection: {
+    marginTop: 32,
+    marginBottom: 40,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 4,
+  },
+  nearbyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  nearbyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nearbyPinCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nearbyHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nearbyHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  nearbyHeaderBtnText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+  },
+  nearbyTitle: {
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+  },
+  nearbySubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  nearbyScroll: {
+    gap: 16,
+    paddingVertical: 8,
+  },
+  nearbyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    width: '100%',
+  },
+  nearbyCardWrapper: {
+    width: Platform.OS === 'web' ? 'calc(25% - 12px)' as any : 280,
+    minWidth: Platform.OS === 'web' ? 240 : undefined,
   },
 });
 

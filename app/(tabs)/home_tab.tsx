@@ -980,9 +980,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#64748B',
+    fontFamily: 'Inter',
   },
   sportCatTextActive: {
     color: '#a5ff8a',
+    fontFamily: 'Inter',
   },
 
   // ── Quick Actions ─────────────────────────────
@@ -1197,9 +1199,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: 'Inter',
   },
   heroCatTextActive: {
     color: '#06392e',
+    fontFamily: 'Inter',
   },
 
   // ── Sections ──────────────────────────────────
@@ -1315,6 +1319,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   groundImageContent: {
     position: 'absolute',
@@ -1357,6 +1362,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -1501,6 +1507,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     marginTop: 1,
+    fontFamily: 'Inter',
   },
 
   // ── Features ─────────────────────────────────
