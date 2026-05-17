@@ -16,6 +16,8 @@
 npx expo start
 npx expo start --web
 
+npm run build:web
+
 npx serve -s dist
 
 commit changes to git

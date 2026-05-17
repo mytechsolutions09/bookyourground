@@ -28,6 +28,10 @@ We have refactored components to resolve "Rendered fewer hooks than expected" er
 - **Fix**: Move dimension checks into the component body and use `useMemo` for dynamic styles.
 - **Example**: `components/landing/FindOpposition.tsx` refactored to use component-level responsive logic.
 
+### Initialization & TDZ Protection
+- **Problem**: Accessing memoized values or hooks (like `supportMultipleSlots` in `LandingBookingForm.tsx`) before their initialization statement causes standard V8/Hermes `ReferenceError: Cannot access 'variable' before initialization` crashes during re-renders or background state updates.
+- **Fix**: Place essential reactive variables, hook wrappers, and `useMemo` blocks at the absolute top of the component body, directly following the state initializations, to ensure they are fully initialized and accessible to all other hooks, effects, and event handlers.
+
 ### Unified List Components
 - **Problem**: Branching between `<FlatList />` and `<Animated.FlatList />` based on props.
 - **Fix**: Use a single component (e.g., `Animated.FlatList`) with dynamic prop objects to maintain hook identity.

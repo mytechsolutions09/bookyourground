@@ -271,6 +271,25 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   /** Which select menu is open (mutually exclusive; drives z-index + controlled open state). */
   const [openSelectMenu, setOpenSelectMenu] = useState<'location' | 'type' | null>(null);
 
+  const selectedGround = useMemo(
+    () => grounds.find((g) => g.id === selectedGroundId) ?? null,
+    [grounds, selectedGroundId],
+  );
+
+  const isNets = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p === 'nets' || p.includes('nets');
+  }, [selectedGround, typeKey]);
+
+  const isCricketGroundType = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p.includes('cricket') && !p.includes('box');
+  }, [selectedGround, typeKey]);
+
+  const supportMultipleSlots = useMemo(() => {
+    return isNets || isCricketGroundType;
+  }, [isNets, isCricketGroundType]);
+
   const [searchResults, setSearchResults] = useState<GroundWithImages[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -357,7 +376,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
     const load = async () => {
       try {
-        setLoadingGrounds(true);
+        if (grounds.length === 0) {
+          setLoadingGrounds(true);
+        }
         let query = supabase
           .from('grounds')
           .select(`
@@ -420,24 +441,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
 
 
-  const selectedGround = useMemo(
-    () => grounds.find((g) => g.id === selectedGroundId) ?? null,
-    [grounds, selectedGroundId],
-  );
 
-  const isNets = useMemo(() => {
-    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p === 'nets' || p.includes('nets');
-  }, [selectedGround, typeKey]);
-
-  const isCricketGroundType = useMemo(() => {
-    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p.includes('cricket') && !p.includes('box');
-  }, [selectedGround, typeKey]);
-
-  const supportMultipleSlots = useMemo(() => {
-    return isNets || isCricketGroundType;
-  }, [isNets, isCricketGroundType]);
 
   // For cricket/nets, auto-select the initial slot in selectedNetsSlots
   useEffect(() => {
@@ -923,7 +927,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     let cancelled = false;
 
     (async () => {
-      setLoadingSlots(true);
+      if (allStartHHMM.size === 0) {
+        setLoadingSlots(true);
+      }
 
       const [bookedRes, slotsRes] = await Promise.all([
         supabase.rpc('booked_start_times_for_ground_day', {

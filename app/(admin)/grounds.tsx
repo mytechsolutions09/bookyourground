@@ -2175,7 +2175,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderCell: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -2217,7 +2217,7 @@ const styles = StyleSheet.create({
   },
   groundName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#111827',
     fontFamily: 'Inter',
   },
@@ -2229,7 +2229,7 @@ const styles = StyleSheet.create({
   },
   ownerName: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#374151',
     fontFamily: 'Inter',
   },
@@ -2245,7 +2245,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#111827',
     fontFamily: 'Inter',
   },
@@ -2262,7 +2262,7 @@ const styles = StyleSheet.create({
   },
   miniBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   miniBadgeApproved: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
   miniBadgeTextApproved: { color: '#16a34a' },
