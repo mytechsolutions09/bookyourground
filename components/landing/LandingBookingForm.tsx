@@ -418,6 +418,27 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     }
   }, [initialStartTime]);
 
+
+
+  const selectedGround = useMemo(
+    () => grounds.find((g) => g.id === selectedGroundId) ?? null,
+    [grounds, selectedGroundId],
+  );
+
+  const isNets = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p === 'nets' || p.includes('nets');
+  }, [selectedGround, typeKey]);
+
+  const isCricketGroundType = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p.includes('cricket') && !p.includes('box');
+  }, [selectedGround, typeKey]);
+
+  const supportMultipleSlots = useMemo(() => {
+    return isNets || isCricketGroundType;
+  }, [isNets, isCricketGroundType]);
+
   // For cricket/nets, auto-select the initial slot in selectedNetsSlots
   useEffect(() => {
     if (
@@ -440,25 +461,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       }
     }
   }, [initialStartTime, initialDate, supportMultipleSlots, selectedGroundId, teamType, isNets, selectedGround]);
-
-  const selectedGround = useMemo(
-    () => grounds.find((g) => g.id === selectedGroundId) ?? null,
-    [grounds, selectedGroundId],
-  );
-
-  const isNets = useMemo(() => {
-    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p === 'nets' || p.includes('nets');
-  }, [selectedGround, typeKey]);
-
-  const isCricketGroundType = useMemo(() => {
-    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p.includes('cricket') && !p.includes('box');
-  }, [selectedGround, typeKey]);
-
-  const supportMultipleSlots = useMemo(() => {
-    return isNets || isCricketGroundType;
-  }, [isNets, isCricketGroundType]);
 
   const locationKeyForGround = (g: GroundWithImages) => `${g.city}__${g.state}`;
 
@@ -857,7 +859,11 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
 
   const handleApplyCoupon = async () => {
-    if (!user || !couponCode || !computed) return;
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in to apply coupon codes.');
+      return;
+    }
+    if (!couponCode || !computed) return;
 
     setValidatingCoupon(true);
     setCouponError(null);
@@ -2478,7 +2484,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       )}
 
       {/* Coupon Code Section */}
-      {user && (!useLandingSearchFlow || groundSelectedFromSearch) && (
+      {(!useLandingSearchFlow || groundSelectedFromSearch) && (
         <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle, isWeb && !isCompact && { flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
           {!(isWeb && !isCompact) && (
             <Text style={fieldLabelStyle}>Coupon Code</Text>
@@ -2527,17 +2533,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   </Text>
                 )}
               </Pressable>
-              {isWeb && groundPageAccent && !isCompact && (
-                <Button
-                  title={submitting ? 'Processing...' : 'Checkout'}
-                  onPress={handleBook}
-                  disabled={submitting}
-                  loading={submitting}
-                  size="large"
-                  style={[styles.premiumGlassButton, { height: 40, borderRadius: 16, paddingHorizontal: 20, marginTop: 0 }]}
-                  textStyle={[styles.premiumGlassButtonText, { fontSize: 13 }]}
-                />
-              )}
+
             </View>
             {appliedCoupon && (
               <Text style={styles.couponSuccess}>
@@ -2664,13 +2660,37 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                     </View>
                   )}
 
-                  <View style={{ marginTop: 'auto', paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '600' }]}>
-                      Total
-                    </Text>
-                    <Text style={[{ fontSize: 16, fontWeight: '600', color: '#0F172A' }]}>
-                      {formatCurrency(finalAmount)}
-                    </Text>
+                  <View style={{ marginTop: 'auto', paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', gap: 12 }}>
+                    {discountAmount > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, color: '#64748B' }}>Subtotal</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '500', color: '#1E293B' }}>{formatCurrency(computed.totalAmount)}</Text>
+                      </View>
+                    )}
+                    {discountAmount > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '500' }}>Discount</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#EF4444' }}>-{formatCurrency(discountAmount)}</Text>
+                      </View>
+                    )}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                      <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
+                        Total
+                      </Text>
+                      <Text style={[{ fontSize: 18, fontWeight: '800', color: '#01b854' }]}>
+                        {formatCurrency(finalAmount)}
+                      </Text>
+                    </View>
+
+                    <Button
+                      title={submitting ? 'Processing...' : 'Continue to Checkout'}
+                      onPress={handleBook}
+                      disabled={submitting}
+                      loading={submitting}
+                      size="large"
+                      style={[styles.premiumGlassButton, { width: '100%', borderRadius: 16, marginTop: 16 }]}
+                      textStyle={styles.premiumGlassButtonText}
+                    />
                   </View>
                 </View>
               ) : (

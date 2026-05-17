@@ -46,7 +46,7 @@ function getNetsTimeSlotSummary(booking: any): string {
 }
 
 export default function BookingDetailsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, completed } = useLocalSearchParams();
   const bookingId = Array.isArray(id) ? id[0] : id;
   const { user, profile } = useAuth();
   
@@ -78,6 +78,23 @@ export default function BookingDetailsScreen() {
       loadBooking();
     }
   }, [bookingId]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || completed !== 'true') return;
+
+    // Push a state so that when user clicks back, it triggers popstate instead of going back in actual history
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = () => {
+      // Redirect to home screen on web
+      router.replace('/');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [completed]);
 
   const loadBooking = async () => {
     try {
@@ -424,7 +441,7 @@ export default function BookingDetailsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Booking not found.</Text>
-          <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
+          <Button title="Go Back" onPress={() => completed === 'true' ? router.replace('/') : router.back()} style={{ marginTop: 20 }} />
         </View>
       </>
     );
