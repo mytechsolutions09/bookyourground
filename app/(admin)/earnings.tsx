@@ -132,12 +132,15 @@ function AdminEarningsInner() {
         .from('bookings')
         .select(`
           id,
+          user_id,
           total_amount,
           status,
           created_at,
           payment_method,
           platform_fee_owner,
           gst_owner,
+          platform_fee_user,
+          gst_user,
           owner_settlement,
           ground:grounds!inner(id, name, owner_id)
         `)
@@ -163,7 +166,9 @@ function AdminEarningsInner() {
       // 4. Process Stats
       let total = 0;
       let monthTotal = 0;
-      let totalFees = 0;
+      let totalOwnerFees = 0;
+      let totalUserFees = 0;
+      let totalPlatformRevenue = 0;
       let totalNet = 0;
       const now = new Date();
       const curMonth = now.getMonth();
@@ -172,12 +177,17 @@ function AdminEarningsInner() {
       const venueMap = new Map<string, number>();
 
       bookings?.forEach(b => {
+        const isOwnerBooking = b.user_id === b.ground?.owner_id;
         const amt = b.total_amount || 0;
-        const fee = (b.platform_fee_owner || 0) + (b.gst_owner || 0);
-        const net = b.owner_settlement || (amt - fee);
+        const ownerFee = (b.platform_fee_owner || 0) + (b.gst_owner || 0);
+        const userFee = isOwnerBooking ? 0 : ((b.platform_fee_user || 0) + (b.gst_user || 0));
+        const platformRevenue = ownerFee + userFee;
+        const net = b.owner_settlement || (amt - ownerFee);
 
         total += amt;
-        totalFees += fee;
+        totalOwnerFees += ownerFee;
+        totalUserFees += userFee;
+        totalPlatformRevenue += platformRevenue;
         totalNet += net;
 
         const date = new Date(b.created_at);
@@ -194,7 +204,9 @@ function AdminEarningsInner() {
         totalEarnings: total,
         thisMonthEarnings: monthTotal,
         totalBookings: bookings?.length || 0,
-        totalFees,
+        totalOwnerFees,
+        totalUserFees,
+        totalPlatformRevenue,
         totalNet
       });
 
@@ -247,12 +259,12 @@ function AdminEarningsInner() {
                  <Text style={styles.statTrendText}>{isFiltered ? selectedOwner?.full_name : 'Platform Wide'}</Text>
               </View>
             </View>
-            <View style={[styles.statCard, { backgroundColor: '#FEE2E2' }]}>
-              <Text style={[styles.statLabel, { color: '#991B1B' }]}>{isFiltered ? 'Your Commission' : 'Platform Earnings'}</Text>
-              <Text style={[styles.statValue, { color: '#991B1B' }]}>{formatCurrency(stats.totalFees)}</Text>
-              <View style={styles.statTrend}>
-                 <TrendingUp size={14} color="#991B1B" />
-                 <Text style={[styles.statTrendText, { color: '#991B1B' }]}>Fees & Taxes</Text>
+            <View style={[styles.statCard, { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#E9D5FF' }]}>
+              <Text style={[styles.statLabel, { color: '#6D28D9' }]}>Platform Net Revenue</Text>
+              <Text style={[styles.statValue, { color: '#6D28D9' }]}>{formatCurrency(stats.totalPlatformRevenue || 0)}</Text>
+              <View style={{ marginTop: 4 }}>
+                 <Text style={{ fontSize: 10, color: '#7C3AED', fontWeight: '600' }}>Owner Comm: {formatCurrency(stats.totalOwnerFees || 0)}</Text>
+                 <Text style={{ fontSize: 10, color: '#7C3AED', fontWeight: '600' }}>User Fees: {formatCurrency(stats.totalUserFees || 0)}</Text>
               </View>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#F0F9FF' }]}>
@@ -309,36 +321,49 @@ function AdminEarningsInner() {
       </View>
       
       <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
-        <View style={[styles.table, (isMobile || isSmallWeb) && { minWidth: 600 }]}>
+        <View style={[styles.table, (isMobile || isSmallWeb) && { minWidth: 800 }]}>
         <View style={styles.tableHeader}>
-          <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
-          <Text style={[styles.headerText, { flex: 1 }]}>Venue</Text>
-          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Gross</Text>
-          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Fee</Text>
-          <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net</Text>
+          <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
+          <Text style={[styles.headerText, { flex: 1.2 }]}>Venue</Text>
+          <Text style={[styles.headerText, { width: 90, textAlign: 'right' }]}>Customer Paid</Text>
+          <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>User Fee</Text>
+          <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>Owner Comm</Text>
+          <Text style={[styles.headerText, { width: 90, textAlign: 'right' }]}>Platform Net</Text>
+          <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Owner Settlement</Text>
         </View>
         {transactions.length === 0 ? (
           <Text style={styles.emptyText}>No data for this selection</Text>
         ) : (
-          transactions.map(tx => (
+          transactions.map(tx => {
+            const isOwnerBooking = tx.user_id === tx.ground?.owner_id;
+            const userFee = isOwnerBooking ? 0 : ((tx.platform_fee_user || 0) + (tx.gst_user || 0));
+            const ownerFee = (tx.platform_fee_owner || 0) + (tx.gst_owner || 0);
+            
+            return (
             <View key={tx.id} style={styles.tableRow}>
-               <View style={{ width: 120 }}>
+               <View style={{ width: 100 }}>
                 <Text style={styles.cellTextMain}>{new Date(tx.created_at).toLocaleDateString()}</Text>
-                <Text style={styles.cellTextSub}>{new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {tx.payment_method?.toUpperCase()}</Text>
+                <Text style={styles.cellTextSub}>{new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1.2 }}>
                 <Text style={[styles.cellTextMain, { color: '#01b854' }]} numberOfLines={1}>{tx.ground?.name}</Text>
-                <Text style={styles.cellTextSub}>ID: #{tx.id.substring(0,8).toUpperCase()}</Text>
+                <Text style={styles.cellTextSub}>ID: #{tx.id.substring(0,8).toUpperCase()} • {tx.payment_method?.toUpperCase()}</Text>
               </View>
-              <Text style={[styles.cellTextMain, { width: 80, textAlign: 'right' }]}>{formatCurrency(tx.total_amount)}</Text>
-              <Text style={[styles.cellTextSub, { width: 80, textAlign: 'right', color: '#EF4444' }]}>
-                -{formatCurrency((tx.platform_fee_owner || 0) + (tx.gst_owner || 0))}
+              <Text style={[styles.cellTextMain, { width: 90, textAlign: 'right' }]}>{formatCurrency(tx.total_amount)}</Text>
+              <Text style={[styles.cellTextSub, { width: 85, textAlign: 'right', color: '#475569' }]}>
+                {formatCurrency(userFee)}
+              </Text>
+              <Text style={[styles.cellTextSub, { width: 85, textAlign: 'right', color: '#EA580C' }]}>
+                {formatCurrency(ownerFee)}
+              </Text>
+              <Text style={[styles.cellTextMain, { width: 90, textAlign: 'right', color: '#6D28D9' }]}>
+                {formatCurrency(userFee + ownerFee)}
               </Text>
               <Text style={[styles.cellTextMain, { width: 100, textAlign: 'right', color: '#01b854' }]}>
-                {formatCurrency(tx.owner_settlement || tx.total_amount)}
+                {formatCurrency(tx.owner_settlement || (tx.total_amount - ownerFee))}
               </Text>
             </View>
-          ))
+          )})
         )}
         </View>
       </ScrollView>

@@ -49,16 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (loadingProfileRef.current === userId && retryCount === 0) return;
     loadingProfileRef.current = userId;
 
+    const startTime = Date.now();
     try {
       setLoading(true);
       
-      const profilePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Wrap the thenable in an async IIFE to ensure it returns a standard native Promise
+      const profilePromise = (async () => {
+        return await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+      })();
 
-      // Increased timeout to 10s to be more resilient on slow connections
+      // 10s timeout is more than enough for Supabase cold starts while avoiding extreme hangs
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       );
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       if (data) {
+        console.log(`AuthContext: Loaded profile in ${Date.now() - startTime}ms`);
         setProfile(prev => {
           if (prev && prev.id === data.id && 
               prev.role === data.role && 
@@ -90,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void scheduleMatchReminders(userId);
     } catch (error: any) {
       const errorMsg = error?.message || String(error);
-      console.error(`AuthContext: Error loading profile (Attempt ${retryCount + 1}):`, errorMsg);
+      console.error(`AuthContext: Error loading profile (Attempt ${retryCount + 1}) after ${Date.now() - startTime}ms:`, errorMsg);
       
       const isRetryable = errorMsg.includes('timeout') || 
                           errorMsg.toLowerCase().includes('fetch') || 
@@ -113,27 +118,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // 1. Check initial session and listen to auth state changes synchronously (no async database calls in listener)
   useEffect(() => {
-    let profileTimeout: NodeJS.Timeout;
     let isMounted = true;
 
-    // Check for stale session on mount
     const checkInitialSession = async () => {
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         if (error) {
           console.warn('AuthContext: Initial session check error:', error.message);
-          // If the refresh token is invalid/not found, force a sign out to clear storage
           if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
             await supabase.auth.signOut();
           }
         }
-        if (isMounted && initialSession?.user) {
-          setUser(initialSession.user);
-          setSession(initialSession);
-          await loadProfile(initialSession.user);
-        } else if (isMounted) {
-          setLoading(false);
+        if (isMounted) {
+          if (initialSession?.user) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+          } else {
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error('AuthContext: Error in checkInitialSession:', err);
@@ -143,11 +147,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkInitialSession();
 
-    // Use onAuthStateChange for all auth state management
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
 
-      // Handle session errors that might come through the event stream
       if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
           setProfile(null);
           setUser(null);
@@ -160,32 +162,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setSession(prev => prev?.access_token === session?.access_token ? prev : session);
       setUser(prev => prev?.id === newUser?.id ? prev : newUser);
-
-      if (newUser) {
-        if (profileTimeout) clearTimeout(profileTimeout);
-
-        profileTimeout = setTimeout(() => {
-          if (isMounted) setLoading(false);
-        }, 30000);
-
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile) {
-          await loadProfile(newUser);
-        } else {
-          setLoading(false);
-        }
-        
-        void scheduleMatchReminders(newUser.id);
-      } else {
-        setLoading(false);
-      }
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+    };
+  }, []);
+
+  // 2. Load user profile whenever the user state changes (outside of onAuthStateChange flow to avoid deadlocks)
+  useEffect(() => {
+    let isMounted = true;
+    let profileTimeout: NodeJS.Timeout;
+
+    if (user) {
+      // Safety backup timeout to guarantee the app becomes interactive within 10s
+      profileTimeout = setTimeout(() => {
+        if (isMounted) {
+          console.warn('AuthContext: Profile fetch backup timeout reached, enabling interaction.');
+          setLoading(false);
+        }
+      }, 10000);
+
+      loadProfile(user).then(() => {
+        if (isMounted) {
+          clearTimeout(profileTimeout);
+        }
+      });
+    } else {
+      setProfile(null);
+    }
+
+    return () => {
+      isMounted = false;
       if (profileTimeout) clearTimeout(profileTimeout);
     };
-  }, [loadProfile]);
+  }, [user, loadProfile]);
 
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {

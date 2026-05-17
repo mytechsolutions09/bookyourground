@@ -47,6 +47,7 @@ function AdminPayoutsInner() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,6 +119,28 @@ function AdminPayoutsInner() {
       } else {
         setBookings(data || []);
         setWithdrawals(withdrawalData || []);
+      }
+
+      // Fetch wallet balances
+      const ownerIds = new Set<string>();
+      (data || []).forEach(b => { if (b.ground?.owner_id) ownerIds.add(b.ground.owner_id); });
+      (withdrawalData || []).forEach(w => { if (w.owner_id) ownerIds.add(w.owner_id); });
+      
+      if (ownerIds.size > 0) {
+        const { data: walletsResult } = await supabase
+          .from('wallets')
+          .select('user_id, balance')
+          .in('user_id', Array.from(ownerIds));
+          
+        if (walletsResult) {
+          setWalletBalances(prev => {
+            const newWallets = { ...prev };
+            walletsResult.forEach(w => {
+              newWallets[w.user_id] = w.balance;
+            });
+            return newWallets;
+          });
+        }
       }
 
       setPage(currentPage);
@@ -346,6 +369,7 @@ function AdminPayoutsInner() {
                 <View style={[styles.tableCell, { flex: 2 }]}>
                   <Text style={styles.ownerName}>{item.owner?.full_name || 'Unknown'}</Text>
                   <Text style={styles.groundName}>{item.owner?.email || ''}</Text>
+                  <Text style={{ fontSize: 11, color: '#01b854', fontWeight: '600', marginTop: 2 }}>Wallet: {formatCurrency(walletBalances[item.owner_id] || 0)}</Text>
                 </View>
                 <View style={[styles.tableCell, { width: 120 }]}>
                   <Text style={styles.amountGross}>{formatCurrency(item.amount)}</Text>
@@ -442,6 +466,7 @@ function AdminPayoutsInner() {
                   <View style={[styles.tableCell, { flex: 2 }]}>
                     <Text style={styles.ownerName}>{item.owner?.full_name || 'Unknown'}</Text>
                     <Text style={styles.groundName}>{item.owner?.email || ''}</Text>
+                    <Text style={{ fontSize: 11, color: '#01b854', fontWeight: '600', marginTop: 2 }}>Wallet: {formatCurrency(walletBalances[item.owner_id] || 0)}</Text>
                   </View>
                   <View style={[styles.tableCell, { width: 120 }]}>
                     <Text style={styles.amountGross}>{formatCurrency(item.amount)}</Text>
@@ -550,6 +575,7 @@ function AdminPayoutsInner() {
                     <Building2 size={12} color="#9CA3AF" />
                     <Text style={styles.groundName}>{item.groundName}</Text>
                   </View>
+                  <Text style={{ fontSize: 11, color: '#01b854', fontWeight: '600', marginTop: 2 }}>Wallet: {formatCurrency(walletBalances[item.ownerId] || 0)}</Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colMatches]}>
@@ -608,6 +634,7 @@ function AdminPayoutsInner() {
                       <Building2 size={12} color="#9CA3AF" />
                       <Text style={styles.groundName}>{item.groundName}</Text>
                     </View>
+                    <Text style={{ fontSize: 11, color: '#01b854', fontWeight: '600', marginTop: 2 }}>Wallet: {formatCurrency(walletBalances[item.ownerId] || 0)}</Text>
                   </View>
 
                   <View style={[styles.tableCell, styles.colMatches]}>

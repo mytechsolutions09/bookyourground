@@ -47,25 +47,109 @@ export default function AdminBookingsScreen() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [types, setTypes] = useState<any[]>([]);
 
+  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'customer' | 'fee' | 'payment' | 'payout'>('booked_at');
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortAsc(prev => !prev);
+    } else {
+      setSortKey(key);
+      if (key === 'booked_at' || key === 'date') {
+        setSortAsc(false);
+      } else {
+        setSortAsc(true);
+      }
+    }
+  };
+
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
   const [selectedSlotBookings, setSelectedSlotBookings] = useState<BookingWithDetails[]>([]);
 
-  const openSlotModal = (item: BookingWithDetails) => {
-    let relatedBookings: BookingWithDetails[] = [];
-    
+  const openSlotModal = async (item: BookingWithDetails) => {
+    // Show modal immediately with current loaded bookings from local state so it's super snappy!
+    let initialBookings: BookingWithDetails[] = [];
     if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
-      relatedBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
+      initialBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
     } else {
       const normStart = normalizeDbTimeToHHMM(item.start_time);
       const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-      relatedBookings = bookings.filter(b => 
+      initialBookings = bookings.filter(b => 
         (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
         `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
       );
     }
-    
-    setSelectedSlotBookings(relatedBookings);
+    setSelectedSlotBookings(initialBookings);
     setIsSlotModalVisible(true);
+
+    // Simultaneously fetch the absolute full truth directly from Supabase to fill in any missing paginated/filtered bookings!
+    try {
+      if (item.created_at) {
+        const dateStr = item.created_at;
+        const minutePrefix = dateStr.substring(0, 16); // "YYYY-MM-DDTHH:MM"
+        const startOfMinute = `${minutePrefix}:00.000Z`;
+        const endOfMinute = `${minutePrefix}:59.999Z`;
+
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .eq('user_id', item.user_id)
+          .eq('ground_id', item.ground_id)
+          .gte('created_at', startOfMinute)
+          .lte('created_at', endOfMinute);
+
+        if (data && !error && data.length > 0) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+          return;
+        }
+      }
+
+      // Fallback to ID-based query if created_at is not available or if the minute-range query returned nothing
+      if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .in('id', (item as any).allBookingIds);
+        if (data && !error) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .eq('ground_id', item.ground_id)
+          .eq('booking_date', item.booking_date)
+          .eq('start_time', item.start_time)
+          .neq('status', 'pending')
+          .neq('status', 'rejected');
+        if (data && !error) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+        }
+      }
+    } catch (dbErr) {
+      console.error('Error fetching full breakdown bookings:', dbErr);
+    }
   };
 
   useEffect(() => {
@@ -79,7 +163,7 @@ export default function AdminBookingsScreen() {
     }, searchQuery ? 400 : 0);
     
     return () => clearTimeout(timer);
-  }, [user, dateRange, typeFilter, activeTab, searchQuery]);
+  }, [user, dateRange, typeFilter, activeTab, searchQuery, sortKey, sortAsc]);
 
   useEffect(() => {
     const loadTypes = async () => {
@@ -212,7 +296,11 @@ export default function AdminBookingsScreen() {
                          <View style={styles.whoAvatar}><Text style={styles.whoAvatarText}>{(b.user?.full_name || b.booked_for_name || 'C')[0].toUpperCase()}</Text></View>
                          <View>
                            <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
-                           <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                             <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                             <Text style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'Inter' }}>•</Text>
+                             <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>{b.user?.phone ?? 'No phone'}</Text>
+                           </View>
                          </View>
                       </View>
 
@@ -227,11 +315,11 @@ export default function AdminBookingsScreen() {
                              {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
                            </Text>
                          </View>
-                         {!(b.ground.pitch_type.toLowerCase().includes('net') || b.ground.pitch_type.toLowerCase().includes('lane')) && (
+                         {!(b.ground?.pitch_type?.toLowerCase()?.includes('net') || b.ground?.pitch_type?.toLowerCase()?.includes('lane')) && (
                            <View style={styles.slotDetailRow}>
                              <Users size={14} color="#64748B" />
                              <Text style={styles.slotBookingDetail}>
-                               {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                               {(cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes) || '1 Team').toUpperCase()}
                              </Text>
                            </View>
                          )}
@@ -356,9 +444,33 @@ export default function AdminBookingsScreen() {
             ground_images(*)
           ),
           user:profiles(full_name, phone)
-        `)
-        .order('booking_date', { ascending: false })
-        .order('created_at', { ascending: false });
+        `);
+      // Apply database-level ordering based on sortKey and sortAsc
+      if (sortKey === 'booked_at') {
+        query = query.order('created_at', { ascending: sortAsc });
+      } else if (sortKey === 'date') {
+        query = query.order('booking_date', { ascending: sortAsc })
+                     .order('start_time', { ascending: sortAsc });
+      } else if (sortKey === 'amount') {
+        query = query.order('total_amount', { ascending: sortAsc });
+      } else if (sortKey === 'status') {
+        query = query.order('status', { ascending: sortAsc });
+      } else if (sortKey === 'payment') {
+        query = query.order('payment_method', { ascending: sortAsc });
+      } else if (sortKey === 'paid') {
+        query = query.order('payment_received', { ascending: sortAsc });
+      } else if (sortKey === 'payout') {
+        query = query.order('payout_enabled', { ascending: sortAsc });
+      } else if (sortKey === 'teams') {
+        query = query.order('team_type', { ascending: sortAsc });
+      } else if (sortKey === 'ground') {
+        query = query.order('name', { referencedTable: 'grounds', ascending: sortAsc });
+      } else if (sortKey === 'customer') {
+        query = query.order('full_name', { referencedTable: 'profiles', ascending: sortAsc });
+      } else {
+        query = query.order('booking_date', { ascending: false })
+                     .order('created_at', { ascending: false });
+      }
 
       if (typeFilter !== 'all') {
         // Since we alias as 'ground', we filter on the joined table's column
@@ -609,8 +721,44 @@ export default function AdminBookingsScreen() {
       });
     }
 
-    return result;
-  }, [bookings, profile?.role]);
+    // Sort logic
+    const sorted = [...result].sort((a, b) => {
+      let comparison = 0;
+      if (sortKey === 'booked_at') {
+        comparison = new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? 1 : -1;
+      } else if (sortKey === 'ground') {
+        comparison = (a.ground?.name || '').toLowerCase() > (b.ground?.name || '').toLowerCase() ? 1 : -1;
+      } else if (sortKey === 'date') {
+        comparison = `${a.booking_date}T${a.start_time}` > `${b.booking_date}T${b.start_time}` ? 1 : -1;
+      } else if (sortKey === 'teams') {
+        const countTeams = (bRow: any) => {
+          if (bRow.team_type === 'one') return 1;
+          if (bRow.team_type === 'both') return 2;
+          return cricketTeamsLabelFromBooking(bRow.ground?.pitch_type, bRow.notes) === '1 team' ? 1 : 2;
+        };
+        comparison = countTeams(a) > countTeams(b) ? 1 : -1;
+      } else if (sortKey === 'status') {
+        comparison = a.status > b.status ? 1 : -1;
+      } else if (sortKey === 'fee') {
+        comparison = (a.calculated_total_fee || 0) > (b.calculated_total_fee || 0) ? 1 : -1;
+      } else if (sortKey === 'amount') {
+        comparison = a.total_amount > b.total_amount ? 1 : -1;
+      } else if (sortKey === 'payment') {
+        comparison = (a.payment_method || '').toLowerCase() > (b.payment_method || '').toLowerCase() ? 1 : -1;
+      } else if (sortKey === 'paid') {
+        const isPaidA = a.payment_received || (a.payment_method !== 'cash' && a.status === 'confirmed');
+        const isPaidB = b.payment_received || (b.payment_method !== 'cash' && b.status === 'confirmed');
+        comparison = (isPaidA ? 1 : 0) > (isPaidB ? 1 : 0) ? 1 : -1;
+      } else if (sortKey === 'payout') {
+        comparison = (a.payout_enabled ? 1 : 0) > (b.payout_enabled ? 1 : 0) ? 1 : -1;
+      } else if (sortKey === 'customer') {
+        comparison = (a.user?.full_name || 'Guest').toLowerCase() > (b.user?.full_name || 'Guest').toLowerCase() ? 1 : -1;
+      }
+      return sortAsc ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [bookings, profile?.role, sortKey, sortAsc]);
 
   const todayIsoForCounts = useMemo(() => {
     const d = new Date();
@@ -799,17 +947,126 @@ export default function AdminBookingsScreen() {
       {isWeb && !isSmallWeb && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colBookedAt]}>Booked at</Text>
-            <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
-            <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Slot Date & time</Text>
-            <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-            <Text style={[styles.tableHeaderCell, styles.colFee]}>Fee</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
-            <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
-            <Text style={[styles.tableHeaderCell, styles.colPaid]}>Paid</Text>
-            <Text style={[styles.tableHeaderCell, styles.colPayout]}>Payout</Text>
-            <Text style={[styles.tableHeaderCell, styles.colWho]}>Customer</Text>
+            <TouchableOpacity 
+              onPress={() => toggleSort('booked_at')} 
+              style={[styles.tableHeaderCellContainer, styles.colBookedAt]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Booked at</Text>
+              {sortKey === 'booked_at' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('ground')} 
+              style={[styles.tableHeaderCellContainer, styles.colGround]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Ground</Text>
+              {sortKey === 'ground' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('date')} 
+              style={[styles.tableHeaderCellContainer, styles.colDateTime]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Slot Date & time</Text>
+              {sortKey === 'date' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('teams')} 
+              style={[styles.tableHeaderCellContainer, styles.colTeams]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Teams</Text>
+              {sortKey === 'teams' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('status')} 
+              style={[styles.tableHeaderCellContainer, styles.colStatus]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Status</Text>
+              {sortKey === 'status' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('fee')} 
+              style={[styles.tableHeaderCellContainer, styles.colFee, { justifyContent: 'center' }]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Fee</Text>
+              {sortKey === 'fee' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('amount')} 
+              style={[styles.tableHeaderCellContainer, styles.colAmount]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Amount</Text>
+              {sortKey === 'amount' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('payment')} 
+              style={[styles.tableHeaderCellContainer, styles.colPayment]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Payment</Text>
+              {sortKey === 'payment' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('paid')} 
+              style={[styles.tableHeaderCellContainer, styles.colPaid, { justifyContent: 'center' }]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Paid</Text>
+              {sortKey === 'paid' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('payout')} 
+              style={[styles.tableHeaderCellContainer, styles.colPayout, { justifyContent: 'center' }]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Payout</Text>
+              {sortKey === 'payout' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => toggleSort('customer')} 
+              style={[styles.tableHeaderCellContainer, styles.colWho]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tableHeaderCell}>Customer</Text>
+              {sortKey === 'customer' && (
+                <Text style={styles.sortIndicator}>{sortAsc ? ' ▲' : ' ▼'}</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -818,7 +1075,7 @@ export default function AdminBookingsScreen() {
         data={filteredBookings}
         renderItem={({ item }) => {
           if (isWeb && !isSmallWeb) {
-            const teamsCell = cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) ?? '—';
+            const teamsCell = cricketTeamsLabelFromBooking(item.ground?.pitch_type, item.notes) ?? '—';
             return (
               <TouchableOpacity
                 onPress={() => router.push(`/bookings/${item.id}`)}
@@ -833,7 +1090,7 @@ export default function AdminBookingsScreen() {
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   <Text style={styles.bookingIdTable}>
-                    Booking ID: {item.id.substring(0, 8).toUpperCase()}
+                    {item.id.substring(0, 8).toUpperCase()}
                   </Text>
                 </View>
 
@@ -897,7 +1154,9 @@ export default function AdminBookingsScreen() {
                           <TouchableOpacity 
                             onPress={(e) => {
                               e.stopPropagation();
-                              router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
+                              if (item.ground?.id) {
+                                router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
+                              }
                             }}
                             style={styles.partialBadge}
                           >
@@ -1163,10 +1422,20 @@ const styles = StyleSheet.create({
   },
   tableHeaderCell: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
+  },
+  tableHeaderCellContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sortIndicator: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#01b854',
   },
   tableRow: {
     flexDirection: 'row',
@@ -1220,17 +1489,17 @@ const styles = StyleSheet.create({
 
   bookedDateText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#111827',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   bookedTimeText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 1,
   },
   bookingIdTable: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#01b854',
     marginTop: 4,
@@ -1326,63 +1595,63 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   groundName: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#111827',
   },
   groundLocation: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
   },
   amount: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#111827',
   },
   dateText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#111827',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
   },
   teamsText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '400',
     color: '#111827',
     textAlign: 'left',
   },
   statusTextInline: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     textTransform: 'capitalize',
     marginTop: 2,
   },
   metaInline: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
   },
   feeText: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
   whoPrimaryText: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: '#111827',
     marginBottom: 2,
   },
@@ -1443,40 +1712,27 @@ const styles = StyleSheet.create({
   paymentBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    textAlign: 'center',
-    overflow: 'hidden',
+    textAlign: 'left',
   },
   paymentCash: {
-    backgroundColor: '#FEF3C7',
-    color: '#92400E',
+    color: '#B45309',
   },
   paymentOnline: {
-    backgroundColor: '#DBEAFE',
-    color: '#1E40AF',
+    color: '#1D4ED8',
   },
   paymentWallet: {
-    backgroundColor: '#F3E8FF',
-    color: '#7E22CE',
+    color: '#6D28D9',
   },
   statusBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    textAlign: 'center',
-    overflow: 'hidden',
+    textAlign: 'left',
   },
   statusConfirmed: {
-    backgroundColor: '#DEF7EC',
-    color: '#03543F',
+    color: '#047857',
   },
   statusCancelled: {
-    backgroundColor: '#FDE8E8',
-    color: '#9B1C1C',
+    color: '#B91C1C',
   },
   payoutToggle: {
     paddingHorizontal: 12,
@@ -1511,12 +1767,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   partialBadge: {
-    backgroundColor: '#fff7ed',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#fdba74',
+    backgroundColor: 'transparent',
   },
   partialBadgeText: {
     fontSize: 10,
@@ -1524,12 +1775,7 @@ const styles = StyleSheet.create({
     color: '#9a3412',
   },
   fullMatchBadge: {
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#86efac',
+    backgroundColor: 'transparent',
   },
   fullMatchBadgeText: {
     fontSize: 10,

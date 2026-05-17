@@ -15,7 +15,7 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { getDayOfWeek } from '@/utils/helpers';
 
 function getNetsTimeSlotSummary(booking: any): string {
-  const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
+  const isNets = booking.ground?.pitch_type?.toLowerCase().includes('nets');
   if (isNets && booking.notes) {
     const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(booking.notes);
     const matchDuration = /\(Duration:\s*([^)]+)\)/.exec(booking.notes);
@@ -42,7 +42,7 @@ function getNetsTimeSlotSummary(booking: any): string {
       }
     }
   }
-  return formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type);
+  return formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground?.pitch_type);
 }
 
 export default function BookingDetailsScreen() {
@@ -203,7 +203,7 @@ export default function BookingDetailsScreen() {
   const handleShare = async () => {
     if (!booking) return;
     try {
-      const message = `Booking at ${booking.ground.name} on ${formatDate(booking.booking_date)} at ${formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}. Booking ID: #${bookingId.substring(0, 8).toUpperCase()}`;
+      const message = `Booking at ${booking.ground?.name || 'N/A'} on ${formatDate(booking.booking_date)} at ${formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground?.pitch_type)}. Booking ID: #${bookingId.substring(0, 8).toUpperCase()}`;
       if (isWeb) {
         if (navigator.share) {
           await navigator.share({
@@ -279,14 +279,14 @@ export default function BookingDetailsScreen() {
 
   const isNetBooking = useMemo(() => {
     if (!booking?.ground) return false;
-    const pitchType = (booking.ground.pitch_type ?? '').toLowerCase();
-    const groundName = (booking.ground.name ?? '').toLowerCase();
+    const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
+    const groundName = (booking.ground?.name ?? '').toLowerCase();
     return pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
   }, [booking]);
 
   const cricketTeamsLabel = useMemo(() => {
     if (!booking) return null;
-    return cricketTeamsLabelFromBooking(booking.ground.pitch_type, booking.notes);
+    return cricketTeamsLabelFromBooking(booking.ground?.pitch_type, booking.notes);
   }, [booking]);
 
   const calculatedPlatformFee = useMemo(() => {
@@ -447,7 +447,7 @@ export default function BookingDetailsScreen() {
     );
   }
 
-  const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
+  const primaryImage = booking.ground?.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
   const content = (
@@ -462,10 +462,10 @@ export default function BookingDetailsScreen() {
           </View>
           <View style={styles.heroBottom}>
             <View style={{ flex: 1, marginRight: 20 }}>
-              <Text style={[styles.groundTitle, width < 768 && { fontSize: 18, fontWeight: '600' }]}>{booking.ground.name}</Text>
+              <Text style={[styles.groundTitle, width < 768 && { fontSize: 18, fontWeight: '600' }]}>{booking.ground?.name || 'N/A'}</Text>
               <View style={styles.groundSport}>
                 <Globe size={12} color="#FFF" />
-                <Text style={styles.sportText}>{booking.ground.pitch_type || 'Cricket'}</Text>
+                <Text style={styles.sportText}>{booking.ground?.pitch_type || 'Cricket'}</Text>
               </View>
             </View>
             <Pressable style={styles.bookingIdChip} onPress={handleCopy}>
@@ -490,7 +490,7 @@ export default function BookingDetailsScreen() {
               <View style={styles.addressRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, gap: 8 }}>
                   <MapPin size={14} color="#01C45A" style={{ marginTop: 2 }} />
-                  <Text style={styles.addressText}>{booking.ground.address}, {booking.ground.city}</Text>
+                  <Text style={styles.addressText}>{booking.ground?.address || ''}, {booking.ground?.city || ''}</Text>
                 </View>
                 {mapsUrl && (
                   <Pressable 
@@ -526,7 +526,7 @@ export default function BookingDetailsScreen() {
                   </View>
                   <Text style={styles.slotValue}>
                     {(() => {
-                      const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
+                      const isNets = booking.ground?.pitch_type?.toLowerCase().includes('nets');
                       if (isNets && !booking.calculatedDuration) {
                         const m = 20 * slotCount;
                         const h = Math.floor(m / 60);
@@ -544,10 +544,10 @@ export default function BookingDetailsScreen() {
                   <View style={styles.slotItem}>
                     <View style={styles.slotLabel}>
                       <Users size={11} color="#01C45A" strokeWidth={2.5} />
-                      <Text style={styles.slotLabelText}>{booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
+                      <Text style={styles.slotLabelText}>{booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
                     </View>
                     <Text style={styles.slotValue}>
-                      {booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
+                      {booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
                     </Text>
                   </View>
                 )}
@@ -754,10 +754,10 @@ export default function BookingDetailsScreen() {
             </View>
             <View style={styles.receiptBody}>
               {[
-                ["Venue", booking.ground.name],
+                ["Venue", booking.ground?.name || 'N/A'],
                 ["Booking ID", `#${bookingId.substring(0, 8).toUpperCase()}`],
                 ["Date", formatDate(booking.booking_date)],
-                ["Slot", isNetsWithMultipleSlots ? timeSlotLabel : formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)],
+                ["Slot", isNetsWithMultipleSlots ? timeSlotLabel : formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground?.pitch_type)],
                 ["Teams", cricketTeamsLabel || '1 Team'],
                 ["Venue Price", formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)],
                 ["Platform Fee", formatCurrency((Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount)],

@@ -376,7 +376,7 @@ export default function OwnerBookingsScreen() {
   };
 
   const handleCancelBooking = async (booking: BookingWithDetails) => {
-    const isOwnGround = booking.ground.owner_id === user?.id;
+    const isOwnGround = booking.ground?.owner_id === user?.id;
     const bDate = new Date(booking.booking_date);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -511,24 +511,94 @@ export default function OwnerBookingsScreen() {
     return ownerPf * (1 + gstRate);
   };
 
-  const openSlotModal = (item: BookingWithDetails) => {
-    let relatedBookings: BookingWithDetails[] = [];
+  const openSlotModal = async (item: BookingWithDetails) => {
+    // Show modal immediately with current loaded bookings from local state so it's super snappy!
+    let initialBookings: BookingWithDetails[] = [];
 
     if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
       // If it's a consolidated item, show all bookings in that group
-      relatedBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
+      initialBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
     } else {
       // Fallback for single slot items
       const normStart = normalizeDbTimeToHHMM(item.start_time);
       const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-      relatedBookings = bookings.filter(b =>
+      initialBookings = bookings.filter(b =>
         (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') &&
         `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
       );
     }
 
-    setSelectedSlotBookings(relatedBookings);
+    setSelectedSlotBookings(initialBookings);
     setIsSlotModalVisible(true);
+
+    // Simultaneously fetch the absolute full truth directly from Supabase to fill in any missing paginated/filtered bookings!
+    try {
+      if (item.created_at) {
+        const dateStr = item.created_at;
+        const minutePrefix = dateStr.substring(0, 16); // "YYYY-MM-DDTHH:MM"
+        const startOfMinute = `${minutePrefix}:00.000Z`;
+        const endOfMinute = `${minutePrefix}:59.999Z`;
+
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .eq('user_id', item.user_id)
+          .eq('ground_id', item.ground_id)
+          .gte('created_at', startOfMinute)
+          .lte('created_at', endOfMinute);
+
+        if (data && !error && data.length > 0) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+          return;
+        }
+      }
+
+      // Fallback to ID-based query if created_at is not available or if the minute-range query returned nothing
+      if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .in('id', (item as any).allBookingIds);
+        if (data && !error) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            ground:grounds(
+              *,
+              ground_images(*)
+            ),
+            user:profiles(full_name, phone)
+          `)
+          .eq('ground_id', item.ground_id)
+          .eq('booking_date', item.booking_date)
+          .eq('start_time', item.start_time)
+          .neq('status', 'pending')
+          .neq('status', 'rejected');
+        if (data && !error) {
+          setSelectedSlotBookings(data as BookingWithDetails[]);
+        }
+      }
+    } catch (dbErr) {
+      console.error('Error fetching full breakdown bookings:', dbErr);
+    }
   };  const setQuickRange = (range: string) => {
     const today = new Date();
     let start = new Date();
@@ -666,8 +736,8 @@ export default function OwnerBookingsScreen() {
       const byScope = bookings.filter((b) => {
         if (ownerScope === 'all') return true;
         return ownerScope === 'own'
-          ? b.ground.owner_id === user?.id
-          : b.ground.owner_id !== user?.id;
+          ? b.ground?.owner_id === user?.id
+          : b.ground?.owner_id !== user?.id;
       });
 
       const byDate = byScope.filter((b) => {
@@ -777,7 +847,7 @@ export default function OwnerBookingsScreen() {
           const getTeamsVal = (b: any) => {
             if (b.team_type === 'one') return 1;
             if (b.team_type === 'both') return 2;
-            const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
+            const label = cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes);
             return label === '1 team' ? 1 : 2;
           };
           comparison = getTeamsVal(a) > getTeamsVal(b) ? 1 : -1;
@@ -805,8 +875,8 @@ export default function OwnerBookingsScreen() {
     const byScope = bookings.filter((b) => {
       if (ownerScope === 'all') return true;
       return ownerScope === 'own'
-        ? b.ground.owner_id === user?.id
-        : b.ground.owner_id !== user?.id;
+        ? b.ground?.owner_id === user?.id
+        : b.ground?.owner_id !== user?.id;
     });
 
     // Typically, status counts might ignore selectedDate or searchQuery to show global totals for that tab,
@@ -1208,7 +1278,7 @@ export default function OwnerBookingsScreen() {
         data={filteredBookings}
         extraData={bookings}
         renderItem={({ item }) => {
-          const isOwnGround = item.ground.owner_id === user?.id;
+          const isOwnGround = item.ground?.owner_id === user?.id;
           const isSelfBooking = item.user_id === user?.id;
           const meta =
             isOwnGround && isSelfBooking
@@ -1237,9 +1307,9 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={[styles.tableCell, styles.colGround]}>
-                  <Text style={styles.groundName}>{item.ground.name}</Text>
+                  <Text style={styles.groundName}>{item.ground?.name || 'N/A'}</Text>
                   <Text style={styles.groundLocation}>
-                    {item.ground.city}, {item.ground.state}
+                    {item.ground?.city || ''}, {item.ground?.state || ''}
                   </Text>
                 </View>
 
@@ -1359,14 +1429,14 @@ export default function OwnerBookingsScreen() {
               <View style={styles.compactTopRow}>
                 <Image
                   source={{
-                    uri: item.ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg'
+                    uri: item.ground?.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg'
                   }}
                   style={styles.compactGroundImage}
                 />
 
                 <View style={styles.compactMainInfo}>
                   <Text style={[styles.compactGroundName, !isLight && styles.compactGroundNameNative]} numberOfLines={1}>
-                    {item.ground.name}
+                    {item.ground?.name || 'N/A'}
                   </Text>
                   <TouchableOpacity 
                     style={styles.compactSlotRow}
@@ -1569,7 +1639,7 @@ export default function OwnerBookingsScreen() {
                               <Text style={{ color: '#CBD5E1', fontSize: 12 }}>|</Text>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                 <Text style={styles.slotBookingDetail}>
-                                  {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                                  {(cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes) || '1 Team').toUpperCase()}
                                 </Text>
                                 <View style={[styles.typeBadge, { backgroundColor: isSlotFull ? '#DCFCE7' : '#FEF3C7', paddingVertical: 2, paddingHorizontal: 6, marginRight: 0 }]}>
                                   <Text style={[styles.typeBadgeText, { color: isSlotFull ? '#166534' : '#92400E', fontSize: 8 }]}>
@@ -1583,7 +1653,7 @@ export default function OwnerBookingsScreen() {
                             <>
                               <Text style={{ color: '#CBD5E1', fontSize: 12 }}>|</Text>
                               <Text style={styles.slotBookingDetail}>
-                                {b.ground.name.toUpperCase()}
+                                {(b.ground?.name || '').toUpperCase()}
                               </Text>
                             </>
                           )}

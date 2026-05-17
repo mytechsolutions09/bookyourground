@@ -103,7 +103,7 @@ export default function GroundCard({
   const renderCardContent = () => {
     if (glass) {
       return (
-        <Card style={[styles.card, styles.cardGlass]}>
+        <Card style={[styles.card, styles.cardGlass, { backgroundColor: 'transparent' }]}>
           <Image source={{ uri: primaryImage }} style={styles.imageFull} />
           <View style={styles.glassOverlayGradient} />
           
@@ -681,23 +681,28 @@ const styles = StyleSheet.create({
   // Glass variant styles
   touchableGlass: {
     marginBottom: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
   cardGlass: {
     height: 320,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
     borderRadius: 24,
     borderWidth: 0,
     borderColor: 'transparent',
+    overflow: 'hidden',
   },
   imageFull: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
     opacity: 1,
+    borderRadius: 24,
   },
   glassOverlayGradient: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 24,
   },
   glassContent: {
     position: 'absolute',
