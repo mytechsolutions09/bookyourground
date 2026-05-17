@@ -389,10 +389,10 @@ function TimeSlotsEditorInner(
         }
       }
 
-      // Update each changed row individually so we never hit NOT NULL / onConflict issues.
-      for (const id of changedIds) {
+      // Update all changed rows in a single highly optimized batch upsert query!
+      const rowsToUpsert = changedIds.map((id) => {
         const slot = slots.find((s) => s.id === id);
-        if (!slot) continue;
+        if (!slot) return null;
 
         // Availability: fall back to the current slot value if not explicitly edited.
         const isAvailable =
@@ -413,13 +413,21 @@ function TimeSlotsEditorInner(
           customPrice = trimmed ? parseFloat(trimmed) : null;
         }
 
+        return {
+          id: slot.id,
+          ground_id: slot.ground_id,
+          day_of_week: slot.day_of_week,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          is_available: isAvailable,
+          custom_price: customPrice,
+        };
+      }).filter((row): row is NonNullable<typeof row> => row !== null);
+
+      if (rowsToUpsert.length > 0) {
         const { error } = await supabase
           .from('time_slots')
-          .update({
-            is_available: isAvailable,
-            custom_price: customPrice,
-          })
-          .eq('id', id);
+          .upsert(rowsToUpsert);
 
         if (error) throw error;
       }
