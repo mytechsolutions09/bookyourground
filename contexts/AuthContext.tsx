@@ -49,18 +49,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (loadingProfileRef.current === userId && retryCount === 0) return;
     loadingProfileRef.current = userId;
 
+    const startTime = Date.now();
     try {
       setLoading(true);
       
-      const profilePromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Wrap the thenable in an async IIFE to ensure it returns a standard native Promise
+      const profilePromise = (async () => {
+        return await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+      })();
 
-      // Increased timeout to 10s to be more resilient on slow connections
+      // Increased timeout to 30s to fully support Supabase project cold starts (free tier)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       if (data) {
+        console.log(`AuthContext: Loaded profile in ${Date.now() - startTime}ms`);
         setProfile(prev => {
           if (prev && prev.id === data.id && 
               prev.role === data.role && 
@@ -90,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void scheduleMatchReminders(userId);
     } catch (error: any) {
       const errorMsg = error?.message || String(error);
-      console.error(`AuthContext: Error loading profile (Attempt ${retryCount + 1}):`, errorMsg);
+      console.error(`AuthContext: Error loading profile (Attempt ${retryCount + 1}) after ${Date.now() - startTime}ms:`, errorMsg);
       
       const isRetryable = errorMsg.includes('timeout') || 
                           errorMsg.toLowerCase().includes('fetch') || 

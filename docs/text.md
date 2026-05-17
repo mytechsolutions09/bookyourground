@@ -16,7 +16,7 @@
 npx expo start
 npx expo start --web
 
-
+npx serve -s dist
 
 commit changes to git
 git push
@@ -29,6 +29,7 @@ git stash pop      # Puts your local changes back on top
 push to dev
 
 on web left section ground page, make padding between container same 
+
 
 resend-intelligentgamerai@gmail.com
 
