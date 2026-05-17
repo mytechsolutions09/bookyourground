@@ -465,7 +465,7 @@ export default function CheckoutScreen() {
                 }
 
                 Alert.alert('Success', 'Booking confirmed via Cash payment.');
-                router.replace(`/bookings/${data.bookingId}` as any);
+                router.replace(`/bookings/${data.bookingId}?completed=true` as any);
             } else {
                 throw new Error(data?.error || 'The server could not confirm the cash payment.');
             }
@@ -865,7 +865,7 @@ export default function CheckoutScreen() {
 
                         if (verifyData && verifyData.success) {
                             Alert.alert('Success', 'Payment successful! Your booking is confirmed.');
-                            router.replace(`/bookings/${verifyData.bookingId}` as any);
+                            router.replace(`/bookings/${verifyData.bookingId}?completed=true` as any);
                         } else {
                             throw new Error(verifyData?.error || 'Payment verification failed.');
                         }
@@ -941,7 +941,7 @@ export default function CheckoutScreen() {
 
                 if (verifyData && verifyData.success) {
                     Alert.alert('Success', 'Payment successful! Your booking is confirmed.');
-                    router.replace(`/bookings/${verifyData.bookingId}` as any);
+                    router.replace(`/bookings/${verifyData.bookingId}?completed=true` as any);
                 } else {
                     throw new Error(verifyData?.error || 'Payment verification failed.');
                 }
@@ -1091,7 +1091,7 @@ export default function CheckoutScreen() {
                 // Wallet transaction record is handled by the edge function 'payment-gateway' via 'process_wallet_transaction' RPC.
 
                 Alert.alert('Success', 'Payment successful using Wallet balance!');
-                router.replace(`/bookings/${data.bookingId}` as any);
+                router.replace(`/bookings/${data.bookingId}?completed=true` as any);
             } else {
                 throw new Error(data?.error || 'Wallet payment failed.');
             }
