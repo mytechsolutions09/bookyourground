@@ -47,7 +47,7 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Company Information</Text>
             <Text style={styles.paragraph}>
-              Book my ground is a registered platform under Purple Plus, dedicated to sports infrastructure management. 
+              Bookyourground.com is a registered platform under Purple Plus, dedicated to sports infrastructure management. 
               We operate with transparency, integrity, and a passion for the game.
             </Text>
           </View>
