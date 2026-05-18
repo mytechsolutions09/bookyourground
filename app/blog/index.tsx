@@ -19,7 +19,7 @@ const ARTICLES = [
 export default function BlogIndex() {
   return (
     <WebLayout>
-      <Stack.Screen options={{ title: 'Blog - Book my ground' }} />
+      <Stack.Screen options={{ title: 'Blog - Book Your Ground' }} />
       <ScrollView style={styles.container}>
         <View style={styles.header}>
            <Text style={styles.title}>Cricket Blog</Text>

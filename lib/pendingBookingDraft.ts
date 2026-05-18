@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
 const KEY = 'bookyourground_pending_booking_draft_v1';
 
@@ -30,7 +29,6 @@ export type PendingBookingDraftV1 = {
 export async function savePendingBookingDraft(
   draft: Omit<PendingBookingDraftV1, 'savedAt' | 'v'>,
 ): Promise<void> {
-  if (Platform.OS === 'web') return;
   try {
     const payload: PendingBookingDraftV1 = { ...draft, v: 1, savedAt: Date.now() };
     await AsyncStorage.setItem(KEY, JSON.stringify(payload));
@@ -40,7 +38,6 @@ export async function savePendingBookingDraft(
 }
 
 export async function peekPendingBookingDraft(): Promise<PendingBookingDraftV1 | null> {
-  if (Platform.OS === 'web') return null;
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return null;
@@ -57,10 +54,10 @@ export async function peekPendingBookingDraft(): Promise<PendingBookingDraftV1 |
 }
 
 export async function clearPendingBookingDraft(): Promise<void> {
-  if (Platform.OS === 'web') return;
   try {
     await AsyncStorage.removeItem(KEY);
   } catch {
     /* ignore */
   }
 }
+

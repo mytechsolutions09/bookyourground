@@ -150,11 +150,21 @@ export default function GroundDetailsScreen() {
       }
 
       const groundData = data as GroundWithImages;
-      setGround(groundData);
-      fetchNearbyGrounds(groundData);
-      setExistingReviewId(null);
-      setReviewBookingId(null);
-      setCanReview(false);
+
+      // Clean redirect to the pretty-url (city/slug) ground details page.
+      const path = makeGroundPath(groundData);
+      
+      const redirectParams: any = {};
+      if (date) redirectParams.date = date;
+      if (time) redirectParams.time = time;
+      if (teams) redirectParams.teams = teams;
+      if (date && time) redirectParams.lock = 'true';
+
+      router.replace({
+        pathname: path as any,
+        params: redirectParams,
+      });
+      return;
     } catch (error) {
       console.error('Error loading ground:', error);
       Alert.alert('Error', 'Failed to load ground details');

@@ -15,7 +15,7 @@ export default function TermsScreen() {
 
           <Text style={styles.sectionTitle}>1.1. Introduction</Text>
           <Text style={styles.paragraph}>
-            These Terms &amp; Conditions govern your use of the Book my ground platform to
+            These Terms &amp; Conditions govern your use of the Book Your Ground platform to
             search, book, and manage cricket grounds, box cricket, and cricket nets. By creating an
             account or making a booking you agree to these terms.
           </Text>
@@ -51,7 +51,7 @@ export default function TermsScreen() {
 
           <Text style={styles.sectionTitle}>1.6. Liability</Text>
           <Text style={styles.paragraph}>
-            While we aim to provide a reliable service, Book my ground does not guarantee
+            While we aim to provide a reliable service, Book Your Ground does not guarantee
             venue availability, conditions, or safety, and is not liable for injuries,
             damages, or losses arising from your use of a venue, except where required by
             law.

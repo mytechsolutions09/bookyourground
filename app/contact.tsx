@@ -57,8 +57,8 @@ export default function ContactScreen() {
 
       const to = 'invirtualcoin@gmail.com';
       const mailSubject = subject.trim()
-        ? `[Book my ground] ${subject.trim()}`
-        : '[Book my ground] Support request';
+        ? `[Book Your Ground] ${subject.trim()}`
+        : '[Book Your Ground] Support request';
       const bodyLines = [
         `Type: ${role === 'ground_owner' ? 'Venue owner' : 'User'}`,
         `Name: ${name.trim()}`,
@@ -110,7 +110,7 @@ export default function ContactScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Office address</Text>
             <Text style={styles.paragraph}>
-              Book my ground (Sports Management Platform)
+              Book Your Ground (Sports Management Platform)
               {"\n"}WZ-15, 3rd Floor,
               {"\n"}Janak Puri, New Delhi - 110058.
             </Text>

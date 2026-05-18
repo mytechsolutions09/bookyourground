@@ -1593,9 +1593,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   handleSearchRef.current = handleSearch as any;
 
-  /** Native: restore booking form draft after returning from login (see `handleBook` when !user). */
+  /** Restore booking form draft after returning from login (works on both native and web). */
   useEffect(() => {
-    if (Platform.OS === 'web') return;
     if (loadingGrounds) return;
 
     let cancelled = false;
@@ -1633,6 +1632,54 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       cancelled = true;
     };
   }, [loadingGrounds, useLandingSearchFlow, initialGroundId]);
+
+  /** Auto-save booking form selections as a draft when the user is not logged in. */
+  useEffect(() => {
+    if (user) return; // Only need this persistence if not logged in (to restore after login)
+    if (!bookingDate && !startTime) return;
+
+    const saveDraft = async () => {
+      try {
+        if (useLandingSearchFlow) {
+          await savePendingBookingDraft({
+            landing: {
+              locationKey,
+              typeKey,
+              bookingDate,
+              startTime,
+              teamType,
+              selectedGroundId,
+              hadCompletedSearch: hasSearched,
+            },
+          });
+        } else if (initialGroundId) {
+          await savePendingBookingDraft({
+            groundDetail: {
+              groundId: initialGroundId,
+              bookingDate,
+              startTime,
+              teamType,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to auto-save pending booking draft:', e);
+      }
+    };
+
+    saveDraft();
+  }, [
+    user,
+    bookingDate,
+    startTime,
+    teamType,
+    locationKey,
+    typeKey,
+    selectedGroundId,
+    hasSearched,
+    useLandingSearchFlow,
+    initialGroundId,
+  ]);
 
   useEffect(() => {
     if (!pendingPostLoginSearchRef.current) return;
