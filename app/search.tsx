@@ -635,18 +635,22 @@ export default function SearchScreen() {
   };
 
   const content = (
-    <View style={styles.mainContainer}>
+    <ScrollView 
+      style={styles.mainContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       
       {/* 1. STADIUM HERO SECTION */}
       <View style={styles.heroSection}>
         <Image 
           source={require('@/assets/stadium_hero_bg.png')} 
-          style={[StyleSheet.absoluteFill, { resizeMode: 'cover', transform: [{ scaleX: -1 }] }]}
+          style={styles.heroBackground}
         />
         <LinearGradient
           colors={['#FFFFFF', 'rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.3)', 'transparent']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0.8, y: 0 }}
+          end={{ x: 0.7, y: 0 }}
           style={StyleSheet.absoluteFill}
         />
 
@@ -681,6 +685,13 @@ export default function SearchScreen() {
               <View style={[styles.stadiumLight, { top: 20, left: 30 }]} />
               <View style={[styles.stadiumLight, { top: 30, right: 40 }]} />
               
+              <LinearGradient
+                colors={['rgba(211, 47, 47, 0.85)', 'rgba(211, 47, 47, 0.4)', 'rgba(211, 47, 47, 0)']}
+                start={{ x: 1, y: 0.5 }}
+                end={{ x: 0, y: 0 }}
+                style={styles.glowingTrail}
+              />
+
               <View style={styles.wicketsContainer}>
                 <View style={styles.wicketStump} />
                 <View style={styles.wicketStump} />
@@ -688,10 +699,16 @@ export default function SearchScreen() {
                 <View style={styles.wicketBail} />
               </View>
 
-              <View style={styles.ballTrail} />
-
               <View style={styles.cricketBall}>
-                <View style={styles.ballSeam} />
+                <LinearGradient
+                  colors={['#FF5252', '#D32F2F', '#7F0000']}
+                  start={{ x: 0.15, y: 0.15 }}
+                  end={{ x: 0.85, y: 0.85 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.ballSeam}>
+                  <View style={styles.ballSeamStitch} />
+                </View>
                 <View style={styles.ballShine} />
               </View>
             </View>
@@ -840,15 +857,29 @@ export default function SearchScreen() {
             <Text style={styles.emptySubtitle}>Adjust your filters or try a different search term.</Text>
           </View>
         ) : (
-          <FlatList
-            data={sortedCombinedResults}
-            key={isWeb && viewMode === 'grid' ? (width > 1300 ? 'cols-4' : width > 900 ? 'cols-2' : 'cols-1') : 'cols-1'}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => item._type === 'ground' ? renderMockupGround(item) : renderMockupMatch(item)}
-            contentContainerStyle={styles.list}
-            numColumns={isWeb && viewMode === 'grid' ? (width > 1300 ? 4 : width > 900 ? 2 : 1) : 1}
-            columnWrapperStyle={isWeb && viewMode === 'grid' && (width > 900) ? { gap: 20 } : undefined}
-          />
+          <View style={[
+            styles.list,
+            isWeb && viewMode === 'grid' && {
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 20,
+            }
+          ]}>
+            {sortedCombinedResults.map(item => (
+              <View 
+                key={item.id} 
+                style={[
+                  isWeb && viewMode === 'grid' ? {
+                    width: width > 1300 ? '23.5%' : width > 900 ? '48%' : '100%',
+                  } : {
+                    width: '100%',
+                  }
+                ]}
+              >
+                {item._type === 'ground' ? renderMockupGround(item) : renderMockupMatch(item)}
+              </View>
+            ))}
+          </View>
         )}
       </View>
 
@@ -903,7 +934,7 @@ export default function SearchScreen() {
         </View>
       </View>
 
-    </View>
+    </ScrollView>
   );
 
   if (isWeb) {
@@ -922,6 +953,9 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#FAFAFA',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   mobileContainer: {
     flex: 1,
@@ -1041,6 +1075,16 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'visible',
   },
+  heroBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
   stadiumLight: {
     position: 'absolute',
     width: 60,
@@ -1052,79 +1096,96 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 30,
   },
+  glowingTrail: {
+    position: 'absolute',
+    width: 320,
+    height: 60,
+    right: 130,
+    top: 60,
+    borderRadius: 30,
+    transform: [{ rotate: '-12deg' }],
+  },
   wicketsContainer: {
     position: 'absolute',
-    bottom: 20,
-    right: 120,
-    width: 70,
-    height: 120,
+    bottom: 15,
+    right: 240,
+    width: 80,
+    height: 140,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    opacity: 0.95,
   },
   wicketStump: {
-    width: 6,
-    height: 110,
-    backgroundColor: '#dcc093',
-    borderRadius: 3,
+    width: 8,
+    height: 125,
+    backgroundColor: '#E5A93C',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#bca073',
+    borderColor: '#C67A13',
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
   wicketBail: {
     position: 'absolute',
-    top: 6,
-    left: 0,
-    right: 0,
-    height: 6,
-    backgroundColor: '#dcc093',
-    borderRadius: 2,
+    top: 10,
+    left: -2,
+    right: -2,
+    height: 8,
+    backgroundColor: '#E5A93C',
+    borderRadius: 3,
     borderWidth: 1,
-    borderColor: '#bca073',
-  },
-  ballTrail: {
-    position: 'absolute',
-    width: 220,
-    height: 140,
-    right: 80,
-    top: 50,
-    borderBottomWidth: 5,
-    borderRightWidth: 5,
-    borderColor: 'rgba(0, 234, 107, 0.3)',
-    borderRadius: 120,
-    transform: [{ rotate: '-35deg' }],
+    borderColor: '#C67A13',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   cricketBall: {
     position: 'absolute',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#C53030',
-    right: 40,
-    top: 60,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    right: 70,
+    top: 40,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
+    elevation: 8,
   },
   ballSeam: {
-    width: '100%',
+    position: 'absolute',
+    width: 130,
     height: 6,
     backgroundColor: '#FFFFFF',
-    transform: [{ rotate: '45deg' }],
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#9B2C2C',
+    borderWidth: 1,
+    borderColor: '#7F0000',
+    top: '46%',
+    left: '-20%',
+    transform: [{ rotate: '42deg' }],
+    opacity: 0.9,
+  },
+  ballSeamStitch: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#7F0000',
   },
   ballShine: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 28,
+    height: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     top: 10,
-    left: 15,
+    left: 18,
+    transform: [{ rotate: '-15deg' }],
   },
   filterBarContainer: {
     width: '100%',
@@ -1132,7 +1193,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 24,
     marginTop: Platform.OS === 'web' ? -35 : 15,
-    zIndex: 10,
+    zIndex: 90,
+    ...Platform.select({
+      web: {
+        position: 'sticky' as any,
+        top: -5,
+      },
+    }),
   },
   filterBar: {
     flexDirection: 'row',
