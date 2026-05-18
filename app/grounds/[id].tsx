@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, Heart, Navigation2, Map as MapIcon } from 'lucide-react-native';
+import { MapPin, Star, Heart, Navigation2, Map as MapIcon, SlidersHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react-native';
 import NativeMap from '@/components/grounds/NativeMap';
 import { supabase } from '@/lib/supabase';
-import { slugifyGroundSegment } from '@/utils/groundSlug';
+import { slugifyGroundSegment, makeGroundPath } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
@@ -12,6 +12,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
+import GroundCard from '@/components/grounds/GroundCard';
 function looksLikeUuid(value: string | undefined | null): boolean {
   if (!value) return false;
   const v = String(value).trim();
@@ -35,6 +36,7 @@ export default function GroundDetailsScreen() {
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [nearbyGrounds, setNearbyGrounds] = useState<GroundWithImages[]>([]);
   const idParam = Array.isArray(id) ? id[0] : id;
 
   const checkFavorite = async () => {
@@ -149,6 +151,7 @@ export default function GroundDetailsScreen() {
 
       const groundData = data as GroundWithImages;
       setGround(groundData);
+      fetchNearbyGrounds(groundData);
       setExistingReviewId(null);
       setReviewBookingId(null);
       setCanReview(false);
@@ -157,6 +160,48 @@ export default function GroundDetailsScreen() {
       Alert.alert('Error', 'Failed to load ground details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNearbyGrounds = async (currentGround: GroundWithImages) => {
+    try {
+      let { data, error } = await supabase
+        .from('grounds')
+        .select(`
+          *,
+          ground_images(*),
+          reviews(rating)
+        `)
+        .eq('active', true)
+        .eq('approved', true)
+        .eq('city', currentGround.city)
+        .neq('id', currentGround.id)
+        .limit(4);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const fallbackRes = await supabase
+          .from('grounds')
+          .select(`
+            *,
+            ground_images(*),
+            reviews(rating)
+          `)
+          .eq('active', true)
+          .eq('approved', true)
+          .neq('id', currentGround.id)
+          .limit(4);
+        if (!fallbackRes.error && fallbackRes.data) {
+          data = fallbackRes.data;
+        }
+      }
+
+      if (data) {
+        setNearbyGrounds(data as GroundWithImages[]);
+      }
+    } catch (err) {
+      console.warn('Error fetching nearby grounds:', err);
     }
   };
 
@@ -766,6 +811,55 @@ export default function GroundDetailsScreen() {
           </Card>
 
         </View>
+
+        {nearbyGrounds && nearbyGrounds.length > 0 && (
+          <View style={styles.nearbySection}>
+            <View style={styles.nearbyHeaderRow}>
+              <View style={styles.nearbyHeaderLeft}>
+                <View style={styles.nearbyPinCircle}>
+                  <MapPin size={20} color="#059669" fill="#059669" />
+                </View>
+                <View>
+                  <Text style={styles.nearbyTitle}>Venues near by</Text>
+                  <Text style={styles.nearbySubtitle}>Explore other grounds in the area</Text>
+                </View>
+              </View>
+            </View>
+            {Platform.OS === 'web' ? (
+              <View style={styles.nearbyGrid}>
+                {nearbyGrounds.map((g) => (
+                  <View key={g.id} style={styles.nearbyCardWrapper}>
+                    <GroundCard
+                      ground={g}
+                      onPress={() => {
+                        const path = makeGroundPath(g);
+                        router.push(path as any);
+                      }}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.nearbyScroll}
+              >
+                {nearbyGrounds.map((g) => (
+                  <View key={g.id} style={styles.nearbyCardWrapper}>
+                    <GroundCard
+                      ground={g}
+                      onPress={() => {
+                        const path = makeGroundPath(g);
+                        router.push(path as any);
+                      }}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
       </ScrollView>
     );
   }
@@ -785,20 +879,36 @@ export default function GroundDetailsScreen() {
           headerLeft: () => null,
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
-              <Pressable
-                onPress={toggleFavorite}
-                disabled={favoriteLoading}
-                style={{ marginRight: 15 }}
-                accessibilityRole="button"
-                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart
-                  size={22}
-                  color={isFavorite ? '#EF4444' : '#64748B'}
-                  fill={isFavorite ? '#EF4444' : 'none'}
-                  strokeWidth={2}
-                />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>
+                {mapsUrl && (
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        await Linking.openURL(mapsUrl);
+                      } catch (err) {
+                        console.error('Failed to open maps URL:', err);
+                      }
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Get Directions on Google Maps"
+                  >
+                    <Navigation2 size={24} color="#64748B" />
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={toggleFavorite}
+                  disabled={favoriteLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart
+                    size={22}
+                    color={isFavorite ? '#EF4444' : '#64748B'}
+                    fill={isFavorite ? '#EF4444' : 'none'}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+              </View>
             ) : null
           )
         }} 
@@ -1148,5 +1258,85 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+  },
+  nearbySection: {
+    marginTop: 32,
+    marginBottom: 40,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 4,
+  },
+  nearbyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  nearbyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nearbyPinCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nearbyHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nearbyHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 100,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  nearbyHeaderBtnText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+  },
+  nearbyTitle: {
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+  },
+  nearbySubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  nearbyScroll: {
+    gap: 16,
+    paddingVertical: 8,
+  },
+  nearbyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    width: '100%',
+  },
+  nearbyCardWrapper: {
+    width: Platform.OS === 'web' ? 'calc(25% - 12px)' as any : 280,
+    minWidth: Platform.OS === 'web' ? 240 : undefined,
   },
 });

@@ -20,6 +20,9 @@ npm run build:web
 
 npx serve -s dist
 
+npx eas-cli build -p ios --profile production --non-interactive
+
+
 commit changes to git
 git push
 

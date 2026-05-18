@@ -142,6 +142,7 @@ export default function MobileTabBar() {
 
   if (Platform.OS === 'web' && !isSmallWeb) return null;
   if (Platform.OS === 'web' && segments[0] === 'search') return null;
+  if (segments[0] === 'bookings') return null;
 
   const activeTab = getActiveTab(segments as string[]);
   const { setTabAnimation } = useUI();

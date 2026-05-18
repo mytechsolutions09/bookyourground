@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Linking, Platform } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Map as MapIcon } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
@@ -23,6 +23,33 @@ export default function NativeMap({ ground }: NativeMapProps) {
     }
   }, [ground]);
 
+  const handlePressPin = async () => {
+    if (!coords) return;
+    const { latitude, longitude } = coords;
+    
+    const label = encodeURIComponent(ground.name || 'Ground Location');
+    
+    // Construct platform-specific directions URL
+    const url = Platform.select({
+      ios: `http://maps.apple.com/?daddr=${latitude},${longitude}&q=${label}`,
+      android: `google.navigation:q=${latitude},${longitude}`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`,
+    });
+
+    const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`;
+
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('Error opening directions:', error);
+      try {
+        await Linking.openURL(fallbackUrl);
+      } catch (fallbackError) {
+        console.error('Error opening fallback directions:', fallbackError);
+      }
+    }
+  };
+
   if (!coords) {
     return (
       <View style={styles.mobileMapPlaceholder}>
@@ -45,7 +72,7 @@ export default function NativeMap({ ground }: NativeMapProps) {
       pitchEnabled={false}
       rotateEnabled={false}
     >
-      <Marker coordinate={coords} title={ground.name}>
+      <Marker coordinate={coords} title={ground.name} onPress={handlePressPin}>
         <View style={{ width: 36, height: 36 }}>
           <Svg width="100%" height="100%" viewBox="0 0 24 24">
             <Defs>
