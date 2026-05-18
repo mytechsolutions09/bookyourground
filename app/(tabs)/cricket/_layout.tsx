@@ -71,6 +71,7 @@ import CricketHighlights from './highlights';
 import CricketPhotos from './photos';
 import CricketConnections from './connections';
 import CricketPlayerProfile from './player-profile';
+import CricketIndex from './index';
 
 const { width: windowWidth } = Dimensions.get('window');
 
@@ -255,7 +256,7 @@ export default function CricketLayout() {
     const targetTab = TABS.find(t => t.id !== 'player-profile' && pathname.includes(t.id));
     
     // If the pathname specifically mentions 'player-profile', then we go there.
-    const isExplicitProfile = pathname.includes('player-profile') || pathname.endsWith('/cricket');
+    const isExplicitProfile = pathname.includes('player-profile');
     
     let tabId = activeTabId;
     if (targetTab) {
@@ -893,7 +894,16 @@ export default function CricketLayout() {
             position: 'fixed'
           }
         ]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.actionCircleBtn}>
+          <TouchableOpacity 
+            onPress={() => {
+              if (Platform.OS === 'web') {
+                window.location.href = '/cricket';
+              } else {
+                router.replace('/cricket');
+              }
+            }} 
+            style={styles.actionCircleBtn}
+          >
             <ChevronLeft size={22} color="#FFFFFF" />
           </TouchableOpacity>
           
@@ -1184,8 +1194,13 @@ export default function CricketLayout() {
     </View>
   );
   
+  const isCricketHub = pathname === '/cricket' || pathname === '/cricket/' || pathname === '/(tabs)/cricket' || pathname === '/(tabs)/cricket/';
+  if (isCricketHub) {
+    return <CricketIndex />;
+  }
+
   if (Platform.OS === 'web') {
-    return <WebLayout hideHeader={true}>{content}</WebLayout>;
+    return <WebLayout hideHeader={true} isPublicNoSidebar={true}>{content}</WebLayout>;
   }
 
   return content;

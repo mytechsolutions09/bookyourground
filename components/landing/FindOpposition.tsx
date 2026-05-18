@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions, TouchableOpacity } from 'react-native';
-import { Users, Sword, Trophy, ArrowRight, Star } from 'lucide-react-native';
+import { Users, Sword, Trophy, ArrowRight, Star, Shield, Crown, BarChart2, Check, Target } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -13,13 +12,12 @@ import Animated, {
   Easing,
   interpolate
 } from 'react-native-reanimated';
-import { Svg } from 'react-native-svg';
 
 export default function FindOpposition() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  // Animation values
+  // Animation values (preserving the exact fluid enter animations)
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   const card1X = useSharedValue(-50);
@@ -57,116 +55,201 @@ export default function FindOpposition() {
     transform: [{ translateX: card2X.value }]
   }));
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: interpolate(pulse.value, [1, 1.1], [0.1, 0.2])
-  }));
-
-
   return (
     <View style={[styles.root, isMobile && { paddingVertical: 60 }]}>
       <View style={styles.container}>
         <View style={[styles.content, isMobile && styles.contentMobile]}>
-            <Animated.View style={[
-              styles.textContainer, 
-              animatedTextStyle,
-              isMobile && { alignItems: 'center' }
-            ]}>
+          
+          {/* Left Text and CTA Section */}
+          <Animated.View style={[
+            styles.textContainer, 
+            animatedTextStyle,
+            isMobile && { alignItems: 'center' }
+          ]}>
+            <TouchableOpacity 
+              style={[styles.badge, isMobile && { alignSelf: 'center' }]}
+              onPress={() => router.push('/find-an-opponent' as any)}
+            >
+              <Users size={14} color="#01b854" strokeWidth={3} />
+              <Text style={styles.badgeText}>FIND AN OPPOSITION</Text>
+            </TouchableOpacity>
+            
+            <Text style={[styles.title, isMobile && { textAlign: 'center' }]}>
+              Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text>
+            </Text>
+            
+            <Text style={[styles.subtitle, isMobile && { textAlign: 'center' }]}>
+              Connect with top cricket teams in your area for competitive matches. 
+              Find the perfect opponents that match your skill level and play style.
+            </Text>
 
-              <TouchableOpacity 
-                style={[styles.badge, isMobile && { alignSelf: 'center' }]}
-                onPress={() => router.push('/find-an-opponent' as any)}
-              >
-                <Users size={14} color="#01b854" strokeWidth={3} />
-                <Text style={styles.badgeText}>FIND AN OPPOSITION</Text>
-              </TouchableOpacity>
+            {/* Feature Cards Grid */}
+            <View style={[styles.featuresRow, isMobile && { flexDirection: 'column', width: '100%' }]}>
+              <View style={styles.featureCard}>
+                <View style={styles.featureIconContainer}>
+                  <Target size={20} color="#01b854" strokeWidth={2.5} />
+                </View>
+                <View style={styles.featureTextContainer}>
+                  <Text style={styles.featureTitle}>Skill Matching</Text>
+                  <Text style={styles.featureDesc}>Get matches that fit your level</Text>
+                </View>
+              </View>
               
-              <Text style={[styles.title, isMobile && { textAlign: 'center' }]}>Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text></Text>
-              <Text style={[styles.subtitle, isMobile && { textAlign: 'center' }]}>
-                Connect with elite teams in your area for competitive matches. 
-                Find the perfect opponents that match your skill level and play style.
-              </Text>
-
-              <View style={[styles.featuresRow, isMobile && { justifyContent: 'center' }]}>
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <Sword size={18} color="#01b854" />
-                  </View>
-                  <Text style={styles.featureText}>Skill Matching</Text>
+              <View style={styles.featureCard}>
+                <View style={styles.featureIconContainer}>
+                  <Trophy size={20} color="#01b854" strokeWidth={2.5} />
                 </View>
-                <View style={styles.featureItem}>
-                  <View style={styles.featureIconBox}>
-                    <Trophy size={18} color="#01b854" />
-                  </View>
-                  <Text style={styles.featureText}>Leaderboards</Text>
+                <View style={styles.featureTextContainer}>
+                  <Text style={styles.featureTitle}>Leaderboards</Text>
+                  <Text style={styles.featureDesc}>Compete & climb the rankings</Text>
                 </View>
               </View>
+            </View>
 
-              <Pressable 
-                style={({ pressed }) => [
-                  styles.ctaButton,
-                  isMobile && { alignSelf: 'center' },
-                  pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 }
-                ]}
-                onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
-              >
+            {/* Call To Action Button */}
+            <Pressable 
+              style={({ pressed }) => [
+                styles.ctaButton,
+                isMobile && { alignSelf: 'center' },
+                pressed && { transform: [{ scale: 0.98 }], opacity: 0.95 }
+              ]}
+              onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
+            >
+              <View style={styles.ctaLeft}>
+                <Sword size={18} color="#01b854" strokeWidth={2.5} style={{ marginRight: 8, transform: [{ rotate: '45deg' }] }} />
                 <Text style={styles.ctaText}>Find a Match</Text>
-                <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
-              </Pressable>
-            </Animated.View>
+              </View>
+              <View style={styles.ctaArrowCircle}>
+                <ArrowRight size={18} color="#043529" strokeWidth={3} />
+              </View>
+            </Pressable>
 
+            {/* Bottom Highlights Row */}
+            <View style={[styles.bulletsRow, isMobile && { justifyContent: 'center', flexWrap: 'wrap', gap: 12 }]}>
+              <View style={styles.bulletItem}>
+                <View style={styles.bulletCheckCircle}>
+                  <Check size={12} color="#01b854" strokeWidth={3} />
+                </View>
+                <Text style={styles.bulletText}>Verified Teams</Text>
+              </View>
+              <View style={styles.bulletItem}>
+                <View style={styles.bulletCheckCircle}>
+                  <Check size={12} color="#01b854" strokeWidth={3} />
+                </View>
+                <Text style={styles.bulletText}>Fair Play</Text>
+              </View>
+              <View style={styles.bulletItem}>
+                <View style={styles.bulletCheckCircle}>
+                  <Check size={12} color="#01b854" strokeWidth={3} />
+                </View>
+                <Text style={styles.bulletText}>Competitive Matches</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Right Cricket Field and Matchup Cards Section */}
           <View style={[styles.imagePlaceholder, isMobile && styles.imagePlaceholderMobile]}>
-            <Animated.View style={[styles.pulseCircle, pulseStyle]} />
-            
-            <Animated.View style={[styles.teamCard1, card1Style]}>
-              <View style={styles.cardGlow} />
-              <LinearGradient
-                colors={['#F8FAFC', '#FFFFFF']}
-                style={styles.teamAvatarPlaceholder}
-              >
-                <Users size={24} color="#94A3B8" />
-              </LinearGradient>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.teamName}>Strikers FC</Text>
-                <View style={styles.ratingRow}>
-                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
-                  <Text style={styles.teamRank}>Rank #4 • Pro Level</Text>
+            {/* The Cricket Field grass graphic */}
+            <View style={[styles.fieldBg, isMobile && styles.fieldBgMobile]}>
+              {/* Outer boundary circle line */}
+              <View style={styles.fieldBoundaryLine} />
+              
+              {/* Center pitch circle line */}
+              <View style={styles.fieldCenterCircle} />
+              
+              {/* The Tan Pitch in the center */}
+              <View style={styles.pitch}>
+                <View style={styles.pitchCrease} />
+                <View style={styles.pitchCrease} />
+              </View>
+            </View>
+
+            {/* Central VS Badge */}
+            <View style={styles.centerVsCircle}>
+              <Text style={styles.centerVsText}>VS</Text>
+            </View>
+
+            {/* Team Card 1: Strikers FC */}
+            <Animated.View style={[styles.teamCard1, card1Style, isMobile && styles.teamCardMobile]}>
+              <View style={styles.logoAndName}>
+                <View style={styles.logoContainer}>
+                  <Sword size={18} color="#dcc093" strokeWidth={2.5} style={{ transform: [{ rotate: '45deg' }] }} />
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.teamName}>Strikers FC</Text>
+                  <View style={styles.rankRow}>
+                    <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                    <Text style={styles.rankText}>Rank #4 • Pro Level</Text>
+                  </View>
                 </View>
               </View>
-              <LinearGradient
-                colors={['#1E293B', '#0F172A']}
-                style={styles.vsBadge}
-              >
-                <Text style={styles.vsText}>VS</Text>
-              </LinearGradient>
-            </Animated.View>
-            
-            <Animated.View style={[styles.teamCard2, card2Style]}>
-              <View style={styles.cardGlow} />
-              <LinearGradient
-                colors={['#F0FDF4', '#FFFFFF']}
-                style={styles.teamAvatarPlaceholder}
-              >
-                <Users size={24} color="#01b854" />
-              </LinearGradient>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.teamName}>United Kings</Text>
-                <View style={styles.ratingRow}>
-                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
-                  <Text style={styles.teamRank}>Rank #12 • Semi-Pro</Text>
+              
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Shield size={14} color="#01b854" />
+                  <Text style={styles.statVal}>87</Text>
+                  <Text style={styles.statLabel}>Rating</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <Users size={14} color="#01b854" />
+                  <Text style={styles.statVal}>12</Text>
+                  <Text style={styles.statLabel}>Players</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <BarChart2 size={14} color="#01b854" />
+                  <Text style={styles.statVal}>92%</Text>
+                  <Text style={styles.statLabel}>Win Rate</Text>
                 </View>
               </View>
-              <View style={styles.matchStatus}>
-                <View style={styles.liveIndicator} />
-                <Text style={styles.matchStatusText}>Live</Text>
+
+              <View style={styles.cardVsBadge}>
+                <Text style={styles.cardVsText}>VS</Text>
               </View>
             </Animated.View>
 
-            {/* Decorative Connection Line */}
-            <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-               {/* Just a subtle dash line using a view as fallback if Svg not easy */}
-            </Svg>
-            <View style={styles.connectionLine} />
+            {/* Team Card 2: United Kings */}
+            <Animated.View style={[styles.teamCard2, card2Style, isMobile && styles.teamCardMobile]}>
+              <View style={styles.logoAndName}>
+                <View style={styles.logoContainer}>
+                  <Crown size={18} color="#dcc093" strokeWidth={2.5} />
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.teamName}>United Kings</Text>
+                  <View style={styles.rankRow}>
+                    <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                    <Text style={styles.rankText}>Rank #12 • Semi-Pro</Text>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Shield size={14} color="#01b854" />
+                  <Text style={styles.statVal}>82</Text>
+                  <Text style={styles.statLabel}>Rating</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <Users size={14} color="#01b854" />
+                  <Text style={styles.statVal}>11</Text>
+                  <Text style={styles.statLabel}>Players</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <BarChart2 size={14} color="#01b854" />
+                  <Text style={styles.statVal}>89%</Text>
+                  <Text style={styles.statLabel}>Win Rate</Text>
+                </View>
+              </View>
+
+              <View style={styles.liveBadge}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>Live</Text>
+              </View>
+            </Animated.View>
+
           </View>
         </View>
       </View>
@@ -178,7 +261,7 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    paddingVertical: Platform.OS === 'web' ? 80 : 40,
+    paddingVertical: Platform.OS === 'web' ? 100 : 60,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -192,7 +275,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 60,
+    gap: 80,
   },
   contentMobile: {
     flexDirection: 'column',
@@ -201,238 +284,387 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textContainer: {
-    flex: 1,
+    flex: 1.1,
+    maxWidth: 580,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 99,
     gap: 8,
     alignSelf: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '800',
     color: '#01b854',
-    letterSpacing: 1.2,
+    letterSpacing: 1.5,
   },
   title: {
-    fontSize: Platform.OS === 'web' ? 42 : 32,
+    fontSize: Platform.OS === 'web' ? 56 : 38,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#043529',
     fontFamily: 'Inter',
-    marginBottom: 16,
-    letterSpacing: -1.5,
-    textAlign: 'left',
+    marginBottom: 20,
+    letterSpacing: -1.8,
+    lineHeight: Platform.OS === 'web' ? 64 : 44,
   },
   subtitle: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 26,
     color: '#64748B',
     fontFamily: 'Inter',
-    marginBottom: 32,
-    textAlign: 'left',
+    marginBottom: 36,
   },
   featuresRow: {
     flexDirection: 'row',
     gap: 20,
     marginBottom: 40,
-    justifyContent: 'flex-start',
   },
-  featureItem: {
+  featureCard: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  featureIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
     backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    padding: 16,
+    borderRadius: 20,
+    gap: 16,
+  },
+  featureIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  featureText: {
+  featureTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  featureTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#334155',
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+  },
+  featureDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 18,
+    justifyContent: 'space-between',
+    paddingLeft: 28,
+    paddingRight: 8,
+    paddingVertical: 8,
     borderRadius: 100,
-    gap: 12,
     alignSelf: 'flex-start',
-    backgroundColor: '#056a31',
-    borderColor: '#01e669',
-    borderWidth: 1,
-    shadowColor: '#01e669',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
+    backgroundColor: '#043529',
+    shadowColor: '#043529',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
     elevation: 8,
-    overflow: 'visible',
-    minWidth: 200,
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
+    minWidth: 220,
+  },
+  ctaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   ctaText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
     color: '#FFFFFF',
     fontFamily: 'Inter',
     letterSpacing: -0.3,
   },
+  ctaArrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#00ea6b',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletsRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 28,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bulletCheckCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
   imagePlaceholder: {
     flex: 1,
-    height: 440,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 40,
+    height: 480,
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'visible',
+    width: '100%',
+    maxWidth: 520,
   },
   imagePlaceholderMobile: {
-    width: '100%',
-    height: 380,
+    height: 420,
     marginTop: 20,
   },
-  pulseCircle: {
+  fieldBg: {
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: '#86B96B',
+    borderWidth: 8,
+    borderColor: '#73A559',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  fieldBgMobile: {
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+  },
+  fieldBoundaryLine: {
     position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#01b854',
-    zIndex: 0,
+    width: '92%',
+    height: '92%',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderStyle: 'dashed' as any,
+  },
+  fieldCenterCircle: {
+    position: 'absolute',
+    width: '55%',
+    height: '55%',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  pitch: {
+    position: 'absolute',
+    width: 44,
+    height: 140,
+    backgroundColor: '#dcc093',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  pitchCrease: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    width: '100%',
+  },
+  centerVsCircle: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#043529',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  centerVsText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+    fontFamily: 'Inter',
   },
   teamCard1: {
-    width: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    padding: 14,
+    width: 340,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
     borderRadius: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 5,
     position: 'absolute',
-    top: '10%',
-    left: '5%',
+    top: '4%',
+    left: '-8%',
     zIndex: 2,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
+    borderColor: '#F1F5F9',
   },
   teamCard2: {
-    width: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    padding: 14,
+    width: 340,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
     borderRadius: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 5,
     position: 'absolute',
-    bottom: '10%',
-    right: '5%',
+    bottom: '4%',
+    right: '-8%',
     zIndex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
+    borderColor: '#F1F5F9',
   },
-  cardGlow: {
-    ...StyleSheet.absoluteFillObject,
+  teamCardMobile: {
+    width: '90%',
+    left: '5%',
+    right: '5%',
+    position: 'absolute',
+  },
+  logoAndName: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 14,
+  },
+  logoContainer: {
+    width: 48,
+    height: 48,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.1)',
-  },
-  teamAvatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    backgroundColor: '#043529',
+    borderWidth: 1.5,
+    borderColor: '#dcc093',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cardInfo: {
+    flex: 1,
   },
   teamName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#043529',
     fontFamily: 'Inter',
   },
-  ratingRow: {
+  rankRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
   },
-  teamRank: {
-    fontSize: 13,
+  rankText: {
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
-  vsBadge: {
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+    marginTop: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  cardVsBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: '#043529',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
   },
-  vsText: {
+  cardVsText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
     fontFamily: 'Inter',
   },
-  matchStatus: {
+  liveBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#E8F8F0',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#F0FDF4',
     borderRadius: 10,
     gap: 6,
   },
-  liveIndicator: {
+  liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#01b854',
   },
-  matchStatusText: {
+  liveText: {
     color: '#01b854',
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter',
   },
-  connectionLine: {
-    position: 'absolute',
-    width: 2,
-    height: '40%',
-    backgroundColor: '#F1F5F9',
-    zIndex: 0,
-    opacity: 0.5,
-  }
 });

@@ -19,6 +19,7 @@ export default function ShopSubbar({ children, onAddProduct, onFetchAmazon }: { 
   const isProducts = pathname.includes('/products') && !params.view;
   const isCategories = pathname.includes('/categories') || params.view === 'categories';
   const isReviews = pathname.includes('/reviews') || params.view === 'reviews';
+  const isWishlists = params.view === 'wishlists';
   const isFetch = params.view === 'fetch';
 
   const [amazonUrl, setAmazonUrl] = useState('');
@@ -66,6 +67,11 @@ export default function ShopSubbar({ children, onAddProduct, onFetchAmazon }: { 
               onPress={() => router.push((BASE + '/reviews') as any)}
               isActive={isReviews}
               label="REVIEWS"
+            />
+            <NavButton 
+              onPress={() => router.push((BASE + '/products?view=wishlists') as any)}
+              isActive={isWishlists}
+              label="WISHLISTS"
             />
             <NavButton 
               onPress={() => router.push((BASE + '/products?view=fetch') as any)}

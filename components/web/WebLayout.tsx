@@ -261,7 +261,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/refund-policy' ||
     cleanPath === '/shipping' ||
     cleanPath === '/contact' ||
-    cleanPath === '/cricket/player-profile',
+    cleanPath === '/cricket/player-profile' ||
+    cleanPath === '/cricket',
     [cleanPath]
   );
   
@@ -625,7 +626,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       cleanPath.startsWith('/shop/') ||
       cleanPath === '/search' ||
       cleanPath.startsWith('/live/') ||
-      (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) ||
+      (cleanPath.startsWith('/cricket/') || cleanPath === '/cricket') && !cleanPath.startsWith('/cricketdata') ||
       cleanPath.startsWith('/players/') ||
       cleanPath.startsWith('/blog')
     ),
@@ -890,7 +891,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
                     {isAuthenticated && (
-                      <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
+                      <TouchableOpacity onPress={() => router.push('/cricket' as any)}>
                         <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
                           CRICKET
                         </Text>
@@ -1350,10 +1351,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           isActiveOverride={cleanPath === '/wallet'}
                         />
                         <NavLink
-                          href="/cricket/player-profile"
+                          href="/cricket"
                           icon={Trophy}
                           label="Cricket Hub"
-                          isActiveOverride={cleanPath === '/cricket/player-profile'}
+                          isActiveOverride={cleanPath === '/cricket' || cleanPath === '/cricket/player-profile'}
                         />
                         <NavLink
                           href="/(tabs)/support"
@@ -1406,7 +1407,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             { label: 'Venue', icon: LandPlot, href: '/book-my-ground' },
             { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
-            { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
+            { label: 'Cricket', icon: Trophy, href: '/cricket' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||
