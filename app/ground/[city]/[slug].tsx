@@ -757,6 +757,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View key={g.id} style={styles.nearbyCardWrapper}>
                       <GroundCard
                         ground={g}
+                        glass={true}
                         onPress={() => {
                           const path = makeGroundPath(g);
                           router.push(path as any);
@@ -775,6 +776,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View key={g.id} style={styles.nearbyCardWrapper}>
                       <GroundCard
                         ground={g}
+                        glass={true}
                         onPress={() => {
                           const path = makeGroundPath(g);
                           router.push(path as any);

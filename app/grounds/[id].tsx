@@ -841,6 +841,7 @@ export default function GroundDetailsScreen() {
                   <View key={g.id} style={styles.nearbyCardWrapper}>
                     <GroundCard
                       ground={g}
+                      glass={true}
                       onPress={() => {
                         const path = makeGroundPath(g);
                         router.push(path as any);
@@ -859,6 +860,7 @@ export default function GroundDetailsScreen() {
                   <View key={g.id} style={styles.nearbyCardWrapper}>
                     <GroundCard
                       ground={g}
+                      glass={true}
                       onPress={() => {
                         const path = makeGroundPath(g);
                         router.push(path as any);

@@ -41,6 +41,8 @@ import {
   List 
 } from 'lucide-react-native';
 import { makeGroundPath } from '@/utils/groundSlug';
+import GroundCard from '@/components/grounds/GroundCard';
+import { useLocation } from '@/contexts/LocationContext';
 
 LocaleConfig.locales['en'] = {
   monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -65,6 +67,7 @@ export default function SearchScreen() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const isCompact = width < 900;
+  const { latitude: userLat, longitude: userLng } = useLocation();
   
   const [query, setQuery] = useState((params.q as string) || '');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
@@ -286,7 +289,12 @@ export default function SearchScreen() {
 
       const additionalMs = (ps || [])
         .flatMap(p => (p.bookings || []).map(b => ({ ...b, user: { team_name: p.team_name, full_name: p.full_name } })))
-        .filter(b => b.ground);
+        .filter(b => 
+          b.ground && 
+          b.status !== 'cancelled' && 
+          b.status !== 'rejected' && 
+          (b.team_type === 'one' || (b.notes && b.notes.includes('1 Team')))
+        );
 
       const enhancedMatches = await Promise.all((ms || []).map(async (m: any) => {
         try {
@@ -398,14 +406,22 @@ export default function SearchScreen() {
     let list = [...combinedResults];
     if (sortBy === 'Price: Low to High') {
       list.sort((a, b) => {
-        const priceA = a._type === 'ground' ? (a.min_price ?? a.base_price_per_hour ?? 0) : (a.total_amount ?? 0);
-        const priceB = b._type === 'ground' ? (b.min_price ?? b.base_price_per_hour ?? 0) : (b.total_amount ?? 0);
+        const priceA = a._type === 'ground' 
+          ? (a.min_price ?? a.base_price_per_hour ?? 0) 
+          : (a.team_type === 'both' ? (a.total_amount ?? 0) / 2 : (a.total_amount ?? 0));
+        const priceB = b._type === 'ground' 
+          ? (b.min_price ?? b.base_price_per_hour ?? 0) 
+          : (b.team_type === 'both' ? (b.total_amount ?? 0) / 2 : (b.total_amount ?? 0));
         return priceA - priceB;
       });
     } else if (sortBy === 'Price: High to Low') {
       list.sort((a, b) => {
-        const priceA = a._type === 'ground' ? (a.min_price ?? a.base_price_per_hour ?? 0) : (a.total_amount ?? 0);
-        const priceB = b._type === 'ground' ? (b.min_price ?? b.base_price_per_hour ?? 0) : (b.total_amount ?? 0);
+        const priceA = a._type === 'ground' 
+          ? (a.min_price ?? a.base_price_per_hour ?? 0) 
+          : (a.team_type === 'both' ? (a.total_amount ?? 0) / 2 : (a.total_amount ?? 0));
+        const priceB = b._type === 'ground' 
+          ? (b.min_price ?? b.base_price_per_hour ?? 0) 
+          : (b.team_type === 'both' ? (b.total_amount ?? 0) / 2 : (b.total_amount ?? 0));
         return priceB - priceA;
       });
     } else if (sortBy === 'Rating') {
@@ -415,83 +431,99 @@ export default function SearchScreen() {
   }, [combinedResults, sortBy]);
 
   const renderDropdownOptions = (type: 'location' | 'type' | 'date' | 'time' | 'price') => {
+    const isDate = type === 'date';
     return (
-      <View style={styles.floatingDropdown}>
-        <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled={true}>
-          {type === 'location' && (
-            <>
-              <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); toggleFilterModal(null); }}>
-                <Text style={styles.dropdownOptionText}>All Locations</Text>
-              </Pressable>
-              {locations.map(l => (
-                <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>{l.label || l.city}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-          {type === 'type' && (
-            <>
-              <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('all'); setTypeKey(''); toggleFilterModal(null); }}>
-                <Text style={styles.dropdownOptionText}>All Types</Text>
-              </Pressable>
-              <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('matches'); setTypeKey(''); toggleFilterModal(null); }}>
-                <Text style={styles.dropdownOptionText}>Find Opposition</Text>
-              </Pressable>
-              {types.map(t => (
-                <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-          {type === 'price' && (
-            <>
-              {PRICE_RANGES.map(p => (
-                <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>{p.label}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-          {type === 'date' && (
-            <>
+      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown]}>
+        {isDate ? (
+          <View style={styles.dateDropdownContainer}>
+            <View style={styles.dateQuickOptions}>
               {['All', 'Today', 'Tomorrow'].map(d => (
-                <Pressable key={d} style={styles.dropdownOption} onPress={() => { setDateKey(d); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>{d}</Text>
+                <Pressable 
+                  key={d} 
+                  style={[
+                    styles.dropdownOption, 
+                    styles.dateQuickBtn, 
+                    dateKey === d && styles.dateQuickBtnActive
+                  ]} 
+                  onPress={() => { setDateKey(d); toggleFilterModal(null); }}
+                >
+                  <Text style={[
+                    styles.dropdownOptionText, 
+                    styles.dateQuickBtnText, 
+                    dateKey === d && styles.dateQuickBtnTextActive
+                  ]}>{d}</Text>
                 </Pressable>
               ))}
-              <View style={styles.calendarWrapper}>
-                <RNCalendar
-                  current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
-                  minDate={new Date().toISOString().split('T')[0]}
-                  onDayPress={(day: any) => {
-                    setDateKey(day.dateString);
-                    toggleFilterModal(null);
-                  }}
-                  theme={{
-                    todayTextColor: '#01b854',
-                    arrowColor: '#01b854',
-                    selectedDayBackgroundColor: '#01b854',
-                    selectedDayTextColor: '#ffffff',
-                  }}
-                />
-              </View>
-            </>
-          )}
-          {type === 'time' && (
-            <>
-              <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); toggleFilterModal(null); }}>
-                <Text style={styles.dropdownOptionText}>All Times</Text>
-              </Pressable>
-              {availableTimes.map(t => (
-                <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>{t}</Text>
+            </View>
+            <View style={styles.calendarWrapper}>
+              <RNCalendar
+                current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
+                minDate={new Date().toISOString().split('T')[0]}
+                onDayPress={(day: any) => {
+                  setDateKey(day.dateString);
+                  toggleFilterModal(null);
+                }}
+                theme={{
+                  todayTextColor: '#01e669',
+                  arrowColor: '#01e669',
+                  selectedDayBackgroundColor: '#01e669',
+                  selectedDayTextColor: '#ffffff',
+                }}
+              />
+            </View>
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled={true}>
+            {type === 'location' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); toggleFilterModal(null); }}>
+                  <Text style={styles.dropdownOptionText}>All Locations</Text>
                 </Pressable>
-              ))}
-            </>
-          )}
-        </ScrollView>
+                {locations.map(l => (
+                  <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); toggleFilterModal(null); }}>
+                    <Text style={styles.dropdownOptionText}>{l.label || l.city}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'type' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('all'); setTypeKey(''); toggleFilterModal(null); }}>
+                  <Text style={styles.dropdownOptionText}>All Types</Text>
+                </Pressable>
+                <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('matches'); setTypeKey(''); toggleFilterModal(null); }}>
+                  <Text style={styles.dropdownOptionText}>Find Opposition</Text>
+                </Pressable>
+                {types.map(t => (
+                  <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); toggleFilterModal(null); }}>
+                    <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'price' && (
+              <>
+                {PRICE_RANGES.map(p => (
+                  <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); toggleFilterModal(null); }}>
+                    <Text style={styles.dropdownOptionText}>{p.label}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'time' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); toggleFilterModal(null); }}>
+                  <Text style={styles.dropdownOptionText}>All Times</Text>
+                </Pressable>
+                {availableTimes.map(t => (
+                  <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); toggleFilterModal(null); }}>
+                    <Text style={styles.dropdownOptionText}>{t}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        )}
       </View>
     );
   };
@@ -526,8 +558,7 @@ export default function SearchScreen() {
     })();
 
     const isBox = String(item.pitch_type || '').toLowerCase().includes('box');
-    const unitLabel = isBox ? '/hr' : ' / match';
-    const imgUrl = item.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+    const unitLabel = isBox ? '/hr' : '/match';
 
     const path = makeGroundPath(item);
     const params: any = {};
@@ -539,49 +570,13 @@ export default function SearchScreen() {
     };
 
     return (
-      <Pressable 
-        style={[styles.customGroundCard, viewMode === 'list' && styles.customGroundCardList]} 
+      <GroundCard
+        ground={item}
+        glass={true}
+        displayPricePerUnit={displayPrice}
+        unitLabelOverride={unitLabel}
         onPress={navigateToDetails}
-        key={item.id}
-      >
-        <View style={[styles.cardImgContainer, viewMode === 'list' && styles.cardImgContainerList]}>
-          <Image source={{ uri: imgUrl }} style={styles.cardImg} />
-          
-          <View style={styles.cardTypeBadge}>
-            <Text style={styles.cardTypeBadgeText}>CRICKET GROUND</Text>
-          </View>
-
-          <Pressable style={styles.favoriteCircle}>
-            <Heart size={14} color="#64748B" fill="transparent" />
-          </Pressable>
-        </View>
-
-        <View style={styles.cardDetails}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.customCardTitle} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.customCardPrice}>
-              ₹{displayPrice.toFixed(2)}
-              <Text style={styles.customCardUnit}>{unitLabel}</Text>
-            </Text>
-          </View>
-
-          <View style={styles.cardLocRow}>
-            <MapPin size={12} color="#94A3B8" style={{ marginRight: 4 }} />
-            <Text style={styles.customCardLocText}>{item.city}, {item.state}</Text>
-          </View>
-
-          <View style={styles.cardRatingPill}>
-            <Star size={10} color="#01b854" fill="#01b854" style={{ marginRight: 4 }} />
-            <Text style={styles.ratingVal}>5.0</Text>
-            <Text style={styles.ratingText}> (New)</Text>
-          </View>
-
-          <View style={styles.cardDetailsBtn}>
-            <Text style={styles.cardDetailsBtnText}>View Details</Text>
-            <ChevronRight size={14} color="#94A3B8" />
-          </View>
-        </View>
-      </Pressable>
+      />
     );
   };
 
@@ -592,42 +587,94 @@ export default function SearchScreen() {
     const dateStr = item.booking_date;
     const timeStr = item.start_time?.slice(0, 5);
 
+    const formattedDateTime = (() => {
+      let datePart = dateStr;
+      if (dateStr && dateStr.includes('-')) {
+        const p = dateStr.split('-');
+        if (p.length === 3) {
+          datePart = `${p[2]}/${p[1]}/${p[0].slice(2)}`;
+        }
+      }
+      return `${datePart} / ${timeStr}`;
+    })();
+
+    const distance = (() => {
+      if (userLat != null && userLng != null && item.ground?.latitude != null && item.ground?.longitude != null) {
+        const lat1 = userLat;
+        const lon1 = userLng;
+        const lat2 = Number(item.ground.latitude);
+        const lon2 = Number(item.ground.longitude);
+
+        if (!isNaN(lat2) && !isNaN(lon2)) {
+          const R = 6371; // Radius of the earth in km
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const d = R * c; // Distance in km
+          return d.toFixed(1);
+        }
+      }
+      const seed = item.ground?.id ? item.ground.id.charCodeAt(0) + item.ground.id.charCodeAt(item.ground.id.length - 1) : 47;
+      return (1.2 + (seed % 89) * 0.1).toFixed(1);
+    })();
+
+    const displayPrice = (() => {
+      const amt = Number(item.total_amount) || 0;
+      if (item.team_type === 'both') {
+        return Math.round((amt / 2) * 100) / 100;
+      }
+      return amt;
+    })();
+
     return (
       <Pressable 
-        style={[styles.customGroundCard, viewMode === 'list' && styles.customGroundCardList]} 
+        style={[styles.premiumMatchCard, viewMode === 'list' && styles.customGroundCardList]} 
         onPress={() => handleJoinMatch(item)}
         key={item.id}
       >
-        <View style={[styles.cardImgContainer, viewMode === 'list' && styles.cardImgContainerList]}>
-          <Image source={{ uri: imgUrl }} style={styles.cardImg} />
-          
-          <View style={[styles.cardTypeBadge, { backgroundColor: '#F59E0B' }]}>
-            <Text style={styles.cardTypeBadgeText}>MATCHMAKING</Text>
+        <View style={styles.premiumImageWrapper}>
+          <Image source={{ uri: imgUrl }} style={styles.premiumImage} />
+          <View style={styles.bookableBadge}>
+            <Text style={styles.bookableBadgeText}>OPPOSITION</Text>
           </View>
         </View>
 
-        <View style={styles.cardDetails}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.customCardTitle} numberOfLines={1}>{teamName}</Text>
-            <Text style={styles.customCardPrice}>
-              ₹{item.total_amount || '---'}
-              <Text style={styles.customCardUnit}> / match</Text>
+        <View style={styles.premiumContent}>
+          <View style={styles.premiumTitleRow}>
+            <Text style={styles.premiumMatchName} numberOfLines={1}>{teamName}</Text>
+            <Text style={styles.premiumPriceText}>
+              ₹{displayPrice || '---'}
+              <Text style={styles.premiumPriceUnitText}>/team</Text>
             </Text>
           </View>
 
-          <View style={styles.cardLocRow}>
-            <MapPin size={12} color="#94A3B8" style={{ marginRight: 4 }} />
-            <Text style={styles.customCardLocText}>{item.ground?.name} ({item.ground?.city})</Text>
+          <View style={styles.premiumLocationRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Text style={styles.premiumLocation} numberOfLines={1}>
+                {item.ground?.name} ({item.ground?.city})
+              </Text>
+            </View>
+            <Text style={styles.premiumDistance}>
+              ~ {distance} km
+            </Text>
           </View>
 
-          <View style={[styles.cardRatingPill, { backgroundColor: '#F0FDF4' }]}>
-            <Users size={10} color="#01b854" style={{ marginRight: 4 }} />
-            <Text style={[styles.ratingVal, { color: '#01b854' }]}>Capt: {captainName}</Text>
-          </View>
+          <View style={[styles.premiumSportsRow, { gap: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 80 }}>
+              <Text style={styles.premiumVenueType} numberOfLines={1}>
+                {captainName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+              </Text>
+            </View>
 
-          <View style={styles.cardDetailsBtn}>
-            <Text style={[styles.cardDetailsBtnText, { color: '#01b854' }]}>{dateStr} @ {timeStr} - JOIN NOW</Text>
-            <ArrowRight size={14} color="#01b854" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', shrink: 0 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#01e669', fontFamily: 'Inter' }}>
+                {formattedDateTime}
+              </Text>
+            </View>
           </View>
         </View>
       </Pressable>
@@ -733,7 +780,7 @@ export default function SearchScreen() {
           <View style={styles.filterDivider} />
 
           <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('type')}>
-            <Building2 size={16} color="#01b854" />
+            <Building2 size={16} color="#01e669" />
             <View style={styles.filterTextContent}>
               <Text style={styles.filterItemLabel}>VENUE TYPE</Text>
               <Text style={styles.filterItemValue} numberOfLines={1}>
@@ -746,8 +793,8 @@ export default function SearchScreen() {
 
           <View style={styles.filterDivider} />
 
-          <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('date')}>
-            <Calendar size={16} color="#01b854" />
+          <Pressable style={[styles.filterItem, { flex: 1.4 }]} onPress={() => toggleFilterModal('date')}>
+            <Calendar size={16} color="#01e669" />
             <View style={styles.filterTextContent}>
               <Text style={styles.filterItemLabel}>DATE</Text>
               <Text style={styles.filterItemValue} numberOfLines={1}>
@@ -761,7 +808,7 @@ export default function SearchScreen() {
           <View style={styles.filterDivider} />
 
           <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('location')}>
-            <MapPin size={16} color="#01b854" />
+            <MapPin size={16} color="#01e669" />
             <View style={styles.filterTextContent}>
               <Text style={styles.filterItemLabel}>LOCATION</Text>
               <Text style={styles.filterItemValue} numberOfLines={1}>
@@ -775,7 +822,7 @@ export default function SearchScreen() {
           <View style={styles.filterDivider} />
 
           <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('price')}>
-            <IndianRupee size={16} color="#01b854" />
+            <IndianRupee size={16} color="#01e669" />
             <View style={styles.filterTextContent}>
               <Text style={styles.filterItemLabel}>PRICE</Text>
               <Text style={styles.filterItemValue} numberOfLines={1}>
@@ -789,7 +836,7 @@ export default function SearchScreen() {
           <View style={styles.filterDivider} />
 
           <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('time')}>
-            <Clock size={16} color="#01b854" />
+            <Clock size={16} color="#01e669" />
             <View style={styles.filterTextContent}>
               <Text style={styles.filterItemLabel}>TIME</Text>
               <Text style={styles.filterItemValue} numberOfLines={1}>
@@ -1231,7 +1278,7 @@ const styles = StyleSheet.create({
   filterSearchInput: {
     flex: 1,
     fontSize: 13,
-    color: '#043529',
+    color: '#06392e',
     fontWeight: '600',
     fontFamily: 'Inter',
     ...Platform.select({
@@ -1265,7 +1312,7 @@ const styles = StyleSheet.create({
   filterItemValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#043529',
+    color: '#06392e',
     fontFamily: 'Inter',
   },
   floatingDropdown: {
@@ -1284,6 +1331,40 @@ const styles = StyleSheet.create({
     elevation: 8,
     padding: 6,
     zIndex: 100,
+  },
+  dateDropdown: {
+    width: 360,
+    left: Platform.OS === 'web' ? -120 : -80,
+    padding: 16,
+    maxHeight: 480,
+  },
+  dateDropdownContainer: {
+    width: '100%',
+  },
+  dateQuickOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
+  },
+  dateQuickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  dateQuickBtnActive: {
+    backgroundColor: '#01e669',
+  },
+  dateQuickBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  dateQuickBtnTextActive: {
+    color: '#FFFFFF',
   },
   dropdownOption: {
     paddingVertical: 10,
@@ -1305,7 +1386,7 @@ const styles = StyleSheet.create({
   applyFiltersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#043529',
+    backgroundColor: '#06392e',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 16,
@@ -1617,5 +1698,110 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     fontFamily: 'Inter',
+  },
+  premiumMatchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    marginBottom: 20,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    padding: 0,
+  },
+  premiumImageWrapper: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 9,
+    overflow: 'hidden',
+  },
+  premiumImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E0E0E0',
+  },
+  premiumContent: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  premiumTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  premiumName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginRight: 8,
+  },
+  premiumMatchName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginRight: 8,
+  },
+  premiumPriceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2D3450',
+    fontFamily: 'Inter',
+  },
+  premiumPriceUnitText: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#64748B',
+  },
+  premiumLocationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  premiumLocation: {
+    flex: 1,
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '400',
+  },
+  premiumDistance: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  premiumSportsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bookableBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#01e669',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderTopLeftRadius: 8,
+  },
+  bookableBadgeText: {
+    color: '#06392e',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
   },
 });

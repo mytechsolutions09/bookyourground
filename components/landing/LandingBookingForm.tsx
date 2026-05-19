@@ -777,11 +777,15 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         const time = parts[1];
         const slotTeamType = parts[2] || teamType;
         
+        const dbPrice = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time];
         let price = 0;
-        if (parts.length >= 4) {
+        if (dbPrice != null) {
+          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
+          price = dbPrice * factor;
+        } else if (parts.length >= 4) {
           price = Number(parts[3]);
         } else {
-          price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+          price = (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
           // Apply team type factor per slot if calculating from base (skip for Nets)
           const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
@@ -1831,14 +1835,18 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         params.set('slots', selectedNetsSlots.join(','));
         const slotPrices = selectedNetsSlots.map(s => {
           const parts = s.split('__');
-          // If the slot string has a price part (index 3), use it.
-          // Format: date__time__team__price
-          if (parts.length >= 4) return Number(parts[3]);
-          
           const date = parts[0];
           const time = parts[1];
           const slotTeamType = parts[2];
-          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+          
+          const dbPrice = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time];
+          if (dbPrice != null) {
+            const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
+            return dbPrice * factor;
+          }
+          if (parts.length >= 4) return Number(parts[3]);
+          
+          let price = (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
           const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
           return price;
