@@ -140,13 +140,23 @@ const NavLink = React.memo(({
           router.push(href as any);
         }
       }}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
       {...(Platform.OS === 'web' ? {
         title: hideLabel ? label : undefined,
-      } : {})}
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      } : {
+        onHoverIn: () => setHovered(true),
+        onHoverOut: () => setHovered(false),
+      })}
     >
-      <Icon size={18} color={iconColor} />
+      <View
+        style={[
+          Platform.OS === 'web' && { transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' } as any,
+          hovered && !hideLabel && { transform: [{ scale: 1.15 }] }
+        ]}
+      >
+        <Icon size={18} color={iconColor} />
+      </View>
       {hideLabel && Platform.OS === 'web' && (
         <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
           <Text style={styles.tooltipText}>{label}</Text>
@@ -734,6 +744,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
+            cleanPath === '/book-my-ground' && { backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
             isCompact && { transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)' } as any,
           ]}
@@ -926,7 +937,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {cleanPath === '/book-my-ground' && (
                       <TouchableOpacity onPress={() => router.push('/find-an-opponent')}>
-                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
+                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
                           FIND AN OPPOSITION
                         </Text>
                       </TouchableOpacity>
@@ -937,7 +948,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         style={styles.headerSecondaryButton}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
-                        <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}>
+                        <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled, cleanPath === '/book-my-ground' && { color: '#00ea6b' }]}>
                           SIGN IN
                         </Text>
                       </TouchableOpacity>
@@ -988,7 +999,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           style={[
             styles.header,
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
-            (cleanPath === '/search' || cleanPath === '/cricket') && { height: 60 },
+            (cleanPath === '/search' || cleanPath === '/cricket') && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -1020,7 +1031,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
                     <Text style={[
                       styles.headerNavLink,
-                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive
+                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
+                      (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
                     ]}>
                       VENUES
                     </Text>
@@ -1029,7 +1041,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   <TouchableOpacity onPress={() => router.push('/shop' as any)}>
                     <Text style={[
                       styles.headerNavLink,
-                      cleanPath.startsWith('/shop') && styles.headerNavLinkActive
+                      cleanPath.startsWith('/shop') && styles.headerNavLinkActive,
+                      (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
                     ]}>
                       SHOP
                     </Text>
@@ -1046,7 +1059,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                   {!isAuthenticated ? (
                     <Text
-                      style={styles.headerSecondaryButtonText}
+                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }]}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
                       SIGN IN
@@ -1124,7 +1137,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 showsHorizontalScrollIndicator={false}
                 overScrollMode="never"
                 bounces={false}
-                contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }]}
+                contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }, Platform.OS === 'web' && { overflowX: 'visible' } as any]}
                 style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
               >
                 {isAuthenticated && !isPublicNoSidebar && (

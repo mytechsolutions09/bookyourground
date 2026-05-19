@@ -18,6 +18,7 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
       {variant === 'web' ? <HeroWeb /> : <Hero />}
+      <GroundsNearYou />
       <HowItWorks />
       <CalendarTabs />
       <PopularGrounds />
@@ -29,7 +30,6 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
           hideTitle={variant === 'native'}
         />
       </View>
-      <GroundsNearYou />
       <Features />
       {variant === 'web' ? <SiteFooter /> : null}
     </>

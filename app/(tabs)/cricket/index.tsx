@@ -11,8 +11,9 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   FlatList,
+  Modal,
 } from 'react-native';
-import { Search, User, Users, Shield, RefreshCw, Sliders, MapPin, ChevronRight } from 'lucide-react-native';
+import { Search, User, Users, Shield, RefreshCw, Sliders, MapPin, ChevronRight, ClipboardList, MessageCircle, Plus, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,13 +26,42 @@ export default function CricketHubScreen() {
   const isWeb = Platform.OS === 'web';
   const isMobile = width < 768;
 
-  const [activeTab, setActiveTab] = useState<'player' | 'team' | 'profile'>('player');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'board'>('board');
 
-  // Data States
-  const [players, setPlayers] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  // Notice Board State
+  const [boardSubTab, setBoardSubTab] = useState<'players_needed' | 'teams_needed'>('players_needed');
+  const [playerRequests, setPlayerRequests] = useState([
+    { id: '1', teamName: 'Gurgaon Strikers', role: 'Top-order Batsman', city: 'Gurugram', message: 'Looking for a solid opener for weekend matches.', postedAt: '2h ago' },
+    { id: '2', teamName: 'Delhi Smashers', role: 'Pace Bowler', city: 'New Delhi', message: 'Need an aggressive fast bowler. Practice on Tuesdays.', postedAt: '5h ago' }
+  ]);
+  const [teamRequests, setTeamRequests] = useState([
+    { id: '1', playerName: 'Rahul Kumar', role: 'All-rounder', city: 'Noida', message: 'Right-arm medium pacer and middle order batsman looking for a club.', postedAt: '1h ago' },
+    { id: '2', playerName: 'Amit Singh', role: 'Wicket-keeper', city: 'Gurugram', message: 'Experienced keeper-batsman. Available on weekends.', postedAt: '1d ago' }
+  ]);
+  const [isPostModalVisible, setIsPostModalVisible] = useState(false);
+  const [postRole, setPostRole] = useState('');
+  const [postCity, setPostCity] = useState('');
+  const [postMessage, setPostMessage] = useState('');
+
+  const handleCreatePost = () => {
+    if (!postRole || !postCity || !postMessage) return;
+    const newPost = {
+      id: Date.now().toString(),
+      role: postRole,
+      city: postCity,
+      message: postMessage,
+      postedAt: 'Just now',
+    };
+    if (boardSubTab === 'players_needed') {
+      setPlayerRequests([{ ...newPost, teamName: 'Your Team' }, ...playerRequests]);
+    } else {
+      setTeamRequests([{ ...newPost, playerName: 'You' }, ...teamRequests]);
+    }
+    setIsPostModalVisible(false);
+    setPostRole('');
+    setPostCity('');
+    setPostMessage('');
+  };
 
   // Route to Player Profile if selected
   useEffect(() => {
@@ -44,166 +74,41 @@ export default function CricketHubScreen() {
     }
   }, [activeTab]);
 
-  // Fetch Players and Teams
-  useEffect(() => {
-    fetchPlayers();
-    fetchTeams();
-  }, []);
-
-  const fetchPlayers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, avatar_url, role')
-        .order('full_name', { ascending: true });
-
-      if (error) throw error;
-      setPlayers(data || []);
-    } catch (err) {
-      console.error('Error fetching players:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTeams = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('teams')
-        .select('id, name, location, captain, image_url')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setTeams(data || []);
-    } catch (err) {
-      console.error('Error fetching teams:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filter Data
-  const filteredPlayers = players.filter(p =>
-    p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.city?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredTeams = teams.filter(t =>
-    t.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.captain?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Render Player Item
-  const renderPlayerItem = ({ item }: { item: any }) => {
-    const initials = item.full_name
-      ? item.full_name
-          .split(' ')
-          .map((n: string) => n[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
-      : '?';
-
-    return (
-      <TouchableOpacity
-        style={styles.playerCard}
-        onPress={() => router.push(`/players/${item.id}`)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.cardMain}>
-          <View style={styles.avatarContainer}>
-            {item.avatar_url ? (
-              <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarFallbackText}>{initials}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.full_name}
-            </Text>
-            {item.city ? (
-              <View style={styles.locationRow}>
-                <MapPin size={12} color="#00ea6b" style={{ marginRight: 4 }} />
-                <Text style={styles.locationText} numberOfLines={1}>
-                  {item.city}
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.subtext}>Cricketer</Text>
-            )}
-          </View>
-        </View>
-        <View style={styles.viewBadge}>
-          <Text style={styles.viewBadgeText}>Profile</Text>
-          <ChevronRight size={14} color="#00ea6b" />
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   // Render Team Item
-  const renderTeamItem = ({ item }: { item: any }) => {
-    const initials = item.name
-      ? item.name
-          .split(' ')
-          .map((n: string) => n[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
-      : 'T';
-
+  const renderBoardItem = ({ item }: { item: any }) => {
+    const isPlayerNeeded = boardSubTab === 'players_needed';
+    const initials = isPlayerNeeded ? (item.teamName ? item.teamName[0] : 'T') : (item.playerName ? item.playerName[0] : 'P');
+    
     return (
-      <TouchableOpacity
-        style={styles.playerCard}
-        onPress={() => router.push(`/teams/${item.id}`)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.cardMain}>
+      <View style={styles.boardCard}>
+        <View style={styles.boardHeader}>
           <View style={styles.avatarContainer}>
-            {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarFallbackText}>{initials}</Text>
-              </View>
-            )}
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>{initials}</Text>
+            </View>
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <View style={styles.teamMeta}>
-              {item.location && (
-                <View style={styles.locationRow}>
-                  <MapPin size={12} color="#00ea6b" style={{ marginRight: 4 }} />
-                  <Text style={styles.locationText} numberOfLines={1}>
-                    {item.location}
-                  </Text>
-                </View>
-              )}
-              {item.captain && (
-                <Text style={styles.captainText} numberOfLines={1}>
-                  Capt: {item.captain}
-                </Text>
-              )}
+            <Text style={styles.cardTitle}>{isPlayerNeeded ? item.teamName : item.playerName}</Text>
+            <View style={styles.locationRow}>
+              <MapPin size={12} color="#01b854" style={{ marginRight: 4 }} />
+              <Text style={styles.locationText}>{item.city}</Text>
+              <Text style={styles.timeText}> • {item.postedAt}</Text>
             </View>
           </View>
         </View>
-        <View style={[styles.viewBadge, { borderColor: 'rgba(0, 234, 107, 0.2)' }]}>
-          <Text style={styles.viewBadgeText}>Squad</Text>
-          <ChevronRight size={14} color="#00ea6b" />
+        <View style={styles.roleTag}>
+          <Text style={styles.roleTagText}>{isPlayerNeeded ? 'Looking for: ' : 'Specialization: '}{item.role}</Text>
         </View>
-      </TouchableOpacity>
+        <Text style={styles.boardMessage}>{item.message}</Text>
+        <TouchableOpacity style={styles.contactBtn}>
+          <MessageCircle size={16} color="#01b854" style={{ marginRight: 6 }} />
+          <Text style={styles.contactBtnText}>Message</Text>
+        </TouchableOpacity>
+      </View>
     );
   };
 
-  const hasResults = activeTab === 'player' ? filteredPlayers.length > 0 : filteredTeams.length > 0;
 
   const content = (
     <View style={styles.page}>
@@ -224,7 +129,7 @@ export default function CricketHubScreen() {
               <View style={[styles.featuresRow, isMobile && styles.featuresRowMobile]}>
                 <View style={styles.featureItem}>
                   <View style={styles.featureIconContainer}>
-                    <Users size={18} color="#00ea6b" />
+                    <Users size={18} color="#01b854" />
                   </View>
                   <View style={styles.featureTextContainer}>
                     <Text style={styles.featureTitle}>Find Players</Text>
@@ -234,7 +139,7 @@ export default function CricketHubScreen() {
 
                 <View style={styles.featureItem}>
                   <View style={styles.featureIconContainer}>
-                    <Shield size={18} color="#00ea6b" />
+                    <Shield size={18} color="#01b854" />
                   </View>
                   <View style={styles.featureTextContainer}>
                     <Text style={styles.featureTitle}>Find Teams</Text>
@@ -244,7 +149,7 @@ export default function CricketHubScreen() {
 
                 <View style={styles.featureItem}>
                   <View style={styles.featureIconContainer}>
-                    <User size={18} color="#00ea6b" />
+                    <User size={18} color="#01b854" />
                   </View>
                   <View style={styles.featureTextContainer}>
                     <Text style={styles.featureTitle}>Player Profile</Text>
@@ -263,25 +168,25 @@ export default function CricketHubScreen() {
                     resizeMode="cover"
                   />
                   <LinearGradient
-                    colors={['#06392e', 'rgba(6, 57, 46, 0)']}
+                    colors={['#FFFFFF', 'rgba(255, 255, 255, 0)']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.leftOverlay}
                   />
                   <LinearGradient
-                    colors={['rgba(6, 57, 46, 0)', '#06392e']}
+                    colors={['rgba(255, 255, 255, 0)', '#FFFFFF']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.rightOverlay}
                   />
                   <LinearGradient
-                    colors={['#06392e', 'rgba(6, 57, 46, 0)']}
+                    colors={['#FFFFFF', 'rgba(255, 255, 255, 0)']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={styles.topOverlay}
                   />
                   <LinearGradient
-                    colors={['rgba(6, 57, 46, 0)', '#06392e']}
+                    colors={['rgba(255, 255, 255, 0)', '#FFFFFF']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={styles.bottomOverlay}
@@ -299,112 +204,124 @@ export default function CricketHubScreen() {
             <TouchableOpacity
               style={[
                 styles.tabButton,
-                activeTab === 'player' && styles.tabButtonActive,
-                isMobile && styles.tabButtonMobile,
-              ]}
-              onPress={() => setActiveTab('player')}
-            >
-              <User size={18} color={activeTab === 'player' ? '#00ea6b' : '#94a3b8'} style={styles.tabIcon} />
-              <Text style={[styles.tabText, activeTab === 'player' && styles.tabTextActive]}>
-                Find Player
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'team' && styles.tabButtonActive,
-                isMobile && styles.tabButtonMobile,
-              ]}
-              onPress={() => setActiveTab('team')}
-            >
-              <Users size={18} color={activeTab === 'team' ? '#00ea6b' : '#94a3b8'} style={styles.tabIcon} />
-              <Text style={[styles.tabText, activeTab === 'team' && styles.tabTextActive]}>
-                Find Team
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
                 activeTab === 'profile' && styles.tabButtonActive,
                 isMobile && styles.tabButtonMobile,
               ]}
               onPress={() => setActiveTab('profile')}
             >
-              <Shield size={18} color={activeTab === 'profile' ? '#00ea6b' : '#94a3b8'} style={styles.tabIcon} />
+              <Shield size={18} color={activeTab === 'profile' ? '#01b854' : '#64748B'} style={styles.tabIcon} />
               <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
                 Player Profile
               </Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Search bar and Filters */}
-          <View style={styles.searchRow}>
-            <View style={styles.searchInputContainer}>
-              <Search size={20} color="#94a3b8" style={styles.searchIcon} />
-              <TextInput
-                placeholder={activeTab === 'player' ? "Search players by name or city..." : "Search teams by name, city or captain..."}
-                placeholderTextColor="#94a3b8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                style={styles.searchInput}
-              />
-            </View>
-            <TouchableOpacity style={styles.filterButton}>
-              <Sliders size={20} color="#00ea6b" />
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'board' && styles.tabButtonActive,
+                isMobile && styles.tabButtonMobile,
+              ]}
+              onPress={() => setActiveTab('board')}
+            >
+              <ClipboardList size={18} color={activeTab === 'board' ? '#01b854' : '#64748B'} style={styles.tabIcon} />
+              <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>
+                Notice Board
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Results List or Empty State */}
-          {loading ? (
-            <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40, marginBottom: 40 }} />
-          ) : hasResults ? (
-            <View style={styles.resultsWrapper}>
+          {/* Main Content Area */}
+          {activeTab === 'board' && (
+            <View style={styles.boardContainer}>
+              <View style={styles.boardSubTabs}>
+                <View style={styles.subTabGroup}>
+                  <TouchableOpacity
+                    style={[styles.subTabBtn, boardSubTab === 'players_needed' && styles.subTabBtnActive]}
+                    onPress={() => setBoardSubTab('players_needed')}
+                  >
+                    <Text style={[styles.subTabText, boardSubTab === 'players_needed' && styles.subTabTextActive]}>Teams looking for Players</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.subTabBtn, boardSubTab === 'teams_needed' && styles.subTabBtnActive]}
+                    onPress={() => setBoardSubTab('teams_needed')}
+                  >
+                    <Text style={[styles.subTabText, boardSubTab === 'teams_needed' && styles.subTabTextActive]}>Players looking for Teams</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.createPostBtn} onPress={() => setIsPostModalVisible(true)}>
+                  <Plus size={16} color="#ffffff" style={{ marginRight: 4 }} />
+                  <Text style={styles.createPostBtnText}>Create Post</Text>
+                </TouchableOpacity>
+              </View>
+
               <FlatList
-                data={activeTab === 'player' ? filteredPlayers : filteredTeams}
-                renderItem={activeTab === 'player' ? renderPlayerItem : renderTeamItem}
+                data={boardSubTab === 'players_needed' ? playerRequests : teamRequests}
+                renderItem={renderBoardItem}
                 keyExtractor={item => item.id}
                 scrollEnabled={false}
                 numColumns={isMobile ? 1 : 2}
-                key={isMobile ? 'v-list' : 'h-list'}
+                key={isMobile ? 'v-board' : 'h-board'}
                 columnWrapperStyle={!isMobile ? { gap: 16 } : null}
                 contentContainerStyle={styles.list}
               />
-            </View>
-          ) : (
-            <View style={styles.emptyStateContainer}>
-              <Image
-                source={require('@/assets/cricket_empty_state.png')}
-                style={styles.emptyStateImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.emptyStateTitle}>
-                {activeTab === 'player' ? 'No players found matching your query' : 'No teams found matching your query'}
-              </Text>
-              <Text style={styles.emptyStateSubtext}>
-                Try searching with a different name or city
-              </Text>
-
-              {/* Action Buttons */}
-              <TouchableOpacity style={styles.primaryButton}>
-                <Search size={18} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.primaryButtonText}>Try a new search</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.textButton}
-                onPress={() => setSearchQuery('')}
-              >
-                <RefreshCw size={14} color="#00ea6b" style={styles.buttonIcon} />
-                <Text style={styles.textButtonText}>Reset filters</Text>
-              </TouchableOpacity>
             </View>
           )}
         </View>
 
         <SiteFooter />
       </ScrollView>
+
+      {/* Create Post Modal */}
+      <Modal
+        visible={isPostModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsPostModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {boardSubTab === 'players_needed' ? 'Find a Player' : 'Find a Team'}
+              </Text>
+              <TouchableOpacity onPress={() => setIsPostModalVisible(false)} style={styles.closeBtn}>
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.inputLabel}>{boardSubTab === 'players_needed' ? 'Role Needed' : 'Your Specialization'}</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder={boardSubTab === 'players_needed' ? "e.g. Top-order Batsman" : "e.g. Right-arm Fast"}
+                value={postRole}
+                onChangeText={setPostRole}
+              />
+              
+              <Text style={styles.inputLabel}>City/Location</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Gurugram"
+                value={postCity}
+                onChangeText={setPostCity}
+              />
+
+              <Text style={styles.inputLabel}>Message</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextArea]}
+                placeholder="Add more details about what you're looking for..."
+                value={postMessage}
+                onChangeText={setPostMessage}
+                multiline
+                numberOfLines={4}
+              />
+
+              <TouchableOpacity style={styles.submitPostBtn} onPress={handleCreatePost}>
+                <Text style={styles.submitPostBtnText}>Post Request</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -418,7 +335,7 @@ export default function CricketHubScreen() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: '#06392e',
+    backgroundColor: '#FAFAFA',
   },
   scrollView: {
     flex: 1,
@@ -433,10 +350,10 @@ const styles = StyleSheet.create({
   // ── HERO BANNER ─────────────────────────────────────────────
   heroBanner: {
     flexDirection: 'row',
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.08)',
+    borderColor: '#E2E8F0',
     padding: 32,
     maxWidth: 1200,
     width: '100%',
@@ -505,16 +422,16 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 42,
     fontWeight: '900',
-    color: '#ffffff',
+    color: '#0F172A',
   },
   heroTitleAccent: {
     fontSize: 42,
     fontWeight: '900',
-    color: '#00ea6b',
+    color: '#01b854',
   },
   heroSubtitle: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: '#64748B',
     marginBottom: 32,
   },
   featuresRow: {
@@ -528,19 +445,19 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 234, 107, 0.04)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.06)',
+    borderColor: '#E2E8F0',
     flex: 1,
   },
   featureIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 234, 107, 0.08)',
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -551,19 +468,19 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#0F172A',
   },
   featureDesc: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748B',
     marginTop: 1,
   },
   // ── MAIN CARD ───────────────────────────────────────────────
   mainCard: {
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.12)',
+    borderColor: '#E2E8F0',
     padding: 24,
     maxWidth: 1200,
     width: '100%',
@@ -593,8 +510,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   tabButtonActive: {
-    backgroundColor: 'rgba(0, 234, 107, 0.04)',
-    borderColor: '#00ea6b',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#01b854',
   },
   tabButtonMobile: {
     width: '100%',
@@ -605,10 +522,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748B',
   },
   tabTextActive: {
-    color: '#ffffff',
+    color: '#0F172A',
   },
   searchRow: {
     flexDirection: 'row',
@@ -619,10 +536,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: '#FAFAFA',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.08)',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 16,
     height: 52,
   },
@@ -631,7 +548,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#ffffff',
+    color: '#0F172A',
     fontSize: 15,
   },
   filterButton: {
@@ -639,8 +556,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.12)',
-    backgroundColor: '#06392e',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FAFAFA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -657,11 +574,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.08)',
+    borderColor: '#E2E8F0',
     marginBottom: 16,
   },
   cardMain: {
@@ -674,7 +591,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -685,14 +602,14 @@ const styles = StyleSheet.create({
   avatarFallback: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 234, 107, 0.06)',
+    backgroundColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarFallbackText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#00ea6b',
+    color: '#01b854',
   },
   cardContent: {
     marginLeft: 14,
@@ -701,7 +618,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#0F172A',
     marginBottom: 4,
   },
   locationRow: {
@@ -710,13 +627,13 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748B',
     fontWeight: '500',
     maxWidth: 160,
   },
   subtext: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748B',
   },
   teamMeta: {
     gap: 4,
@@ -724,23 +641,23 @@ const styles = StyleSheet.create({
   captainText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#00ea6b',
+    color: '#01b854',
   },
   viewBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 234, 107, 0.04)',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.12)',
+    borderColor: '#E2E8F0',
   },
   viewBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00ea6b',
+    color: '#01b854',
   },
   // ── EMPTY STATE ─────────────────────────────────────────────
   emptyStateContainer: {
@@ -756,13 +673,13 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#ffffff',
+    color: '#0F172A',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#64748B',
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -779,7 +696,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#06392e',
+    color: '#FFFFFF',
   },
   buttonIcon: {
     marginRight: 8,
@@ -791,9 +708,186 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  textButtonText: {
+    textButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00ea6b',
+    color: '#01b854',
+  },
+  // ── NOTICE BOARD ───────────────────────────────────────────
+  boardContainer: {
+    width: '100%',
+  },
+  boardSubTabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  subTabGroup: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+  },
+  subTabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  subTabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  subTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  subTabTextActive: {
+    color: '#0F172A',
+  },
+  createPostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#01b854',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  createPostBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  boardCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  boardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  roleTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  roleTagText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  boardMessage: {
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  contactBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#01b854',
+  },
+  contactBtnText: {
+    color: '#01b854',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  // ── MODAL ───────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#0F172A',
+    marginBottom: 16,
+  },
+  modalTextArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  submitPostBtn: {
+    backgroundColor: '#01b854',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitPostBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

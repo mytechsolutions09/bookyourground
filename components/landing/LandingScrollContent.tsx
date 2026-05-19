@@ -120,11 +120,11 @@ export default function LandingScrollContent({
 
               </View>
 
+              <GroundsNearYou />
               <FindOpposition />
               <HowItWorks />
               <CalendarTabs />
               <PopularGrounds />
-              <GroundsNearYou />
               <Features />
               <CallToAction />
               <SiteFooter />
@@ -132,7 +132,7 @@ export default function LandingScrollContent({
           ) : (
             <>
               {/* 
-                Subsequent Section 2: Find an Opposition
+                Subsequent Section 2: Grounds Near You + Find an Opposition
               */}
               <View
                 style={{
@@ -142,6 +142,7 @@ export default function LandingScrollContent({
                   marginTop: 0,
                 }}
               >
+                <GroundsNearYou />
                 <FindOpposition />
               </View>
 
@@ -178,7 +179,6 @@ export default function LandingScrollContent({
               >
                 <CalendarTabs />
                 <PopularGrounds />
-                <GroundsNearYou />
                 <Features />
                 <CallToAction />
                 <SiteFooter />
