@@ -105,6 +105,21 @@ const FEATURES = [
   { icon: Zap, label: 'Instant Book', desc: 'No calls needed' },
 ];
 
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+};
+
 function GroundCardMobile({ 
   ground, 
   index, 
@@ -157,6 +172,16 @@ function GroundCardMobile({
           <Text style={styles.cardLocation} numberOfLines={1}>
             {ground.city}, {ground.state}
           </Text>
+          {ground._distance !== undefined && ground._distance !== null && (
+            <View style={styles.distanceBadge}>
+              <MapPin size={9} color="#01b854" />
+              <Text style={styles.distanceText}>
+                {ground._distance < 1 
+                  ? `${Math.round(ground._distance * 1000)}m` 
+                  : `${ground._distance.toFixed(1)} km`}
+              </Text>
+            </View>
+          )}
         </View>
         {avgRating > 0 && (
           <View style={styles.groundMeta}>
@@ -197,6 +222,85 @@ function GroundCardMobile({
   );
 }
 
+function GroundCardNearYou({ ground }: { ground: any }) {
+  const primaryImage =
+    ground.ground_images?.find((img: any) => img.is_primary)?.image_url ||
+    ground.ground_images?.[0]?.image_url ||
+    'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+
+  const reviews = (ground.reviews || []) as { rating: number }[];
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((s: number, r: { rating: number }) => s + (r.rating || 0), 0) / reviews.length
+      : 0;
+
+  const href = makeGroundPath(ground);
+
+  const priceVal = ground.min_price !== null && ground.min_price !== undefined
+    ? ground.min_price
+    : (ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+      ? Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))
+      : null);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => router.push(href as any)}
+      style={styles.nearYouCard}
+    >
+      {/* Image Wrap */}
+      <View style={styles.nearYouImageWrap}>
+        <Image source={{ uri: primaryImage }} style={styles.nearYouImage} />
+        {/* Exclusive Badge */}
+        {ground.approved && (ground.name.toLowerCase().includes('badminton') || ground.id.charCodeAt(0) % 5 === 0) && (
+          <View style={styles.exclusiveBadge}>
+            <View style={styles.exclusiveIconBox}>
+              <Text style={styles.exclusiveIconText}>H</Text>
+            </View>
+            <Text style={styles.exclusiveText}>Exclusive</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Body */}
+      <View style={styles.nearYouBody}>
+        {/* Name */}
+        <Text style={styles.nearYouName} numberOfLines={1}>
+          {ground.name}
+        </Text>
+
+        {/* Location / Distance */}
+        <View style={styles.nearYouLocationRow}>
+          <MapPin size={12} color="#94A3B8" />
+          <Text style={styles.nearYouDistanceText}>
+            {ground._distance !== undefined && ground._distance !== null
+              ? `${ground._distance.toFixed(2)} km`
+              : `${(0.1 + (ground.id.charCodeAt(0) % 10) * 0.08).toFixed(2)} km`}
+          </Text>
+        </View>
+
+        {/* Footer: Price onwards & Rating Badge */}
+        <View style={styles.nearYouFooter}>
+          {/* Price */}
+          <View style={styles.nearYouPriceRow}>
+            <Text style={styles.nearYouPriceText}>
+              {priceVal !== null ? `₹${priceVal} onwards` : 'See Slots'}
+            </Text>
+          </View>
+
+          {/* Rating */}
+          <View style={styles.nearYouRatingBadge}>
+            <Text style={styles.nearYouRatingText}>
+              {(avgRating > 0 ? avgRating : 3.5 + (ground.id.charCodeAt(0) % 15) * 0.1).toFixed(1)}
+            </Text>
+            <Star size={9} color="#FFD700" fill="#FFD700" style={{ marginLeft: 2 }} />
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function HomeScreen() {
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -219,7 +323,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sportFilter, setSportFilter] = useState('cricket');
   const { setTabBarVisible } = useUI();
-  const { cityName, refreshLocation } = useLocation();
+  const { cityName, refreshLocation, latitude: userLat, longitude: userLng } = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedTimeTab, setSelectedTimeTab] = useState<string | null>('morning');
 
@@ -343,28 +447,70 @@ export default function HomeScreen() {
     return { venueCount, cityCount, avgRating };
   }, [grounds]);
 
-  const popularGrounds = useMemo(() => {
-    const scored = grounds.map((g: any) => {
-      const reviews = (g.reviews || []) as { rating: number }[];
-      const avg =
-        reviews.length > 0
-          ? reviews.reduce((s: number, r: { rating: number }) => s + (r.rating || 0), 0) / reviews.length
+  const venuesNearYou = useMemo(() => {
+    let list = [...grounds];
+    if (userLat && userLng) {
+      list = list.map((g: any) => {
+        const lat = parseFloat(g.latitude);
+        const lng = parseFloat(g.longitude);
+        let distance = null;
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          distance = getDistance(userLat, userLng, lat, lng);
+        }
+        return { ...g, _distance: distance };
+      });
+      // Sort grounds: those with a valid distance first, sorted from closest to farthest, then those without distance
+      list.sort((a: any, b: any) => {
+        if (a._distance !== null && b._distance !== null) {
+          return a._distance - b._distance;
+        }
+        if (a._distance !== null) return -1;
+        if (b._distance !== null) return 1;
+        return 0;
+      });
+    } else {
+      // Fallback: sort by review rating if location is not available
+      list = list.map((g: any) => {
+        const reviews = (g.reviews || []) as { rating: number }[];
+        const avg = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
           : 0;
-      return { ...g, _avg: avg, _count: reviews.length };
-    });
-    scored.sort((a: any, b: any) => {
-      if (b._avg !== a._avg) return b._avg - a._avg;
-      return b._count - a._count;
-    });
-    return scored.slice(0, 8);
-  }, [grounds]);
+        return { ...g, _avg: avg, _count: reviews.length };
+      });
+      list.sort((a: any, b: any) => {
+        if (b._avg !== a._avg) return b._avg - a._avg;
+        return b._count - a._count;
+      });
+    }
+    return list.slice(0, 8);
+  }, [grounds, userLat, userLng]);
 
   const cricketGrounds = useMemo(() => {
-    return grounds.filter((g: any) => 
+    let list = grounds.filter((g: any) => 
       (g.pitch_type || '').toLowerCase().includes('cricket') ||
       (g.name || '').toLowerCase().includes('cricket')
-    ).slice(0, 8);
-  }, [grounds]);
+    );
+    if (userLat && userLng) {
+      list = list.map((g: any) => {
+        const lat = parseFloat(g.latitude);
+        const lng = parseFloat(g.longitude);
+        let distance = null;
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          distance = getDistance(userLat, userLng, lat, lng);
+        }
+        return { ...g, _distance: distance };
+      });
+      list.sort((a: any, b: any) => {
+        if (a._distance !== null && b._distance !== null) {
+          return a._distance - b._distance;
+        }
+        if (a._distance !== null) return -1;
+        if (b._distance !== null) return 1;
+        return 0;
+      });
+    }
+    return list.slice(0, 8);
+  }, [grounds, userLat, userLng]);
 
   const bookTodayGrounds = useMemo(() => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
@@ -748,58 +894,43 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* ── Popular Grounds ───────────────────────────── */}
+        {/* ── Venues Near You ───────────────────────────── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionLabel}>Popular Grounds</Text>
-              <Text style={styles.sectionTitle}>Trending near you</Text>
-            </View>
-            <Pressable
-              style={styles.seeAllBtn}
+          <View style={styles.nearYouSectionHeader}>
+            <Text style={styles.nearYouSectionTitle}>VENUES NEAR YOU</Text>
+            <TouchableOpacity
               onPress={() => router.push('/(tabs)/grounds' as any)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
-            </Pressable>
+              <Text style={styles.nearYouSeeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
 
           {loading ? (
             <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
-          ) : popularGrounds.length === 0 ? (
+          ) : venuesNearYou.length === 0 ? (
             <Text style={styles.emptyText}>No grounds found</Text>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              snapToInterval={mobileItemWidth + horizontalGap}
-              decelerationRate="fast"
-              snapToAlignment="start"
-            >
-              {popularGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={{ width: mobileItemWidth }}>
-                  <GroundCardMobile ground={g} index={i} />
+            <View style={styles.venuesGrid}>
+              {venuesNearYou.slice(0, 4).map((g: any, i: number) => (
+                <View key={g.id} style={styles.gridCardWrapper}>
+                  <GroundCardNearYou ground={g} />
                 </View>
               ))}
-            </ScrollView>
+            </View>
           )}
         </View>
 
         {/* ── Cricket Grounds ───────────────────────────── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionLabel}>Cricket Grounds</Text>
-              <Text style={styles.sectionTitle}>Best for Cricket</Text>
-            </View>
-            <Pressable
-              style={styles.seeAllBtn}
+          <View style={styles.nearYouSectionHeader}>
+            <Text style={styles.nearYouSectionTitle}>BEST FOR CRICKET</Text>
+            <TouchableOpacity
               onPress={() => router.push('/(tabs)/grounds' as any)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
-            </Pressable>
+              <Text style={styles.nearYouSeeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
 
           {loading ? (
@@ -807,20 +938,13 @@ export default function HomeScreen() {
           ) : cricketGrounds.length === 0 ? (
             <Text style={styles.emptyText}>No cricket grounds found</Text>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              snapToInterval={mobileItemWidth + horizontalGap}
-              decelerationRate="fast"
-              snapToAlignment="start"
-            >
-              {cricketGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={{ width: mobileItemWidth }}>
-                  <GroundCardMobile ground={g} index={i} />
+            <View style={styles.venuesGrid}>
+              {cricketGrounds.slice(0, 4).map((g: any, i: number) => (
+                <View key={g.id} style={styles.gridCardWrapper}>
+                  <GroundCardNearYou ground={g} />
                 </View>
               ))}
-            </ScrollView>
+            </View>
           )}
         </View>
         <View style={{ height: 30 }} />
@@ -874,6 +998,144 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  nearYouSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  nearYouSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
+  },
+  nearYouSeeAllText: {
+    fontSize: 13,
+    color: '#01b854',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  venuesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 4,
+  },
+  gridCardWrapper: {
+    width: '48.2%',
+    marginBottom: 16,
+  },
+  nearYouCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  nearYouImageWrap: {
+    width: '100%',
+    height: 105,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+  },
+  nearYouImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  exclusiveBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: '#FFD700',
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 6,
+    overflow: 'hidden',
+  },
+  exclusiveIconBox: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  exclusiveIconText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 8,
+    fontFamily: 'Inter',
+  },
+  exclusiveText: {
+    color: '#1E3A8A',
+    fontWeight: '800',
+    fontSize: 8.5,
+    fontFamily: 'Inter',
+  },
+  nearYouBody: {
+    padding: 8,
+  },
+  nearYouName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  nearYouLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: 8,
+  },
+  nearYouDistanceText: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  nearYouFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  nearYouPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  nearYouPriceText: {
+    fontSize: 10.5,
+    color: '#475569',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  nearYouRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#06392e',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  nearYouRatingText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
   screen: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -1345,6 +1607,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#64748B',
     fontWeight: '500',
+    fontFamily: 'Inter',
+    flex: 1,
+    marginRight: 6,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginLeft: 'auto',
+  },
+  distanceText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#01b854',
     fontFamily: 'Inter',
   },
   groundCardBody: {

@@ -35,17 +35,6 @@ function NotificationsInner() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const dateOptions = useMemo(() => {
-    const dates = [];
-    for (let i = -2; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
-    }
-    return dates;
-  }, []);
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
@@ -101,7 +90,7 @@ function NotificationsInner() {
         `)
         .eq('user_id', user.id)
         .eq('status', 'confirmed')
-        .eq('booking_date', selectedDate);
+        .gte('booking_date', nowIso);
 
       // Map bookings to look like notifications
       const mappedBookings = (bookings || []).map(b => ({
@@ -153,7 +142,7 @@ function NotificationsInner() {
 
   useEffect(() => {
     loadReminders();
-  }, [user, selectedDate]);
+  }, [user]);
 
   useEffect(() => {
     setTabBarVisible(false);
@@ -204,51 +193,20 @@ function NotificationsInner() {
     <ScrollView 
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadReminders} />}
-      stickyHeaderIndices={[0]}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
-      <View style={{ backgroundColor: '#FFFFFF' }}>
-        <View style={styles.inner}>
-          {IS_WEB ? (
+      {IS_WEB && (
+        <View style={{ backgroundColor: '#FFFFFF' }}>
+          <View style={styles.inner}>
             <ProfileHeaderTabs
               themeAccent="#00ea6b"
-              themeText={IS_WEB ? '#111827' : '#0F172A'}
-              isCompact={!IS_WEB}
+              themeText="#111827"
+              isCompact={false}
             />
-          ) : (
-            <View style={[styles.headerRow, { justifyContent: 'center', paddingTop: 0, paddingBottom: 0 }]}>
-              <Text style={[styles.pageTitle, { textAlign: 'center', top: 35, color: '#01b854' }]}>Notifications</Text>
-            </View>
-          )}
+          </View>
         </View>
-        
-        {!IS_WEB && (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.datePickerScroll}
-            contentContainerStyle={styles.datePickerContent}
-          >
-            {dateOptions.map((date) => {
-              const d = new Date(date);
-              const isSelected = date === selectedDate;
-              const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-              const dayNum = d.getDate();
-              
-              return (
-                <TouchableOpacity 
-                  key={date}
-                  onPress={() => setSelectedDate(date)}
-                  style={[styles.dateChip, isSelected && styles.dateChipActive]}
-                >
-                  <Text style={[styles.dateDayName, isSelected && styles.dateTextActive]}>{dayName}</Text>
-                  <Text style={[styles.dateDayNum, isSelected && styles.dateTextActive]}>{dayNum}</Text>
-                  {isSelected && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
+      )}
 
       <View style={styles.inner}>
         {loading ? (

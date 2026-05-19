@@ -218,6 +218,18 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const hasMounted = useHasMounted();
   const isCompact = useIsCompact();
   const { user } = useAuth();
+
+  const lastTapRef = React.useRef<{ [key: string]: number }>({});
+  const handleSlotDoubleTap = (slotValue: string) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[slotValue] || 0;
+    if (now - lastTap < 300) {
+      setSelectedNetsSlots(prev => prev.filter(v => v !== slotValue));
+      delete lastTapRef.current[slotValue];
+    } else {
+      lastTapRef.current[slotValue] = now;
+    }
+  };
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = useMemo(() => (hasMounted ? (!isWeb || windowWidth < 900) : false), [hasMounted, isWeb, windowWidth]);
@@ -2544,69 +2556,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       )}
 
-      {/* Coupon Code Section */}
-      {(!useLandingSearchFlow || groundSelectedFromSearch) && (
-        <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle, isWeb && !isCompact && { flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
-          {!(isWeb && !isCompact) && (
-            <Text style={fieldLabelStyle}>Coupon Code</Text>
-          )}
-          <View style={{ flex: (isWeb && !isCompact) ? 1 : undefined }}>
-            <View style={styles.couponRow}>
-              <TextInput
-                style={[
-                  styles.input,
-                  { flex: 1 },
-                  isWeb && !isCompact && { height: 40, minHeight: 40 },
-                  isCouponFocused && { borderColor: '#01b854', ...Platform.select({ web: { outlineStyle: 'none' } }) },
-                  nativeTanChrome && styles.inputBookGroundNative,
-                  appliedCoupon && styles.couponInputApplied,
-                ]}
-                placeholder="Enter coupon code"
-                placeholderTextColor={Platform.OS === 'web' ? '#9CA3AF' : '#9ca3af'}
-                value={couponCode}
-                onChangeText={(text) => {
-                  setCouponCode(text.toUpperCase());
-                  setAppliedCoupon(null);
-                  setCouponError(null);
-                }}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                editable={!validatingCoupon}
-                onFocus={() => setIsCouponFocused(true)}
-                onBlur={() => setIsCouponFocused(false)}
-              />
-              <Pressable
-                onPress={handleApplyCoupon}
-                disabled={!couponCode || !!appliedCoupon || validatingCoupon || !computed}
-                style={({ pressed }) => [
-                  styles.applyBtn,
-                  isWeb && !isCompact && { height: 40, minHeight: 40 },
-                  (!couponCode || !!appliedCoupon || validatingCoupon || !computed) && styles.applyBtnDisabled,
-                  appliedCoupon && styles.applyBtnApplied,
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                {validatingCoupon ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={[styles.applyBtnText, appliedCoupon && styles.applyBtnTextApplied]}>
-                    {appliedCoupon ? 'Applied' : 'Apply'}
-                  </Text>
-                )}
-              </Pressable>
-
-            </View>
-            {appliedCoupon && (
-              <Text style={styles.couponSuccess}>
-                Coupon applied! You saved {formatCurrency(discountAmount)}
-              </Text>
-            )}
-            {couponError && (
-              <Text style={styles.couponError}>{couponError}</Text>
-            )}
-          </View>
-        </View>
-      )}
+      {/* Coupon Code Section is now rendered just over checkout */}
 
       {!separateSearchResults && searchResultsBody ? (
         <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
@@ -2615,6 +2565,66 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       ) : null}
     </>
   );
+
+  const renderCouponField = () => {
+    if (groundPageAccent) return null;
+    if (useLandingSearchFlow && !groundSelectedFromSearch) return null;
+    return (
+      <View style={{ paddingHorizontal: groundPageAccent && !isWeb ? 20 : 0, marginTop: 8, marginBottom: 8 }}>
+        <View style={styles.couponRow}>
+          <TextInput
+            style={[
+              styles.input,
+              { flex: 1, height: 40, minHeight: 40, paddingVertical: 0, borderRadius: 12 },
+              isCouponFocused && { borderColor: '#01b854', ...Platform.select({ web: { outlineStyle: 'none' } }) },
+              nativeTanChrome && styles.inputBookGroundNative,
+              appliedCoupon && styles.couponInputApplied,
+            ]}
+            placeholder="Enter coupon code"
+            placeholderTextColor={Platform.OS === 'web' ? '#9CA3AF' : '#9ca3af'}
+            value={couponCode}
+            onChangeText={(text) => {
+              setCouponCode(text.toUpperCase());
+              setAppliedCoupon(null);
+              setCouponError(null);
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!validatingCoupon}
+            onFocus={() => setIsCouponFocused(true)}
+            onBlur={() => setIsCouponFocused(false)}
+          />
+          <Pressable
+            onPress={handleApplyCoupon}
+            disabled={!couponCode || !!appliedCoupon || validatingCoupon || !computed}
+            style={({ pressed }) => [
+              styles.applyBtn,
+              { height: 40, minHeight: 40, paddingVertical: 0, justifyContent: 'center', borderRadius: 12 },
+              (!couponCode || !!appliedCoupon || validatingCoupon || !computed) && styles.applyBtnDisabled,
+              appliedCoupon && styles.applyBtnApplied,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            {validatingCoupon ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={[styles.applyBtnText, appliedCoupon && styles.applyBtnTextApplied]}>
+                {appliedCoupon ? 'Applied' : 'Apply'}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+        {appliedCoupon && (
+          <Text style={styles.couponSuccess}>
+            Coupon applied! You saved {formatCurrency(discountAmount)}
+          </Text>
+        )}
+        {couponError && (
+          <Text style={styles.couponError}>{couponError}</Text>
+        )}
+      </View>
+    );
+  };
 
   const ContainerComponent: React.ComponentType<any> =
     noCard ? View : Card;
@@ -2721,6 +2731,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                     </View>
                   )}
 
+                  {renderCouponField()}
+
                   <View style={{ marginTop: 'auto', paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0', gap: 12 }}>
                     {discountAmount > 0 && (
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2749,7 +2761,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       disabled={submitting}
                       loading={submitting}
                       size="large"
-                      style={[styles.premiumGlassButton, { width: '100%', borderRadius: 16, marginTop: 16 }]}
+                      style={[styles.premiumGlassButton, { width: '100%', borderRadius: 12, marginTop: 16 }]}
                       textStyle={styles.premiumGlassButtonText}
                     />
                   </View>
@@ -2808,9 +2820,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   )}
                 </Text>
                 {supportMultipleSlots ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                    <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>{isNets ? 'Nets: ' : 'Slots: '}</Text>
-                    {selectedNetsSlots.map(s => {
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 8 }}>
+                    {selectedNetsSlots.length > 0 && (
+                      <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter', fontWeight: '400', marginRight: 2 }}>
+                        Double tap to remove:
+                      </Text>
+                    )}
+                    {selectedNetsSlots.map((s) => {
                       const parts = s.split('__');
                       const date = parts[0];
                       const time = parts[1];
@@ -2823,12 +2839,30 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       const factor = slotTeamType === 'one' ? 0.5 : 1.0;
                       price = price * factor;
                       
+                      const textVal = `${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`;
+                      
                       return (
-                        <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
-                            {`${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`}
+                        <Pressable 
+                          key={s} 
+                          onPress={() => handleSlotDoubleTap(s)}
+                          style={({ pressed }) => [
+                            {
+                              paddingVertical: 6,
+                              paddingHorizontal: 12,
+                              borderRadius: 12,
+                              borderWidth: 1,
+                              borderColor: '#E2E8F0',
+                              backgroundColor: '#F8FAFC',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            },
+                            pressed && { opacity: 0.7 }
+                          ]}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '500', color: '#475569', fontFamily: 'Inter' }}>
+                            {textVal}
                           </Text>
-                        </View>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -2849,58 +2883,92 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               </View>
             )}
 
-            <View
-              style={[
-                styles.actions,
-                groundPageAccent && !isWeb && styles.actionsGroundPageNative,
-              ]}
-            >
-              {useLandingSearchFlow ? (
-                groundSelectedFromSearch ? (
-                  <View style={styles.actionsColumn}>
+            {groundPageAccent && !isWeb ? (
+              <View style={{ paddingHorizontal: 0, marginTop: 4, marginBottom: 12 }}>
+                <Button
+                  title={submitting ? '...' : 'Proceed'}
+                  onPress={handleBook}
+                  disabled={submitting}
+                  loading={submitting}
+                  size="small"
+                  style={[
+                    styles.premiumGlassButton,
+                    { 
+                      height: 40, 
+                      minHeight: 40, 
+                      paddingVertical: 0, 
+                      paddingHorizontal: 0, 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
+                      borderRadius: 12,
+                      backgroundColor: '#01b854',
+                      borderColor: '#01b854',
+                      width: '100%',
+                    }
+                  ]}
+                  textStyle={[
+                    styles.premiumGlassButtonText,
+                    { fontSize: 14, color: '#FFFFFF', fontWeight: '700' }
+                  ]}
+                />
+              </View>
+            ) : (
+              <>
+                {renderCouponField()}
+                <View
+                  style={[
+                    styles.actions,
+                    groundPageAccent && !isWeb && styles.actionsGroundPageNative,
+                  ]}
+                >
+                  {useLandingSearchFlow ? (
+                    groundSelectedFromSearch ? (
+                      <View style={styles.actionsColumn}>
+                        <Button
+                          title={submitting ? 'Processing...' : 'Checkout'}
+                          onPress={handleBook}
+                          disabled={submitting}
+                          loading={submitting}
+                          fullWidth
+                          size="large"
+                          style={styles.premiumGlassButton}
+                          textStyle={styles.premiumGlassButtonText}
+                        />
+                        <Pressable
+                          onPress={() => setSelectedGroundId(null)}
+                          style={styles.changeGroundPress}
+                          disabled={submitting}
+                        >
+                          <Text style={styles.changeGroundText}>Choose a different ground</Text>
+                        </Pressable>
+                      </View>
+                    ) : !hasSearched || searchResults.length === 0 ? (
+                      <Button
+                        title="Search"
+                        onPress={handleSearch}
+                        disabled={submitting || searching || !canRunSearch}
+                        loading={searching}
+                        fullWidth
+                        size="large"
+                        style={styles.premiumGlassButton}
+                        textStyle={styles.premiumGlassButtonText}
+                      />
+                    ) : null
+                  ) : (
                     <Button
                       title={submitting ? 'Processing...' : 'Checkout'}
                       onPress={handleBook}
                       disabled={submitting}
                       loading={submitting}
                       fullWidth
-                      size="large"
+                      size={groundPageAccent && !isWeb ? 'small' : 'large'}
                       style={styles.premiumGlassButton}
                       textStyle={styles.premiumGlassButtonText}
                     />
-                    <Pressable
-                      onPress={() => setSelectedGroundId(null)}
-                      style={styles.changeGroundPress}
-                      disabled={submitting}
-                    >
-                      <Text style={styles.changeGroundText}>Choose a different ground</Text>
-                    </Pressable>
-                  </View>
-                ) : !hasSearched || searchResults.length === 0 ? (
-                  <Button
-                    title="Search"
-                    onPress={handleSearch}
-                    disabled={submitting || searching || !canRunSearch}
-                    loading={searching}
-                    fullWidth
-                    size="large"
-                    style={styles.premiumGlassButton}
-                    textStyle={styles.premiumGlassButtonText}
-                  />
-                ) : null
-              ) : (
-                <Button
-                  title={submitting ? 'Processing...' : 'Checkout'}
-                  onPress={handleBook}
-                  disabled={submitting}
-                  loading={submitting}
-                  fullWidth
-                  size={groundPageAccent && !isWeb ? 'small' : 'large'}
-                  style={styles.premiumGlassButton}
-                  textStyle={styles.premiumGlassButtonText}
-                />
-              )}
-            </View>
+                  )}
+                </View>
+              </>
+            )}
           </>
         )}
             </ContainerComponent>
@@ -2987,7 +3055,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   premiumGlassButton: {
     backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.7)' : '#01b854',
-    borderRadius: 100,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.8)' : '#01b854',
     ...Platform.select({
@@ -3326,7 +3394,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: '#9CA3AF',
   },
   summaryAccent: {
-    color: '#01b854',
+    color: '#334155',
     fontWeight: '800',
   },
   /** Ground detail on native: large capsule (tan border/text on mobile only). */
@@ -3347,8 +3415,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   summaryAccentGroundMobile: {
     fontWeight: '800',
     ...Platform.select({
-      web: { color: '#01b854' },
-      default: { color: isLight ? '#01b854' : '#dcc093' },
+      web: { color: '#334155' },
+      default: { color: '#334155' },
     }),
   },
   summaryMutedGroundMobile: {

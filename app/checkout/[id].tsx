@@ -25,7 +25,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY, formatTime } from '@/utils/helpers';
 import { makeGroundPath } from '@/utils/groundSlug';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves, Lock } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { useUI } from '@/contexts/UIContext';
@@ -43,6 +43,7 @@ export default function CheckoutScreen() {
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const isDesktop = width > 768;
+    const SummaryContainer = Platform.OS === 'web' ? Card : View;
 
     const [booking, setBooking] = useState<any>(null);
 
@@ -1525,7 +1526,20 @@ export default function CheckoutScreen() {
 
                 {/* Right Column: Order Summary */}
                 <View style={[styles.sideColumn, !isDesktop && Platform.OS !== 'web' && styles.sideColumnMobile, dynamicStyles.sideColumn as any]}>
-                    <Card style={[styles.summaryCard, dynamicStyles.summaryCard, { marginTop: 0 }]}>
+                    <SummaryContainer
+                      style={[
+                        styles.summaryCard,
+                        dynamicStyles.summaryCard,
+                        { marginTop: 0 },
+                        Platform.OS !== 'web' && {
+                          backgroundColor: 'transparent',
+                          borderWidth: 0,
+                          shadowOpacity: 0,
+                          elevation: 0,
+                          padding: 12,
+                        }
+                      ]}
+                    >
                         <View style={[styles.summaryHeaderRow, { marginBottom: 12 }]}>
                             <View style={{ flex: 1 }}>
                                 <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
@@ -1546,10 +1560,10 @@ export default function CheckoutScreen() {
                                 }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                         <Ticket size={18} color="#06392e" />
-                                        <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
+                                        <RNText style={{ fontSize: 14, fontWeight: Platform.OS === 'web' ? '600' : '400', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
                                     </View>
                                     <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
-                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#475569', fontFamily: 'Inter' }}>View Offers</RNText>
+                                        <RNText style={{ fontSize: 13, fontWeight: Platform.OS === 'web' ? '600' : '400', color: '#475569', fontFamily: 'Inter' }}>View Offers</RNText>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={[styles.couponContainer, { borderColor: isCouponFocused ? '#01b854' : '#F1F5F9' }]}>
@@ -1624,7 +1638,7 @@ export default function CheckoutScreen() {
                         <View style={{ marginBottom: 24 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                                 <Users size={18} color="#0F172A" />
-                                <RNText style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>
+                                <RNText style={{ fontSize: 15, fontWeight: Platform.OS === 'web' ? '700' : '500', color: '#0F172A', fontFamily: 'Inter' }}>
                                     {isGroundOwnerOrAdmin ? 'Billing / Customer Details' : 'Confirm Contact Details'}
                                 </RNText>
                             </View>
@@ -1658,7 +1672,7 @@ export default function CheckoutScreen() {
                         <View style={{ marginBottom: 24 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                                 <CreditCard size={18} color="#0F172A" />
-                                <RNText style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>Payment Method</RNText>
+                                <RNText style={{ fontSize: 15, fontWeight: Platform.OS === 'web' ? '700' : '500', color: '#0F172A', fontFamily: 'Inter' }}>Payment Method</RNText>
                             </View>
 
                             <View style={styles.methodListNew}>
@@ -1793,7 +1807,7 @@ export default function CheckoutScreen() {
                         </TouchableOpacity>
 
 
-                    </Card>
+                    </SummaryContainer>
                 </View>
             </View>
 
@@ -2016,6 +2030,609 @@ export default function CheckoutScreen() {
         </ScrollView>
     );
 
+    if (Platform.OS !== 'web') {
+        const groundImage = (booking.grounds || booking.ground)?.ground_images?.[0]?.image_url || 'https://via.placeholder.com/600x400';
+        return (
+            <ScrollView
+                style={{ flex: 1, backgroundColor: '#F8FAFC' }}
+                contentContainerStyle={{ padding: 16, paddingTop: insets.top + 6, paddingBottom: 40 }}
+            >
+                {/* Custom Mini Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <TouchableOpacity onPress={handleBack} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                        <ChevronLeft size={18} color="#0F172A" />
+                    </TouchableOpacity>
+                    <RNText style={{ fontSize: 16, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Checkout</RNText>
+                    <View style={{ width: 32 }} />
+                </View>
+
+                {/* 1. Ground Info Banner Card */}
+                <TouchableOpacity
+                    onPress={() => setIsSlotsModalVisible(true)}
+                    activeOpacity={0.7}
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        padding: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        marginBottom: 16,
+                    }}
+                >
+                    <RNImage source={{ uri: groundImage }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+                    <View style={{ flex: 1 }}>
+                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }} numberOfLines={1}>
+                            {(booking.grounds || booking.ground)?.name}
+                        </RNText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <MapPin size={12} color="#64748B" />
+                            <RNText style={{ fontSize: 12, color: '#64748B', fontFamily: 'Inter' }} numberOfLines={1}>
+                                {(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}
+                            </RNText>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8, backgroundColor: '#E8F8F0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#DCFCE7' }}>
+                            <Calendar size={12} color="#15803D" />
+                            <RNText style={{ fontSize: 11, color: '#15803D', fontWeight: '500', fontFamily: 'Inter' }}>
+                                {booking.slots && booking.slots.length > 0
+                                    ? `${booking.slots.length} ${booking.slots.length === 1 ? 'Slot' : 'Slots'} Selected`
+                                    : `1 Slot Selected`}
+                            </RNText>
+                        </View>
+                    </View>
+                    <View style={{ alignSelf: 'center' }}>
+                        <RNText style={{ fontSize: 16, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>
+                            {formatCurrency(baseGroundPrice)}
+                        </RNText>
+                    </View>
+                </TouchableOpacity>
+
+                {/* 2. Coupon Card */}
+                {!isGroundOwnerOrAdmin && (
+                    <View
+                        style={{
+                            backgroundColor: '#F4FBF7',
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: '#E6F4ED',
+                            padding: 16,
+                            marginBottom: 16,
+                        }}
+                    >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Ticket size={18} color="#15803D" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
+                                    <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 1 }}>Unlock offers & save more</RNText>
+                                </View>
+                            </View>
+                            <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                    <RNText style={{ fontSize: 12, fontWeight: '600', color: '#15803D', fontFamily: 'Inter' }}>View Offers</RNText>
+                                    <ChevronRight size={12} color="#15803D" />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                            <RNTextInput
+                                style={{
+                                    flex: 1,
+                                    height: 40,
+                                    backgroundColor: '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: '#E2E8F0',
+                                    borderRadius: 8,
+                                    paddingHorizontal: 12,
+                                    fontSize: 13,
+                                    color: '#0F172A',
+                                    fontFamily: 'Inter',
+                                }}
+                                placeholder="Enter coupon code"
+                                placeholderTextColor="#94A3B8"
+                                value={couponCode}
+                                onChangeText={setCouponCode}
+                                autoCapitalize="characters"
+                            />
+                            <TouchableOpacity
+                                style={{
+                                    height: 40,
+                                    paddingHorizontal: 16,
+                                    backgroundColor: '#00ea6b',
+                                    borderRadius: 8,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                                onPress={() => booking.coupon_id ? removeCoupon() : applyCouponCode(couponCode)}
+                            >
+                                <RNText style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF', fontFamily: 'Inter' }}>
+                                    {applyingCoupon ? '...' : (booking.coupon_id ? 'Remove' : 'Apply')}
+                                </RNText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
+                {/* 3. Order Summary Card */}
+                <View
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        padding: 16,
+                        marginBottom: 16,
+                    }}
+                >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Order Summary</RNText>
+                        <ShieldCheck size={18} color="#64748B" />
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <RNText style={{ fontSize: 13, color: '#64748B', fontFamily: 'Inter' }}>Ground Price</RNText>
+                        <RNText style={{ fontSize: 13, color: '#0F172A', fontWeight: '500', fontFamily: 'Inter' }}>{formatCurrency(baseGroundPrice)}</RNText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <RNText style={{ fontSize: 13, color: '#64748B', fontFamily: 'Inter' }}>Platform Fee</RNText>
+                            <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                <RNText style={{ fontSize: 9, color: '#64748B', fontWeight: '500', fontFamily: 'Inter' }}>Incl. GST</RNText>
+                            </View>
+                        </View>
+                        <RNText style={{ fontSize: 13, color: '#0F172A', fontWeight: '500', fontFamily: 'Inter' }}>
+                            {formatCurrency(isGroundOwnerOrAdmin ? ownerPlatformFee : (platformFeeUser + gstUser))}
+                        </RNText>
+                    </View>
+
+                    {booking.discount_amount > 0 && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <RNText style={{ fontSize: 13, color: '#15803D', fontFamily: 'Inter' }}>Coupon Discount</RNText>
+                            <RNText style={{ fontSize: 13, color: '#15803D', fontWeight: '500', fontFamily: 'Inter' }}>-{formatCurrency(booking.discount_amount)}</RNText>
+                        </View>
+                    )}
+
+                    <View style={{ height: 1, borderStyle: 'dashed', borderWidth: 0.5, borderColor: '#E2E8F0', marginVertical: 12 }} />
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View>
+                            <RNText style={{ fontSize: 12, fontWeight: '500', color: '#475569', fontFamily: 'Inter' }}>Total Payable</RNText>
+                            <RNText style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, fontFamily: 'Inter' }}>Incl. all taxes</RNText>
+                        </View>
+                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{formatCurrency(totalPayable)}</RNText>
+                    </View>
+                </View>
+
+                {/* 4. Confirm Contact Details Card */}
+                <View
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        padding: 16,
+                        marginBottom: 16,
+                    }}
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
+                            <Users size={16} color="#15803D" />
+                        </View>
+                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Confirm Contact Details</RNText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <View style={{ flex: 1, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Users size={16} color="#94A3B8" />
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter' }}>Full Name</RNText>
+                                <RNTextInput
+                                    style={{ fontSize: 13, color: '#0F172A', fontFamily: 'Inter', marginTop: 2, padding: 0 }}
+                                    value={bookedForName}
+                                    onChangeText={setBookedForName}
+                                />
+                            </View>
+                        </View>
+                        <View style={{ flex: 1, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Smartphone size={16} color="#94A3B8" />
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Inter' }}>Mobile Number</RNText>
+                                <RNTextInput
+                                    style={{ fontSize: 13, color: '#0F172A', fontFamily: 'Inter', marginTop: 2, padding: 0 }}
+                                    keyboardType="phone-pad"
+                                    value={contactPhone}
+                                    onChangeText={setContactPhone}
+                                />
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* 5. Payment Method Card */}
+                <View
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        padding: 16,
+                        marginBottom: 20,
+                    }}
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
+                            <CreditCard size={16} color="#15803D" />
+                        </View>
+                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Payment Method</RNText>
+                    </View>
+
+                    <View style={{ gap: 12 }}>
+                        {/* Wallet Option */}
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSelectedGateway('wallet');
+                                setWalletAmountUsed(Math.min(walletBalance, totalPayable));
+                            }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                padding: 12,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: selectedGateway === 'wallet' ? '#86EFAC' : '#E2E8F0',
+                                backgroundColor: selectedGateway === 'wallet' ? '#F4FBF7' : '#FFFFFF',
+                            }}
+                        >
+                            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                <Wallet size={16} color={selectedGateway === 'wallet' ? '#15803D' : '#64748B'} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 13, fontWeight: '500', color: '#0F172A', fontFamily: 'Inter' }}>Wallet Balance</RNText>
+                                <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 2 }}>Available: {formatCurrency(walletBalance)}</RNText>
+                            </View>
+                            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: selectedGateway === 'wallet' ? '#15803D' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                                {selectedGateway === 'wallet' && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#15803D' }} />}
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* UPI Option */}
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSelectedGateway('razorpay');
+                                setSelectedSubMethod('upi');
+                            }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                padding: 12,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#86EFAC' : '#E2E8F0',
+                                backgroundColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#F4FBF7' : '#FFFFFF',
+                            }}
+                        >
+                            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                <Smartphone size={16} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#15803D' : '#64748B'} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 13, fontWeight: '500', color: '#0F172A', fontFamily: 'Inter' }}>UPI (PhonePe, GPay, etc.)</RNText>
+                                <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 2 }}>Instant and Secure</RNText>
+                            </View>
+                            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#15803D' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#15803D' }} />}
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Cards Option */}
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSelectedGateway('razorpay');
+                                setSelectedSubMethod('card');
+                            }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                padding: 12,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#86EFAC' : '#E2E8F0',
+                                backgroundColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#F4FBF7' : '#FFFFFF',
+                            }}
+                        >
+                            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                <CreditCard size={16} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#15803D' : '#64748B'} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 13, fontWeight: '500', color: '#0F172A', fontFamily: 'Inter' }}>Cards (Credit/Debit)</RNText>
+                                <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 2 }}>Visa, Mastercard, RuPay</RNText>
+                            </View>
+                            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#15803D' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#15803D' }} />}
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Net Banking Option */}
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSelectedGateway('razorpay');
+                                setSelectedSubMethod('netbanking');
+                            }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                padding: 12,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#86EFAC' : '#E2E8F0',
+                                backgroundColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#F4FBF7' : '#FFFFFF',
+                            }}
+                        >
+                            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                <Globe size={16} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#15803D' : '#64748B'} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 13, fontWeight: '500', color: '#0F172A', fontFamily: 'Inter' }}>Net Banking</RNText>
+                                <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 2 }}>All major Indian banks</RNText>
+                            </View>
+                            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#15803D' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#15803D' }} />}
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* 6. Confirm Button & Secure Footer */}
+                <TouchableOpacity
+                    onPress={handlePayment}
+                    disabled={processing}
+                    activeOpacity={0.8}
+                    style={{
+                        height: 52,
+                        borderRadius: 12,
+                        backgroundColor: '#00ea6b',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 10,
+                        shadowColor: '#00ea6b',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 8,
+                        elevation: 3,
+                    }}
+                >
+                    <ShieldCheck size={20} color="#FFFFFF" />
+                    <RNText style={{ fontSize: 16, fontWeight: '600', color: '#FFFFFF', fontFamily: 'Inter' }}>
+                        Confirm & Pay {formatCurrency(totalPayable)}
+                    </RNText>
+                </TouchableOpacity>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, marginBottom: 24 }}>
+                    <Lock size={12} color="#94A3B8" />
+                    <RNText style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'Inter' }}>
+                        Your payment details are secure and encrypted
+                    </RNText>
+                </View>
+
+                {/* Modals & WebViews */}
+                <Modal visible={showRazorpayWebView} animationType="slide">
+                    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+                        <View style={{ height: insets.top + 48, paddingTop: insets.top, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                            <TouchableOpacity onPress={() => { setShowRazorpayWebView(false); setProcessing(false); }} style={{ padding: 12 }}>
+                                <X size={20} color="#334155" />
+                            </TouchableOpacity>
+                            <RNText style={{ fontSize: 16, fontWeight: '600', color: '#1e293b' }}>Secure Payment</RNText>
+                            <View style={{ width: 44 }} />
+                        </View>
+                        <WebView
+                            source={{ html: razorpayMobileHtml }}
+                            onMessage={handleRazorpayMobileMessage}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            startInLoadingState={true}
+                        />
+                    </View>
+                </Modal>
+
+                <UIModal
+                    visible={errorModalVisible}
+                    onClose={() => setErrorModalVisible(false)}
+                    title={errorModalTitle}
+                >
+                    <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                        <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                            <X size={30} color="#EF4444" />
+                        </View>
+                        <RNText style={{ fontSize: 16, color: '#475569', textAlign: 'center', lineHeight: 24, marginBottom: 24, fontFamily: 'Inter' }}>
+                            {errorModalMessage}
+                        </RNText>
+                        <Button
+                            title="Got it"
+                            onPress={() => setErrorModalVisible(false)}
+                            style={{ width: '100%' }}
+                        />
+                    </View>
+                </UIModal>
+
+                <Modal
+                    visible={isCouponsModalVisible}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setIsCouponsModalVisible(false)}
+                >
+                    <Pressable
+                        style={styles.modalOverlay}
+                        onPress={() => setIsCouponsModalVisible(false)}
+                    >
+                        <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+                            <View style={styles.modalHeader}>
+                                <RNText style={styles.modalTitle}>Available Offers</RNText>
+                                <TouchableOpacity onPress={() => setIsCouponsModalVisible(false)}>
+                                    <RNText style={styles.closeBtnText}>Close</RNText>
+                                </TouchableOpacity>
+                            </View>
+
+                            {fetchingCoupons ? (
+                                <ActivityIndicator size="large" color="#01b854" style={{ padding: 40 }} />
+                            ) : availableCoupons.length === 0 ? (
+                                <View style={styles.emptyCoupons}>
+                                    <RNText style={styles.emptyText}>No offers available right now.</RNText>
+                                </View>
+                            ) : (
+                                <FlatList
+                                    data={availableCoupons}
+                                    keyExtractor={(item) => item.id}
+                                    contentContainerStyle={styles.couponsList}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={styles.couponItem}
+                                            onPress={() => applyCouponCode(item.code)}
+                                        >
+                                            <View style={styles.couponLeft}>
+                                                <RNText style={styles.couponCodeText}>{item.code}</RNText>
+                                                <RNText style={styles.couponDescText}>
+                                                    {item.discount_type === 'percentage'
+                                                        ? `${item.discount_value}% OFF`
+                                                        : `${formatCurrency(item.discount_value)} FLAT OFF`}
+                                                    {item.max_discount && ` up to ${formatCurrency(item.max_discount)}`}
+                                                </RNText>
+                                                {item.min_booking_amount > 0 && (
+                                                    <RNText style={styles.couponMinText}>
+                                                        Min booking: {formatCurrency(item.min_booking_amount)}
+                                                    </RNText>
+                                                )}
+                                            </View>
+                                            <TouchableOpacity
+                                                style={styles.applySmallBtn}
+                                                onPress={() => applyCouponCode(item.code)}
+                                            >
+                                                <RNText style={styles.applySmallText}>APPLY</RNText>
+                                            </TouchableOpacity>
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            )}
+                        </View>
+                    </Pressable>
+                </Modal>
+
+                <Modal
+                    visible={isSlotsModalVisible}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setIsSlotsModalVisible(false)}
+                >
+                    <Pressable
+                        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                        onPress={() => setIsSlotsModalVisible(false)}
+                    >
+                        <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                <RNText style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>Selected Slots & Teams</RNText>
+                            </View>
+
+                            <ScrollView style={{ maxHeight: 300 }}>
+                                {booking.slots && booking.slots.length > 0 ? (
+                                    booking.slots.map((s, index) => {
+                                        const parts = s.split('__');
+                                        const date = parts[0];
+                                        const time = parts[1];
+                                        const slotTeamType = parts[2] || booking.team_type;
+
+                                        const dateParts = date.split('-');
+                                        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : date;
+
+                                        const teamsLabel = slotTeamType === 'one' ? '1 Team' : 'Both Teams';
+                                        const pricePerSlot = (booking.slotPrices && booking.slotPrices[index]) ?? (parts[3] ? parseFloat(parts[3]) : (baseGroundPrice / booking.slots.length));
+
+                                        return (
+                                            <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <Calendar size={16} color="#059669" />
+                                                    <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
+                                                    <Clock size={16} color="#059669" style={{ marginLeft: 16 }} />
+                                                    <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                    {!isNets && (
+                                                        <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+                                                            <RNText style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>{teamsLabel}</RNText>
+                                                        </View>
+                                                    )}
+                                                    <RNText style={{ fontSize: 14, color: '#333', fontWeight: '600' }}>{formatCurrency(pricePerSlot)}</RNText>
+                                                </View>
+                                            </View>
+                                        );
+                                    })
+                                ) : (
+                                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                                        <RNText style={{ color: '#059669', fontWeight: '600' }}>1 Team</RNText>
+                                        <RNText style={{ color: '#333', fontWeight: '600', marginTop: 4 }}>
+                                            {formatDateDDMMYYYY(booking.booking_date)} | {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)} | {formatCurrency(baseGroundPrice)}
+                                        </RNText>
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                            <TouchableOpacity
+                                style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                                onPress={() => setIsSlotsModalVisible(false)}
+                            >
+                                <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
+                            </TouchableOpacity>
+                        </View>
+                    </Pressable>
+                </Modal>
+
+                <Modal
+                    visible={isPolicyModalVisible}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setIsPolicyModalVisible(false)}
+                >
+                    <Pressable
+                        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                        onPress={() => setIsPolicyModalVisible(false)}
+                    >
+                        <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                <RNText style={{ fontSize: 18, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Cancellation Policy</RNText>
+                            </View>
+
+                            <ScrollView style={{ maxHeight: 300 }}>
+                                <RNText style={{ fontSize: 14, color: '#333', lineHeight: 20 }}>
+                                    Cancel up to {platformSettings?.cancellation_days ?? 7} days before the match for a full refund.
+                                </RNText>
+                                <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 12 }}>
+                                    1. Cancellations made less than {platformSettings?.cancellation_days ?? 7} days before the start time are non-refundable.
+                                </RNText>
+                                <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 8 }}>
+                                    2. In case of rain or ground unsuitability, full refund or reschedule will be provided.
+                                </RNText>
+                                <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 8 }}>
+                                    3. Refunds may take 5-7 working days to reflect in your account.
+                                </RNText>
+                            </ScrollView>
+
+                            <TouchableOpacity
+                                style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                                onPress={() => setIsPolicyModalVisible(false)}
+                            >
+                                <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
+                            </TouchableOpacity>
+                        </View>
+                    </Pressable>
+                </Modal>
+            </ScrollView>
+        );
+    }
+
     if (Platform.OS === 'web') {
         return <WebLayout noCard>{content}</WebLayout>;
     }
@@ -2209,8 +2826,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     summaryTitleNew: {
-        fontSize: 20,
-        fontWeight: '600',
+        fontSize: Platform.OS === 'web' ? 20 : 16,
+        fontWeight: Platform.OS === 'web' ? '600' : '400',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2329,8 +2946,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     totalLabelNew: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: Platform.OS === 'web' ? 14 : 12,
+        fontWeight: Platform.OS === 'web' ? '600' : '400',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2340,8 +2957,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     totalValueNew: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: Platform.OS === 'web' ? 18 : 15,
+        fontWeight: Platform.OS === 'web' ? '600' : '500',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2350,7 +2967,7 @@ const styles = StyleSheet.create({
     },
     sectionTitleNew: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: Platform.OS === 'web' ? '700' : '500',
         color: '#0F172A',
         marginBottom: 16,
         fontFamily: 'Inter',
@@ -2459,7 +3076,7 @@ const styles = StyleSheet.create({
     },
     confirmBtnTextNew: {
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: Platform.OS === 'web' ? '600' : '500',
         color: '#1E293B',
         fontFamily: 'Inter',
     },
@@ -2931,8 +3548,8 @@ const styles = StyleSheet.create({
     },
     compactGroundName: {
         fontSize: 16,
-        fontWeight: '800',
-        color: '#00ea6b',
+        fontWeight: Platform.OS === 'web' ? '800' : '500',
+        color: '#475569',
         fontFamily: 'Inter',
     },
     compactGroundLocation: {

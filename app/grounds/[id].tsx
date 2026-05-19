@@ -880,14 +880,24 @@ export default function GroundDetailsScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: (ground?.name ?? 'Ground').toUpperCase(),
-          headerTitleStyle: { 
-            fontFamily: 'Inter', 
-            fontSize: 16, 
-            fontWeight: '700', 
-            color: '#111827',
-            letterSpacing: 1.2,
-          },
+          headerTitle: () => (
+            <Text 
+              numberOfLines={1} 
+              ellipsizeMode="tail" 
+              style={{
+                fontFamily: 'Inter', 
+                fontSize: 16, 
+                fontWeight: '700', 
+                color: '#111827',
+                letterSpacing: 1.2,
+                textAlign: 'center',
+                maxWidth: 180,
+              }}
+            >
+              {(ground?.name ?? 'Ground').toUpperCase()}
+            </Text>
+          ),
+          headerTitleAlign: 'center',
           headerLeft: () => null,
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
