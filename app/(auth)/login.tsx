@@ -18,21 +18,12 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, CheckCircle, Send, Smartphone } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 import { BlurView } from 'expo-blur';
+import { generateOTP, sendSMSOTP } from '@/utils/sms';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-
-let TurnstileComponent: any = null;
-if (Platform.OS === 'web') {
-  try {
-    // We use a local variable to avoid naming conflicts and ensure clean conditional loading
-    const TurnstileModule = require('@marsidev/react-turnstile');
-    TurnstileComponent = TurnstileModule.Turnstile;
-  } catch (e) {
-    console.warn('Turnstile module could not be loaded:', e);
-  }
-}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -44,9 +35,60 @@ export default function LoginScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showEmailNotConfirmedModal, setShowEmailNotConfirmedModal] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  
+  // Login Method Toggle State
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone');
+  const [phone, setPhone] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  
+  // Inline Phone OTP Login States
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtpVal, setPhoneOtpVal] = useState('');
+  const [phoneGeneratedOtp, setPhoneGeneratedOtp] = useState('');
+  const [phoneOtpTimer, setPhoneOtpTimer] = useState(0);
+  const [phoneOtpFocused, setPhoneOtpFocused] = useState(false);
+  const [otpSuccessMessage, setOtpSuccessMessage] = useState('');
+
   const emailRef = React.useRef<TextInput>(null);
   const passwordRef = React.useRef<TextInput>(null);
+  const phoneRef = React.useRef<TextInput>(null);
+  const phoneOtpRef = React.useRef<TextInput>(null);
+
+  // OTP Verification States
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpInput, setOtpInput] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpError, setOtpError] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [loginOtpVerified, setLoginOtpVerified] = useState(false);
+  
+  const otpRefs = [
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+  ];
+
+  // OTP Timer countdown
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (showOtpModal && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (phoneOtpTimer > 0) {
+      interval = setInterval(() => {
+        setPhoneOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showOtpModal, otpTimer, phoneOtpTimer]);
   
   const swipeGesture = Gesture.Pan()
     .activeCursor('grabbing')
@@ -64,30 +106,119 @@ export default function LoginScreen() {
 
   const { redirect, date, time, teams } = useLocalSearchParams();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      if (Platform.OS === 'web') {
-        alert('Please fill in all fields');
-      } else {
-        Alert.alert('Error', 'Please fill in all fields');
-      }
+  const sendPhoneOtp = async () => {
+    if (!phone) {
+      const msg = 'Please enter your phone number';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
       return;
     }
 
     setLoading(true);
-    const { error } = await signIn(email, password, turnstileToken || undefined);
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    const { data: resolvedEmail, error: rpcError } = await supabase.rpc('get_email_by_phone', { p_phone: cleaned });
+
+    if (rpcError || !resolvedEmail) {
+      setLoading(false);
+      const msg = 'No registered account found with this phone number.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
+    const otp = generateOTP();
+    const res = await sendSMSOTP(cleaned, otp, 'login');
     setLoading(false);
 
-    if (error) {
-      if (error.message.toLowerCase().includes('email not confirmed')) {
-        setShowEmailNotConfirmedModal(true);
-      } else if (Platform.OS === 'web') {
-        alert('Login Failed: ' + error.message);
-      } else {
-        Alert.alert('Login Failed', error.message);
+    if (res.success) {
+      setPhoneGeneratedOtp(otp);
+      setPhoneOtpSent(true);
+      setPhoneOtpTimer(60);
+      setPhoneOtpVal('');
+      const msg = 'OTP sent successfully to your registered mobile number.';
+      setOtpSuccessMessage(msg);
+      if (Platform.OS !== 'web') {
+        Alert.alert('OTP Sent', msg);
+      }
+      setTimeout(() => {
+        phoneOtpRef.current?.focus();
+      }, 300);
+    } else {
+      setOtpSuccessMessage('');
+      const msg = res.error || 'Failed to send OTP. Please try again.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (loginMethod === 'phone') {
+      if (!phoneOtpSent) {
+        await sendPhoneOtp();
+        return;
+      }
+
+      if (!phone || !phoneOtpVal) {
+        const msg = 'Please fill in all fields';
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Error', msg);
+        return;
+      }
+
+      if (phoneOtpVal !== phoneGeneratedOtp) {
+        const msg = 'Incorrect OTP. Please check and try again.';
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Error', msg);
+        return;
+      }
+
+      setLoading(true);
+      const cleaned = phone.replace(/[^0-9]/g, '');
+      const tempPassword = 'BYGTempOTPAuthPass_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+      
+      const { data: resolvedEmail, error: rpcError } = await supabase.rpc('login_with_otp_auth', {
+        p_phone: cleaned,
+        p_new_password: tempPassword,
+      });
+
+      if (rpcError || !resolvedEmail) {
+        setLoading(false);
+        const msg = 'Failed to authenticate phone login. Please try again.';
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Login Failed', msg);
+        return;
+      }
+
+      // Pre-verify OTP to bypass 2FA modal
+      setLoginOtpVerified(true);
+      
+      const { error } = await signIn(resolvedEmail, tempPassword);
+      setLoading(false);
+
+      if (error) {
+        if (Platform.OS === 'web') alert('Login Failed: ' + error.message);
+        else Alert.alert('Login Failed', error.message);
       }
     } else {
-      // Success. Redirection is handled in useEffect based on user/profile state.
+      if (!email || !password) {
+        if (Platform.OS === 'web') alert('Please fill in all fields');
+        else Alert.alert('Error', 'Please fill in all fields');
+        return;
+      }
+
+      setLoading(true);
+      const { error } = await signIn(email, password);
+      setLoading(false);
+
+      if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setShowEmailNotConfirmedModal(true);
+        } else if (Platform.OS === 'web') {
+          alert('Login Failed: ' + error.message);
+        } else {
+          Alert.alert('Login Failed', error.message);
+        }
+      }
     }
   };
 
@@ -116,8 +247,85 @@ export default function LoginScreen() {
     }
   };
 
+  const sendLoginOtp = async (phone: string) => {
+    setSendingOtp(true);
+    const newOtp = generateOTP();
+    const res = await sendSMSOTP(phone, newOtp, 'login');
+    setSendingOtp(false);
+
+    if (res.success) {
+      setGeneratedOtp(newOtp);
+      setOtpTimer(60);
+      setOtpInput(['', '', '', '', '', '']);
+      setOtpError('');
+      setOtpSent(true);
+      setShowOtpModal(true);
+      setTimeout(() => {
+        otpRefs[0].current?.focus();
+      }, 300);
+    } else {
+      const msg = res.error || 'Failed to send verification OTP to your registered phone number.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Verification Error', msg);
+      // Sign out since 2FA failed to send/initiate
+      signOut();
+      setOtpSent(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!profile || !profile.phone) return;
+    setSendingOtp(true);
+    setOtpError('');
+    const newOtp = generateOTP();
+    const res = await sendSMSOTP(profile.phone, newOtp, 'login');
+    setSendingOtp(false);
+
+    if (res.success) {
+      setGeneratedOtp(newOtp);
+      setOtpTimer(60);
+      setOtpInput(['', '', '', '', '', '']);
+      setTimeout(() => {
+        otpRefs[0].current?.focus();
+      }, 100);
+    } else {
+      setOtpError(res.error || 'Failed to resend OTP.');
+    }
+  };
+
+  const handleVerifyOtp = () => {
+    const enteredOtp = otpInput.join('');
+    if (enteredOtp.length !== 6) {
+      setOtpError('Please enter a 6-digit verification code.');
+      return;
+    }
+
+    if (enteredOtp !== generatedOtp) {
+      setOtpError('Incorrect OTP. Please check and try again.');
+      return;
+    }
+
+    setShowOtpModal(false);
+    setLoginOtpVerified(true);
+  };
+
+  const handleCancelOtp = () => {
+    setShowOtpModal(false);
+    setOtpError('');
+    setOtpSent(false);
+    signOut();
+  };
+
   useEffect(() => {
     if (!user || !profile) return;
+
+    // Enforce custom SMS OTP 2FA login verification
+    if (profile.phone && !loginOtpVerified) {
+      if (!otpSent && !sendingOtp) {
+        sendLoginOtp(profile.phone);
+      }
+      return;
+    }
 
     // Check for redirect param
     const redirectPath = typeof redirect === 'string' ? redirect : null;
@@ -147,7 +355,104 @@ export default function LoginScreen() {
       // This ensures a consistent entry point as requested
       router.replace('/(tabs)/home_tab');
     }
-  }, [user, profile, redirect, date, time, teams]);
+  }, [user, profile, redirect, date, time, teams, loginOtpVerified, otpSent, sendingOtp]);
+
+  const renderOtpModal = () => (
+    <Modal visible={showOtpModal} transparent animationType="fade">
+      <View style={modalStyles.overlay}>
+        <BlurView intensity={Platform.OS === 'web' ? 40 : 90} tint="light" style={[modalStyles.card, { maxWidth: 450, padding: 32 }]}>
+          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
+            <Smartphone size={36} color="#01b854" strokeWidth={2.5} />
+          </View>
+          <Text style={modalStyles.title}>Verify Your Mobile</Text>
+          <Text style={[modalStyles.message, { marginBottom: 20 }]}>
+            We've sent a 6-digit verification code to the number ending in{' '}
+            <Text style={{ fontWeight: '700', color: '#1E293B' }}>
+              {profile && profile.phone ? profile.phone.slice(-4) : 'XXXX'}
+            </Text>
+            . Enter it below to authenticate.
+          </Text>
+
+          {/* Custom 6-digit styled OTP Inputs */}
+          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
+            {otpInput.map((val, idx) => (
+              <TextInput
+                key={idx}
+                ref={otpRefs[idx]}
+                style={{
+                  width: 42,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: val ? '#01b854' : 'rgba(15, 23, 42, 0.15)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  textAlign: 'center',
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: '#0F172A',
+                }}
+                value={val}
+                keyboardType="number-pad"
+                maxLength={1}
+                onChangeText={(text) => {
+                  const newOtp = [...otpInput];
+                  newOtp[idx] = text;
+                  setOtpInput(newOtp);
+                  setOtpError('');
+
+                  // Automatically move focus to next/prev input
+                  if (text && idx < 5) {
+                    otpRefs[idx + 1].current?.focus();
+                  }
+                }}
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Backspace' && !val && idx > 0) {
+                    otpRefs[idx - 1].current?.focus();
+                  }
+                }}
+              />
+            ))}
+          </View>
+
+          {otpError ? (
+            <Text style={{ color: '#ff3564', fontSize: 13, fontWeight: '600', marginBottom: 16, textAlign: 'center' }}>
+              {otpError}
+            </Text>
+          ) : null}
+
+          {/* Verification & Cancel Buttons */}
+          <TouchableOpacity
+            style={[modalStyles.button, loading && { opacity: 0.7 }]}
+            onPress={handleVerifyOtp}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={modalStyles.buttonText}>VERIFY & SIGN IN</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 }}>
+            <TouchableOpacity
+              onPress={otpTimer === 0 && !sendingOtp ? handleResendOtp : undefined}
+              style={{ opacity: otpTimer > 0 || sendingOtp ? 0.5 : 1 }}
+            >
+              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 14 }}>
+                {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend OTP'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleCancelOtp}>
+              <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 14 }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </View>
+    </Modal>
+  );
 
   // Web layout (unchanged split design)
   if (os === 'web') {
@@ -176,45 +481,187 @@ export default function LoginScreen() {
                 </View>
   
                 <View style={webStyles.form}>
-                  <WebInput
-                    label="Email Address"
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder=""
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                  />
-  
-                  <WebInput
-                    label="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder=""
-                    secureTextEntry={!showPassword}
-                    showToggle={true}
-                    onToggle={() => setShowPassword(!showPassword)}
-                    isToggled={showPassword}
-                  />
+                  {/* Toggle Selector */}
+                  <View style={{
+                    flexDirection: 'row',
+                    backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                    borderRadius: 12,
+                    padding: 4,
+                    marginBottom: 20,
+                  }}>
+                    <TouchableOpacity
+                      onPress={() => setLoginMethod('email')}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 10,
+                        backgroundColor: loginMethod === 'email' ? '#01b854' : 'transparent',
+                        borderColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        shadowColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: loginMethod === 'email' ? 0.25 : 0,
+                        shadowRadius: 8,
+                      }}
+                    >
+                      <Text style={{
+                        color: loginMethod === 'email' ? '#FFF' : 'rgba(255, 255, 255, 0.7)',
+                        fontWeight: '700',
+                        fontSize: 13,
+                      }}>
+                        Email
+                      </Text>
+                    </TouchableOpacity>
 
-                  {Platform.OS === 'web' && TurnstileComponent && (
-                    <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
-                      <TurnstileComponent
-                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
-                        onSuccess={(token: string) => setTurnstileToken(token)}
-                        onExpire={() => setTurnstileToken(null)}
-                        onError={() => setTurnstileToken(null)}
-                        options={{
-                          theme: 'light',
-                          size: 'normal',
-                        }}
+                    <TouchableOpacity
+                      onPress={() => setLoginMethod('phone')}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 10,
+                        backgroundColor: loginMethod === 'phone' ? '#01b854' : 'transparent',
+                        borderColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        shadowColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: loginMethod === 'phone' ? 0.25 : 0,
+                        shadowRadius: 8,
+                      }}
+                    >
+                      <Text style={{
+                        color: loginMethod === 'phone' ? '#FFF' : 'rgba(255, 255, 255, 0.7)',
+                        fontWeight: '700',
+                        fontSize: 13,
+                      }}>
+                        Phone
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {loginMethod === 'email' ? (
+                    <>
+                      <WebInput
+                        label="Email Address"
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder=""
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
                       />
-                    </View>
+      
+                      <WebInput
+                        label="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder=""
+                        secureTextEntry={!showPassword}
+                        showToggle={true}
+                        onToggle={() => setShowPassword(!showPassword)}
+                        isToggled={showPassword}
+                      />
+                    </>
+                  ) : (
+                    <>
+                       <WebInput
+                        label="Phone Number"
+                        value={phone}
+                        onChangeText={(t: string) => {
+                          setPhone(t);
+                          if (phoneOtpSent) setPhoneOtpSent(false);
+                          if (otpSuccessMessage) setOtpSuccessMessage('');
+                        }}
+                        placeholder=""
+                        keyboardType="phone-pad"
+                        autoCapitalize="none"
+                        editable={!phoneOtpSent}
+                        rightElement={
+                          !phoneOtpSent ? (
+                            <TouchableOpacity
+                              onPress={sendPhoneOtp}
+                              disabled={loading}
+                              style={{
+                                backgroundColor: '#01b854',
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                              }}
+                            >
+                              {loading ? (
+                                <ActivityIndicator size="small" color="#FFF" />
+                              ) : (
+                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>SEND OTP</Text>
+                              )}
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={{ paddingRight: 6 }}>
+                              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 11 }}>SENT</Text>
+                            </View>
+                          )
+                        }
+                      />
+
+                      {!phoneOtpSent ? (
+                        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, marginTop: 4, marginBottom: 20 }}>
+                          Enter your phone number and tap SEND OTP to receive your 6-digit verification code.
+                        </Text>
+                      ) : (
+                        <>
+                          {otpSuccessMessage ? (
+                            <View style={{
+                              backgroundColor: 'rgba(1, 184, 84, 0.15)',
+                              borderWidth: 1,
+                              borderColor: 'rgba(1, 184, 84, 0.3)',
+                              borderRadius: 8,
+                              padding: 10,
+                              marginBottom: 12,
+                            }}>
+                              <Text style={{ color: '#00ea6b', fontSize: 12, fontWeight: '600', lineHeight: 16 }}>
+                                ✓ {otpSuccessMessage}
+                              </Text>
+                            </View>
+                          ) : null}
+
+                          <WebInput
+                            ref={phoneOtpRef}
+                            label="Enter 6-Digit OTP"
+                            value={phoneOtpVal}
+                            onChangeText={setPhoneOtpVal}
+                            placeholder=""
+                            keyboardType="number-pad"
+                            maxLength={6}
+                          />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -4, marginBottom: 20 }}>
+                            <TouchableOpacity
+                              onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
+                              style={{ opacity: phoneOtpTimer > 0 ? 0.6 : 1 }}
+                            >
+                              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 13 }}>
+                                {phoneOtpTimer > 0 ? `Resend in ${phoneOtpTimer}s` : 'Resend OTP'}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={() => setPhoneOtpSent(false)}>
+                              <Text style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '600', fontSize: 13 }}>
+                                Change Phone
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
+                    </>
                   )}
+
+
   
-                  <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={webStyles.forgotWrap}>
-                    <Text style={webStyles.forgotText}>Forgot password?</Text>
-                  </TouchableOpacity>
+                  {loginMethod === 'email' && (
+                    <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={webStyles.forgotWrap}>
+                      <Text style={webStyles.forgotText}>Forgot password?</Text>
+                    </TouchableOpacity>
+                  )}
   
                   <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
@@ -225,12 +672,14 @@ export default function LoginScreen() {
                       <Text style={webStyles.buttonText}>SIGN IN</Text>
                     </TouchableOpacity>
   
-                    <TouchableOpacity
-                      style={webStyles.outlineButton}
-                      onPress={() => router.push('/(auth)/signup')}
-                    >
-                      <Text style={webStyles.outlineButtonText}>SIGN UP</Text>
-                    </TouchableOpacity>
+                    {loginMethod !== 'phone' && (
+                      <TouchableOpacity
+                        style={webStyles.outlineButton}
+                        onPress={() => router.push('/(auth)/signup')}
+                      >
+                        <Text style={webStyles.outlineButtonText}>SIGN UP</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               </BlurView>
@@ -260,6 +709,7 @@ export default function LoginScreen() {
             </View>
           </View>
         </Modal>
+        {renderOtpModal()}
       </View>
     );
   }
@@ -298,72 +748,265 @@ export default function LoginScreen() {
           tint="light" 
           style={styles.card}
         >
-          <View style={{ height: 16 }} />
-          {/* Email field */}
-            <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
-              <Text style={styles.fieldLabel}>Email</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => emailRef.current?.focus()}
-              style={[
-                styles.inputRow,
-                emailFocused && styles.inputRowFocused,
-              ]}
+          {/* Mobile Login Toggle */}
+          <View style={{
+            flexDirection: 'row',
+            backgroundColor: 'rgba(15, 23, 42, 0.05)',
+            borderRadius: 12,
+            padding: 4,
+            marginBottom: 20,
+            borderWidth: 1,
+            borderColor: 'rgba(15, 23, 42, 0.1)',
+          }}>
+            <TouchableOpacity
+              onPress={() => setLoginMethod('email')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 10,
+                backgroundColor: loginMethod === 'email' ? '#01b854' : 'transparent',
+                borderColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
+                borderWidth: 1,
+                alignItems: 'center',
+                shadowColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: loginMethod === 'email' ? 0.25 : 0,
+                shadowRadius: 8,
+              }}
             >
-              <Mail size={17} color={emailFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
-              <TextInput
-                ref={emailRef}
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder=""
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
-              />
-            </Pressable>
+              <Text style={{
+                color: loginMethod === 'email' ? '#FFF' : '#64748B',
+                fontWeight: '700',
+                fontSize: 13,
+              }}>
+                Email
+              </Text>
+            </TouchableOpacity>
 
-          {/* Password field */}
-          <View style={styles.fieldWrap}>
-            <Pressable style={styles.fieldLabel} onPress={() => passwordRef.current?.focus()}>
-              <Text style={styles.fieldLabel}>Password</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => passwordRef.current?.focus()}
-              style={[
-                styles.inputRow,
-                passwordFocused && styles.inputRowFocused,
-              ]}
+            <TouchableOpacity
+              onPress={() => setLoginMethod('phone')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 10,
+                backgroundColor: loginMethod === 'phone' ? '#01b854' : 'transparent',
+                borderColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
+                borderWidth: 1,
+                alignItems: 'center',
+                shadowColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: loginMethod === 'phone' ? 0.25 : 0,
+                shadowRadius: 8,
+              }}
             >
-              <Lock size={17} color={passwordFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
-              <TextInput
-                ref={passwordRef}
-                style={styles.textInput}
-                value={password}
-                onChangeText={setPassword}
-                placeholder=""
-                placeholderTextColor="#94A3B8"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-              />
-              <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                {showPassword ? (
-                  <EyeOff size={17} color="#6b7280" strokeWidth={2} />
-                ) : (
-                  <Eye size={17} color="#6b7280" strokeWidth={2} />
-                )}
-              </Pressable>
-            </Pressable>
+              <Text style={{
+                color: loginMethod === 'phone' ? '#FFF' : '#64748B',
+                fontWeight: '700',
+                fontSize: 13,
+              }}>
+                Phone
+              </Text>
+            </TouchableOpacity>
           </View>
-  
-          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotWrap}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
+
+          {loginMethod === 'email' ? (
+            <>
+              {/* Email field */}
+              <View style={{ width: '100%' }}>
+                <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
+                  <Text style={styles.fieldLabel}>Email</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => emailRef.current?.focus()}
+                  style={[
+                    styles.inputRow,
+                    emailFocused && styles.inputRowFocused,
+                  ]}
+                >
+                  <Mail size={17} color={emailFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <TextInput
+                    ref={emailRef}
+                    style={styles.textInput}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder=""
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    onFocus={() => setEmailFocused(true)}
+                    onBlur={() => setEmailFocused(false)}
+                  />
+                </Pressable>
+              </View>
+
+              {/* Password field */}
+              <View style={[styles.fieldWrap, { marginTop: 16 }]}>
+                <Pressable style={styles.fieldLabel} onPress={() => passwordRef.current?.focus()}>
+                  <Text style={styles.fieldLabel}>Password</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => passwordRef.current?.focus()}
+                  style={[
+                    styles.inputRow,
+                    passwordFocused && styles.inputRowFocused,
+                  ]}
+                >
+                  <Lock size={17} color={passwordFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <TextInput
+                    ref={passwordRef}
+                    style={styles.textInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder=""
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={!showPassword}
+                    autoComplete="password"
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                  />
+                  <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                    {showPassword ? (
+                      <EyeOff size={17} color="#6b7280" strokeWidth={2} />
+                    ) : (
+                      <Eye size={17} color="#6b7280" strokeWidth={2} />
+                    )}
+                  </Pressable>
+                </Pressable>
+              </View>
+
+              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotWrap}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Phone field */}
+              <View style={{ width: '100%' }}>
+                <Pressable style={styles.fieldLabel} onPress={() => phoneRef.current?.focus()}>
+                  <Text style={styles.fieldLabel}>Phone Number</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => phoneRef.current?.focus()}
+                  style={[
+                    styles.inputRow,
+                    phoneFocused && styles.inputRowFocused,
+                  ]}
+                >
+                  <Smartphone size={17} color={phoneFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <TextInput
+                    ref={phoneRef}
+                    style={[styles.textInput, { flex: 1 }]}
+                    value={phone}
+                    onChangeText={(t: string) => {
+                      setPhone(t);
+                      if (phoneOtpSent) setPhoneOtpSent(false);
+                      if (otpSuccessMessage) setOtpSuccessMessage('');
+                    }}
+                    placeholder=""
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    editable={!phoneOtpSent}
+                    onFocus={() => setPhoneFocused(true)}
+                    onBlur={() => setPhoneFocused(false)}
+                  />
+                  {!phoneOtpSent ? (
+                    <TouchableOpacity
+                      onPress={sendPhoneOtp}
+                      disabled={loading}
+                      style={{
+                        backgroundColor: '#01b854',
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        marginLeft: 8,
+                      }}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>SEND OTP</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ marginLeft: 8, paddingHorizontal: 6 }}>
+                      <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 11 }}>SENT</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              {!phoneOtpSent ? (
+                <Text style={{ color: '#64748B', fontSize: 11, marginTop: 8, marginBottom: 10, width: '100%' }}>
+                  Enter your phone number and tap SEND OTP to receive your 6-digit verification code.
+                </Text>
+              ) : (
+                <>
+                  {otpSuccessMessage ? (
+                    <View style={{
+                      backgroundColor: 'rgba(1, 184, 84, 0.15)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(1, 184, 84, 0.3)',
+                      borderRadius: 8,
+                      padding: 10,
+                      marginTop: 12,
+                      width: '100%',
+                    }}>
+                      <Text style={{ color: '#00ea6b', fontSize: 12, fontWeight: '600', lineHeight: 16 }}>
+                        ✓ {otpSuccessMessage}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* OTP field */}
+                  <View style={[styles.fieldWrap, { marginTop: otpSuccessMessage ? 12 : 16, width: '100%' }]}>
+                    <Pressable style={styles.fieldLabel} onPress={() => phoneOtpRef.current?.focus()}>
+                      <Text style={styles.fieldLabel}>Enter 6-Digit OTP</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => phoneOtpRef.current?.focus()}
+                      style={[
+                        styles.inputRow,
+                        phoneOtpFocused && styles.inputRowFocused,
+                      ]}
+                    >
+                      <Lock size={17} color={phoneOtpFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                      <TextInput
+                        ref={phoneOtpRef}
+                        style={styles.textInput}
+                        value={phoneOtpVal}
+                        onChangeText={setPhoneOtpVal}
+                        placeholder=""
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        onFocus={() => setPhoneOtpFocused(true)}
+                        onBlur={() => setPhoneOtpFocused(false)}
+                      />
+                    </Pressable>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 8, marginBottom: 16 }}>
+                    <TouchableOpacity
+                      onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
+                      style={{ opacity: phoneOtpTimer > 0 ? 0.6 : 1 }}
+                    >
+                      <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 13 }}>
+                        {phoneOtpTimer > 0 ? `Resend in ${phoneOtpTimer}s` : 'Resend OTP'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => setPhoneOtpSent(false)}>
+                      <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 13 }}>
+                        Change Phone
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </>
+          )}
 
           {/* Action buttons */}
           <View style={[styles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
@@ -379,15 +1022,17 @@ export default function LoginScreen() {
               <Text style={styles.signInBtnText}>SIGN IN</Text>
             </Pressable>
   
-            <Pressable
-              style={({ pressed }) => [
-                styles.outlineBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => router.push('/(auth)/signup')}
-            >
-              <Text style={styles.outlineBtnText}>SIGN UP</Text>
-            </Pressable>
+            {loginMethod !== 'phone' && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.outlineBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => router.push('/(auth)/signup')}
+              >
+                <Text style={styles.outlineBtnText}>SIGN UP</Text>
+              </Pressable>
+            )}
           </View>
         </BlurView>
       </ScrollView>
@@ -439,6 +1084,8 @@ export default function LoginScreen() {
           </View>
         </View>
       </Modal>
+
+      {renderOtpModal()}
         </View>
       </GestureDetector>
     </KeyboardAvoidingView>
@@ -446,27 +1093,28 @@ export default function LoginScreen() {
   );
 }
 
-function WebInput(props: any) {
-  const { label, showToggle, onToggle, isToggled, ...rest } = props;
+const WebInput = React.forwardRef((props: any, ref: any) => {
+  const { label, showToggle, onToggle, isToggled, rightElement, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#FFFFFF', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '400', color: '#FFFFFF', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <TextInput
+          ref={ref}
           style={{
             borderWidth: 1.5,
             borderColor: 'rgba(255, 255, 255, 0.2)',
             borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
-            paddingRight: showToggle ? 40 : 10,
+            paddingRight: (showToggle || rightElement) ? 100 : 10,
             fontSize: 14,
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             color: '#FFFFFF',
-            fontWeight: '400',
+            fontWeight: '300',
             outlineStyle: 'none',
           } as any}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor="rgba(255, 255, 255, 0.4)"
           {...rest}
         />
         {showToggle && (
@@ -477,10 +1125,15 @@ function WebInput(props: any) {
             {isToggled ? <EyeOff size={16} color="#94A3B8" /> : <Eye size={16} color="#94A3B8" />}
           </TouchableOpacity>
         )}
+        {rightElement && (
+          <View style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
+            {rightElement}
+          </View>
+        )}
       </View>
     </View>
   );
-}
+});
 
 // --- Mobile styles ---
 const styles = StyleSheet.create({
@@ -539,7 +1192,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#334155',
     marginBottom: 4,
     letterSpacing: 0.2,
@@ -570,7 +1223,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     fontFamily: 'Inter',
-    fontWeight: '400',
+    fontWeight: '300',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -582,7 +1235,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
     borderColor: '#00ea6b',
     borderWidth: 1,
-    borderRadius: 100,
+    borderRadius: 10,
     height: 46,
     alignItems: 'center',
     justifyContent: 'center',
@@ -601,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   outlineBtn: {
     flex: 1,
-    borderRadius: 100,
+    borderRadius: 10,
     height: 46,
     borderWidth: 1.5,
     borderColor: '#94A3B8',
@@ -677,7 +1330,7 @@ const webStyles = StyleSheet.create({
     backgroundColor: '#01b854', 
     borderColor: '#00ea6b',
     borderWidth: 1,
-    borderRadius: 100, 
+    borderRadius: 10, 
     height: 48, 
     alignItems: 'center', 
     justifyContent: 'center',
@@ -698,7 +1351,7 @@ const webStyles = StyleSheet.create({
   },
   outlineButton: { 
     flex: 1, 
-    borderRadius: 100, 
+    borderRadius: 10, 
     height: 48, 
     borderWidth: 1.5, 
     borderColor: 'rgba(255, 255, 255, 0.4)', 

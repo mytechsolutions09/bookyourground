@@ -22,20 +22,51 @@ export default function OccupancyDashboard() {
   const { user } = useAuth();
   const [realOccupancy, setRealOccupancy] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [grounds, setGrounds] = useState<any[]>([]);
+  const [selectedGroundId, setSelectedGroundId] = useState<string>('all');
+  const [overallOccupancy, setOverallOccupancy] = useState<number>(0);
 
   useEffect(() => {
     async function fetchOccupancy() {
       if (!user) return;
       try {
         setLoading(true);
-        const { data, error } = await supabase.rpc('get_owner_occupancy_rate', { target_owner_id: user.id });
-        if (error) throw error;
         
-        // Handle RPC returning an array or single object
-        const result = Array.isArray(data) ? data[0] : data;
-        if (result && result.occupancy_percentage !== undefined) {
-          setRealOccupancy(Math.round(result.occupancy_percentage));
-        }
+        // 1. Fetch grounds owned by owner
+        const { data: groundsData, error: groundsErr } = await supabase
+          .from('grounds')
+          .select('id, name')
+          .eq('owner_id', user.id);
+        if (groundsErr) throw groundsErr;
+
+        // 2. Fetch occupancy rates for each ground
+        const { data: occupancyData, error: occupancyErr } = await supabase
+          .rpc('get_owner_grounds_occupancy', { target_owner_id: user.id });
+        if (occupancyErr) throw occupancyErr;
+
+        // 3. Fetch overall occupancy rate for owner
+        const { data: overallData, error: overallErr } = await supabase
+          .rpc('get_owner_occupancy_rate', { target_owner_id: user.id });
+        if (overallErr) throw overallErr;
+
+        // Merge ground name with occupancy percentage
+        const groundsWithOccupancy = (groundsData || []).map(g => {
+          const occItem = (occupancyData || []).find((o: any) => o.ground_id === g.id);
+          return {
+            id: g.id,
+            name: g.name,
+            occupancy: occItem ? Math.round(occItem.occupancy_percentage) : 0
+          };
+        });
+
+        const overallRes = Array.isArray(overallData) ? overallData[0] : overallData;
+        const overallPct = overallRes && overallRes.occupancy_percentage !== undefined 
+          ? Math.round(overallRes.occupancy_percentage) 
+          : 0;
+
+        setGrounds(groundsWithOccupancy);
+        setOverallOccupancy(overallPct);
+        setRealOccupancy(overallPct);
       } catch (err) {
         console.error('Error fetching occupancy:', err);
       } finally {
@@ -45,7 +76,9 @@ export default function OccupancyDashboard() {
     fetchOccupancy();
   }, [user]);
 
-  const displayOccupancy = realOccupancy !== null ? realOccupancy : 75; // Fallback to 75 if null
+  const displayOccupancy = selectedGroundId === 'all' 
+    ? (realOccupancy !== null ? realOccupancy : 75)
+    : (grounds.find(g => g.id === selectedGroundId)?.occupancy ?? 75);
 
   const occupancyData = {
     day: [
@@ -141,6 +174,70 @@ export default function OccupancyDashboard() {
               ))}
             </View>
           </View>
+
+          {/* Venue Selector */}
+          {grounds.length > 0 && (
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 10,
+              marginBottom: 20,
+              paddingHorizontal: isSmallScreen ? 8 : 0,
+            }}>
+              <TouchableOpacity
+                onPress={() => setSelectedGroundId('all')}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  backgroundColor: selectedGroundId === 'all' ? '#06392e' : '#FFFFFF',
+                  borderWidth: 1.5,
+                  borderColor: selectedGroundId === 'all' ? '#06392e' : '#e2e8f0',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: selectedGroundId === 'all' ? 0.1 : 0.02,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text style={{
+                  color: selectedGroundId === 'all' ? '#FFFFFF' : '#475569',
+                  fontWeight: '700',
+                  fontSize: 13,
+                }}>
+                  🌐 All Venues ({overallOccupancy}%)
+                </Text>
+              </TouchableOpacity>
+
+              {grounds.map((g) => (
+                <TouchableOpacity
+                  key={g.id}
+                  onPress={() => setSelectedGroundId(g.id)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 14,
+                    backgroundColor: selectedGroundId === g.id ? '#06392e' : '#FFFFFF',
+                    borderWidth: 1.5,
+                    borderColor: selectedGroundId === g.id ? '#06392e' : '#e2e8f0',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: selectedGroundId === g.id ? 0.1 : 0.02,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}
+                >
+                  <Text style={{
+                    color: selectedGroundId === g.id ? '#FFFFFF' : '#475569',
+                    fontWeight: '700',
+                    fontSize: 13,
+                  }}>
+                    🏟️ {g.name} ({g.occupancy}%)
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Main Card */}
           <View style={[styles.mainCard, isSmallScreen && { borderRadius: 0, borderWidth: 0, boxShadow: 'none' } as any]}>

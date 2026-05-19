@@ -92,6 +92,7 @@ export default function SearchScreen() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('Popularity');
   const [showSortModal, setShowSortModal] = useState(false);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -121,6 +122,12 @@ export default function SearchScreen() {
   useEffect(() => {
     performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange);
   }, [query, locationKey, typeKey, dateKey, timeKey, priceRange]);
+
+  useEffect(() => {
+    if (isCompact && viewMode === 'list') {
+      setViewMode('grid');
+    }
+  }, [isCompact, viewMode]);
 
   useEffect(() => {
     const fetchAvailableTimes = async () => {
@@ -681,6 +688,8 @@ export default function SearchScreen() {
     );
   };
 
+  const isAnyDropdownOpen = showTypeModal || showDateModal || showLocationModal || showPriceModal || showTimeModal;
+
   const content = (
     <ScrollView 
       style={styles.mainContainer}
@@ -689,42 +698,46 @@ export default function SearchScreen() {
     >
       
       {/* 1. STADIUM HERO SECTION */}
-      <View style={styles.heroSection}>
-        <Image 
-          source={require('@/assets/stadium_hero_bg.png')} 
-          style={styles.heroBackground}
-        />
+      <View style={[styles.heroSection, isCompact && styles.heroSectionMobile]}>
+        {!isCompact && (
+          <Image 
+            source={require('@/assets/stadium_hero_bg.png')} 
+            style={styles.heroBackground}
+          />
+        )}
         <LinearGradient
           colors={['#FFFFFF', 'rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.3)', 'transparent']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0.7, y: 0 }}
+          end={{ x: isCompact ? 1 : 0.7, y: 0 }}
           style={StyleSheet.absoluteFill}
         />
 
-        <View style={styles.heroContainer}>
+        <View style={[styles.heroContainer, isCompact && styles.heroContainerMobile]}>
           <View style={styles.heroLeft}>
             <Text style={styles.perfectText}>FIND THE PERFECT</Text>
             
             <View style={styles.heroTitleContainer}>
-              <Text style={styles.heroTitle}>
+              <Text style={[styles.heroTitle, isCompact && styles.heroTitleMobile]}>
                 Cricket <Text style={styles.heroTitleHighlight}>Ground</Text>
               </Text>
-              <View style={styles.titleUnderline} />
+              <View style={[styles.titleUnderline, isCompact && styles.titleUnderlineMobile]} />
             </View>
             
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroSubtitle, isCompact && styles.heroSubtitleMobile]}>
               Explore and book the best cricket grounds near you in just a few clicks.
             </Text>
             
-            <View style={styles.foundBadge}>
-              <View style={styles.foundIconBg}>
-                <View style={styles.foundIconInner} />
+            {!isCompact && (
+              <View style={styles.foundBadge}>
+                <View style={styles.foundIconBg}>
+                  <View style={styles.foundIconInner} />
+                </View>
+                <View style={styles.foundInfo}>
+                  <Text style={styles.foundCountText}>{combinedResults.length} Grounds Found</Text>
+                  <Text style={styles.foundSubText}>Across New Delhi, Gurugram & more</Text>
+                </View>
               </View>
-              <View style={styles.foundInfo}>
-                <Text style={styles.foundCountText}>{combinedResults.length} Grounds Found</Text>
-                <Text style={styles.foundSubText}>Across New Delhi, Gurugram & more</Text>
-              </View>
-            </View>
+            )}
           </View>
 
           {!isCompact && (
@@ -764,101 +777,123 @@ export default function SearchScreen() {
       </View>
 
       {/* 2. FLOATING FILTER BAR */}
-      <View style={styles.filterBarContainer}>
+      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }]}>
         <View style={[styles.filterBar, isCompact && styles.filterBarMobile]}>
-          <View style={styles.filterItemSearch}>
-            <Search size={16} color="#94A3B8" style={{ marginRight: 8 }} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Keywords..."
-              placeholderTextColor="#94A3B8"
-              style={styles.filterSearchInput}
-            />
+          <View style={[isCompact ? { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', marginBottom: 4 } : { flexDirection: 'row', alignItems: 'center', flex: 1.2 }]}>
+            <View style={[styles.filterItemSearch, isCompact && { flex: 1, minHeight: 44 }]}>
+              <Search size={16} color="#94A3B8" style={{ marginRight: 8 }} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Keywords..."
+                placeholderTextColor="#94A3B8"
+                style={styles.filterSearchInput}
+              />
+            </View>
+            
+            {isCompact && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.mobileToggleFiltersBtn,
+                  isFiltersExpanded && styles.mobileToggleFiltersBtnActive,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
+              >
+                <SlidersHorizontal size={14} color={isFiltersExpanded ? '#FFFFFF' : '#01e669'} />
+                <Text style={[styles.mobileToggleFiltersText, isFiltersExpanded && { color: '#FFFFFF' }]}>
+                  Filters
+                </Text>
+              </Pressable>
+            )}
           </View>
           
-          <View style={styles.filterDivider} />
+          {(isFiltersExpanded || !isCompact) && (
+            <>
+              {!isCompact && <View style={styles.filterDivider} />}
 
-          <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('type')}>
-            <Building2 size={16} color="#01e669" />
-            <View style={styles.filterTextContent}>
-              <Text style={styles.filterItemLabel}>VENUE TYPE</Text>
-              <Text style={styles.filterItemValue} numberOfLines={1}>
-                {typeKey || 'All Types'}
-              </Text>
-            </View>
-            <ChevronDown size={14} color="#94A3B8" />
-            {showTypeModal && renderDropdownOptions('type')}
-          </Pressable>
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTypeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('type')}>
+                <Building2 size={16} color="#01e669" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>VENUE TYPE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {typeKey || 'All Types'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#94A3B8" />
+                {showTypeModal && renderDropdownOptions('type')}
+              </Pressable>
 
-          <View style={styles.filterDivider} />
+              {!isCompact && <View style={styles.filterDivider} />}
 
-          <Pressable style={[styles.filterItem, { flex: 1.4 }]} onPress={() => toggleFilterModal('date')}>
-            <Calendar size={16} color="#01e669" />
-            <View style={styles.filterTextContent}>
-              <Text style={styles.filterItemLabel}>DATE</Text>
-              <Text style={styles.filterItemValue} numberOfLines={1}>
-                {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
-            <ChevronDown size={14} color="#94A3B8" />
-            {showDateModal && renderDropdownOptions('date')}
-          </Pressable>
+              <Pressable style={[styles.filterItem, { flex: 1.4 }, isCompact && styles.filterItemMobile, showDateModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('date')}>
+                <Calendar size={16} color="#01e669" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>DATE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#94A3B8" />
+                {showDateModal && renderDropdownOptions('date')}
+              </Pressable>
 
-          <View style={styles.filterDivider} />
+              {!isCompact && <View style={styles.filterDivider} />}
 
-          <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('location')}>
-            <MapPin size={16} color="#01e669" />
-            <View style={styles.filterTextContent}>
-              <Text style={styles.filterItemLabel}>LOCATION</Text>
-              <Text style={styles.filterItemValue} numberOfLines={1}>
-                {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
-              </Text>
-            </View>
-            <ChevronDown size={14} color="#94A3B8" />
-            {showLocationModal && renderDropdownOptions('location')}
-          </Pressable>
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showLocationModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('location')}>
+                <MapPin size={16} color="#01e669" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>LOCATION</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#94A3B8" />
+                {showLocationModal && renderDropdownOptions('location')}
+              </Pressable>
 
-          <View style={styles.filterDivider} />
+              {!isCompact && <View style={styles.filterDivider} />}
 
-          <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('price')}>
-            <IndianRupee size={16} color="#01e669" />
-            <View style={styles.filterTextContent}>
-              <Text style={styles.filterItemLabel}>PRICE</Text>
-              <Text style={styles.filterItemValue} numberOfLines={1}>
-                {priceRange.label}
-              </Text>
-            </View>
-            <ChevronDown size={14} color="#94A3B8" />
-            {showPriceModal && renderDropdownOptions('price')}
-          </Pressable>
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showPriceModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('price')}>
+                <IndianRupee size={16} color="#01e669" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>PRICE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {priceRange.label}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#94A3B8" />
+                {showPriceModal && renderDropdownOptions('price')}
+              </Pressable>
 
-          <View style={styles.filterDivider} />
+              {!isCompact && <View style={styles.filterDivider} />}
 
-          <Pressable style={styles.filterItem} onPress={() => toggleFilterModal('time')}>
-            <Clock size={16} color="#01e669" />
-            <View style={styles.filterTextContent}>
-              <Text style={styles.filterItemLabel}>TIME</Text>
-              <Text style={styles.filterItemValue} numberOfLines={1}>
-                {timeKey || 'All Times'}
-              </Text>
-            </View>
-            <ChevronDown size={14} color="#94A3B8" />
-            {showTimeModal && renderDropdownOptions('time')}
-          </Pressable>
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTimeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('time')}>
+                <Clock size={16} color="#01e669" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>TIME</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {timeKey || 'All Times'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#94A3B8" />
+                {showTimeModal && renderDropdownOptions('time')}
+              </Pressable>
 
-          <Pressable style={styles.applyFiltersBtn} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
-            <SlidersHorizontal size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.applyFiltersBtnText}>Apply Filters</Text>
-          </Pressable>
+              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
+                <SlidersHorizontal size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.applyFiltersBtnText}>Apply Filters</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
 
       {/* 3. SORTING AND VIEW TOGGLE */}
-      <View style={styles.sortRowContainer}>
+      <View style={[styles.sortRowContainer, showSortModal && { zIndex: 999, position: 'relative' }]}>
         <View style={styles.sortRow}>
           <View style={styles.sortLeft}>
-            <Text style={styles.sortLabel}>Sort by:</Text>
+            {!isCompact && <Text style={styles.sortLabel}>Sort by:</Text>}
             <Pressable style={styles.sortBtn} onPress={() => setShowSortModal(!showSortModal)}>
               <Text style={styles.sortBtnText}>{sortBy}</Text>
               <ChevronDown size={12} color="#94A3B8" />
@@ -874,23 +909,33 @@ export default function SearchScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.sortRight}>
-            <Pressable 
-              style={[styles.toggleBtn, viewMode === 'grid' && styles.toggleBtnActive]} 
-              onPress={() => setViewMode('grid')}
-            >
-              <Grid size={14} color={viewMode === 'grid' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
-              <Text style={[styles.toggleBtnText, viewMode === 'grid' && styles.toggleBtnTextActive]}>Grid View</Text>
-            </Pressable>
-            <Pressable 
-              style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]} 
-              onPress={() => setViewMode('list')}
-            >
-              <List size={14} color={viewMode === 'list' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
-              <Text style={[styles.toggleBtnText, viewMode === 'list' && styles.toggleBtnTextActive]}>List View</Text>
-            </Pressable>
-          </View>
+          {!isCompact && (
+            <View style={styles.sortRight}>
+              <Pressable 
+                style={[styles.toggleBtn, viewMode === 'grid' && styles.toggleBtnActive]} 
+                onPress={() => setViewMode('grid')}
+              >
+                <Grid size={14} color={viewMode === 'grid' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.toggleBtnText, viewMode === 'grid' && styles.toggleBtnTextActive]}>Grid View</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]} 
+                onPress={() => setViewMode('list')}
+              >
+                <List size={14} color={viewMode === 'list' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.toggleBtnText, viewMode === 'list' && styles.toggleBtnTextActive]}>List View</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
+
+        {isCompact && (
+          <View style={styles.mobileVenuesFoundContainer}>
+            <Text style={styles.mobileVenuesFoundText}>
+              {combinedResults.length} {combinedResults.length === 1 ? 'Venue' : 'Venues'} Found
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* 4. RESULTS DISPLAY */}
@@ -910,6 +955,9 @@ export default function SearchScreen() {
               flexDirection: 'row',
               flexWrap: 'wrap',
               gap: 20,
+            },
+            isWeb && viewMode === 'list' && {
+              alignItems: 'center',
             }
           ]}>
             {sortedCombinedResults.map(item => (
@@ -919,7 +967,9 @@ export default function SearchScreen() {
                   isWeb && viewMode === 'grid' ? {
                     width: width > 1300 ? '23.5%' : width > 900 ? '48%' : '100%',
                   } : {
-                    width: '100%',
+                    width: !isCompact ? 700 : width > 480 ? 440 : '100%',
+                    maxWidth: '100%',
+                    alignSelf: 'center',
                   }
                 ]}
               >
@@ -1264,10 +1314,11 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   filterBarMobile: {
-    flexDirection: 'column',
-    gap: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     borderRadius: 20,
-    padding: 16,
+    padding: 12,
   },
   filterItemSearch: {
     flexDirection: 'row',
@@ -1334,7 +1385,8 @@ const styles = StyleSheet.create({
   },
   dateDropdown: {
     width: 360,
-    left: Platform.OS === 'web' ? -120 : -80,
+    maxWidth: 320,
+    left: Platform.OS === 'web' ? -100 : -60,
     padding: 16,
     maxHeight: 480,
   },
@@ -1391,6 +1443,101 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 16,
     marginLeft: 12,
+  },
+  applyFiltersBtnMobile: {
+    width: '100%',
+    justifyContent: 'center',
+    marginLeft: 0,
+    marginTop: 8,
+  },
+  mobileToggleFiltersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 230, 105, 0.25)',
+    backgroundColor: 'rgba(1, 230, 105, 0.05)',
+  },
+  mobileToggleFiltersBtnActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  mobileToggleFiltersText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#06392e',
+    fontFamily: 'Inter',
+  },
+  mobileVenuesFoundContainer: {
+    width: '100%',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 10,
+    alignItems: 'flex-start',
+  },
+  mobileVenuesFoundText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#06392e',
+    fontFamily: 'Inter',
+  },
+  filterItemMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    flexGrow: 1,
+    minWidth: '46%',
+  },
+  filterItemSearchMobile: {
+    width: '100%',
+    flex: 0,
+    flexBasis: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 8,
+    marginBottom: 4,
+  },
+  filterItemMobileNoBorder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    flexGrow: 1,
+    minWidth: '46%',
+  },
+  heroSectionMobile: {
+    height: 280,
+  },
+  heroContainerMobile: {
+    paddingHorizontal: 16,
+  },
+  heroTitleMobile: {
+    fontSize: 32,
+    letterSpacing: -0.5,
+  },
+  titleUnderlineMobile: {
+    width: 100,
+    bottom: -4,
+  },
+  heroSubtitleMobile: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
   },
   applyFiltersBtnText: {
     fontSize: 13,

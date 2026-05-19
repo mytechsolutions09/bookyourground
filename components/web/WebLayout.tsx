@@ -766,7 +766,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || isMarketing) && styles.logoImageCompact,
+                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || cleanPath === '/cricket' || isMarketing) && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -988,7 +988,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           style={[
             styles.header,
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
-            cleanPath === '/search' && { height: 60 },
+            (cleanPath === '/search' || cleanPath === '/cricket') && { height: 60 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -1005,7 +1005,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isShop || cleanPath === '/search') && styles.logoImageCompact,
+                  (isCompact || isShop || cleanPath === '/search' || cleanPath === '/cricket') && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors

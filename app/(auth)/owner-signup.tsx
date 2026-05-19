@@ -18,8 +18,9 @@ import {
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown, Eye, EyeOff, Smartphone } from 'lucide-react-native';
 import PasswordRequirement from '@/components/ui/PasswordRequirement';
+import { generateOTP, sendSMSOTP } from '@/utils/sms';
 
 let TurnstileComponent: any = null;
 if (Platform.OS === 'web') {
@@ -56,6 +57,36 @@ export default function OwnerSignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
+  // OTP Verification States
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpInput, setOtpInput] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpError, setOtpError] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  
+  const otpRefs = [
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+  ];
+
+  // OTP Timer countdown
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (showOtpModal && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [showOtpModal, otpTimer]);
+
   const { signUp } = useAuth();
   const { width } = useWindowDimensions();
   const showHeroImage = Platform.OS === 'web' && width >= 1000;
@@ -86,8 +117,62 @@ export default function OwnerSignupScreen() {
       return;
     }
 
+    setSendingOtp(true);
+    const newOtp = generateOTP();
+    const res = await sendSMSOTP(phone, newOtp);
+    setSendingOtp(false);
+
+    if (res.success) {
+      setGeneratedOtp(newOtp);
+      setOtpTimer(60);
+      setOtpInput(['', '', '', '', '', '']);
+      setOtpError('');
+      setShowOtpModal(true);
+      setTimeout(() => {
+        otpRefs[0].current?.focus();
+      }, 300);
+    } else {
+      const msg = res.error || 'Failed to send OTP. Please check your mobile number and try again.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('OTP Error', msg);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setSendingOtp(true);
+    setOtpError('');
+    const newOtp = generateOTP();
+    const res = await sendSMSOTP(phone, newOtp);
+    setSendingOtp(false);
+
+    if (res.success) {
+      setGeneratedOtp(newOtp);
+      setOtpTimer(60);
+      setOtpInput(['', '', '', '', '', '']);
+      setTimeout(() => {
+        otpRefs[0].current?.focus();
+      }, 100);
+    } else {
+      setOtpError(res.error || 'Failed to resend OTP.');
+    }
+  };
+
+  const handleVerifyAndSignup = async () => {
+    const enteredOtp = otpInput.join('');
+    if (enteredOtp.length !== 6) {
+      setOtpError('Please enter a 6-digit verification code.');
+      return;
+    }
+
+    if (enteredOtp !== generatedOtp) {
+      setOtpError('Incorrect OTP. Please check and try again.');
+      return;
+    }
+
+    setShowOtpModal(false);
     setLoading(true);
-    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName, address, state, undefined, undefined, turnstileToken || undefined);
+    // Pass phoneVerified=true (the 12th parameter)
+    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName, address, state, undefined, undefined, turnstileToken || undefined, true);
     setLoading(false);
 
     if (error) {
@@ -109,6 +194,108 @@ export default function OwnerSignupScreen() {
       }
     }
   };
+
+  const renderOtpModal = () => (
+    <Modal visible={showOtpModal} transparent animationType="fade">
+      <View style={modalStyles.overlay}>
+        <BlurView intensity={Platform.OS === 'web' ? 40 : 90} tint="light" style={[modalStyles.card, { maxWidth: 450, padding: 32 }]}>
+          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
+            <Smartphone size={36} color="#01b854" strokeWidth={2.5} />
+          </View>
+          <Text style={modalStyles.title}>Verify Your Mobile</Text>
+          <Text style={[modalStyles.message, { marginBottom: 20 }]}>
+            We've sent a 6-digit verification code to the number ending in{' '}
+            <Text style={{ fontWeight: '700', color: '#1E293B' }}>
+              {phone ? phone.slice(-4) : 'XXXX'}
+            </Text>
+            . Enter it below to authenticate.
+          </Text>
+
+          {/* Custom 6-digit styled OTP Inputs */}
+          <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
+            {otpInput.map((val, idx) => (
+              <TextInput
+                key={idx}
+                ref={otpRefs[idx]}
+                style={{
+                  width: 42,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: val ? '#01b854' : 'rgba(15, 23, 42, 0.15)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  textAlign: 'center',
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: '#0F172A',
+                }}
+                value={val}
+                keyboardType="number-pad"
+                maxLength={1}
+                onChangeText={(text) => {
+                  const newOtp = [...otpInput];
+                  newOtp[idx] = text;
+                  setOtpInput(newOtp);
+                  setOtpError('');
+
+                  // Automatically move focus to next/prev input
+                  if (text && idx < 5) {
+                    otpRefs[idx + 1].current?.focus();
+                  }
+                }}
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Backspace' && !val && idx > 0) {
+                    otpRefs[idx - 1].current?.focus();
+                  }
+                }}
+              />
+            ))}
+          </View>
+
+          {otpError ? (
+            <Text style={{ color: '#ff3564', fontSize: 13, fontWeight: '600', marginBottom: 16, textAlign: 'center' }}>
+              {otpError}
+            </Text>
+          ) : null}
+
+          {/* Verification & Cancel Buttons */}
+          <TouchableOpacity
+            style={[modalStyles.button, loading && { opacity: 0.7 }]}
+            onPress={handleVerifyAndSignup}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={modalStyles.buttonText}>VERIFY & SIGN UP</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 }}>
+            <TouchableOpacity
+              onPress={otpTimer === 0 && !sendingOtp ? handleResendOtp : undefined}
+              style={{ opacity: otpTimer > 0 || sendingOtp ? 0.5 : 1 }}
+            >
+              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 14 }}>
+                {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend OTP'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowOtpModal(false);
+                setOtpError('');
+              }}
+            >
+              <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 14 }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </View>
+    </Modal>
+  );
 
   // ── Web layout ────────────────────────────────────────────────────────────
   if (Platform.OS === 'web') {
@@ -267,6 +454,7 @@ export default function OwnerSignupScreen() {
             </View>
           </ScrollView>
         </ImageBackground>
+        {renderOtpModal()}
       </View>
     );
   }
@@ -456,6 +644,8 @@ export default function OwnerSignupScreen() {
         </KeyboardAvoidingView>
       </ImageBackground>
 
+      {renderOtpModal()}
+
       {/* State Picker Modal for Mobile */}
       <Modal visible={showStatePicker} transparent animationType="slide">
         <View style={mobilePickerStyles.overlay}>
@@ -597,13 +787,13 @@ function WebInput(props: any) {
         <TextInput
           style={{
             borderWidth: 1.5,
-            borderColor: 'rgba(15, 23, 42, 0.2)',
+            borderColor: 'rgba(15, 23, 42, 0.1)',
             borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
             paddingRight: showToggle ? 40 : 10,
             fontSize: 14,
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
             color: '#0F172A',
             fontWeight: '400',
             outlineStyle: 'none',
@@ -775,4 +965,26 @@ const webStyles = StyleSheet.create({
     textTransform: 'uppercase' as any,
     fontFamily: 'Inter',
   },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 32, 
+    padding: 32, 
+    width: '100%', 
+    maxWidth: 400, 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 20 }, 
+    shadowOpacity: 0.15, 
+    shadowRadius: 30, 
+    elevation: 10 
+  },
+  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '800', color: '#0F172A', marginBottom: 12, fontFamily: 'Inter' },
+  message: { fontSize: 15, color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 28, fontFamily: 'Inter' },
+  button: { backgroundColor: '#01b854', paddingVertical: 16, borderRadius: 16, width: '100%', alignItems: 'center' },
+  buttonText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1, fontFamily: 'Inter' },
 });
