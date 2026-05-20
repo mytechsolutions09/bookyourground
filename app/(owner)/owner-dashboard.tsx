@@ -901,7 +901,7 @@ export default function OwnerDashboardScreen() {
   return (
     <View style={styles.nativeContainer}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Owner Dashboard" titleColor={THEME_ACCENT} />
+        <MobileAppNavbar title="Owner Dashboard" titleColor="#0F172A" lightBg />
         <View style={styles.tabContainer}>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 

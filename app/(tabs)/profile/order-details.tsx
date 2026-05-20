@@ -402,7 +402,7 @@ export default function OrderDetailsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <MobileAppNavbar 
         title="Order Details" 
-        titleColor="#111827"
+        titleColor="#0F172A"
         lightBg
       />
       {content}

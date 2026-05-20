@@ -301,6 +301,80 @@ function GroundCardNearYou({ ground }: { ground: any }) {
   );
 }
 
+const TimeTabToggle = ({ 
+  tab, 
+  isSelected, 
+  onPress 
+}: { 
+  tab: any; 
+  isSelected: boolean; 
+  onPress: () => void 
+}) => {
+  const Icon = tab.icon;
+  const [cardWidth, setCardWidth] = useState(85);
+  
+  // Calculate slide limits dynamically based on Measured Card Width
+  const slideDistance = cardWidth - 26 - 8; // width - knobSize - padding
+  const translateX = useSharedValue(isSelected ? slideDistance : 0);
+
+  useEffect(() => {
+    translateX.value = withTiming(isSelected ? slideDistance : 0, { duration: 220 });
+  }, [isSelected, slideDistance]);
+
+  const animatedKnobStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(isSelected ? tab.color : '#FFFFFF', { duration: 220 }),
+    borderColor: withTiming(isSelected ? tab.color : '#E2E8F0', { duration: 220 }),
+  }));
+
+  const animatedLeftTextStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(isSelected ? 1 : 0, { duration: 200 }),
+  }));
+
+  const animatedRightTextStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(isSelected ? 0 : 1, { duration: 200 }),
+  }));
+
+  const textColor = isSelected 
+    ? (tab.id === 'night' ? '#FFFFFF' : '#000000') 
+    : '#475569';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      style={styles.timeTabChipTouch}
+    >
+      <Animated.View 
+        onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+        style={[styles.timeTabChip, animatedCardStyle]}
+      >
+        {/* Left text layer (visible when toggled ON) */}
+        <Animated.View style={[styles.switchTextLeftContainer, animatedLeftTextStyle]}>
+          <Text style={[styles.switchTimeText, { color: textColor }]}>
+            {tab.label}
+          </Text>
+        </Animated.View>
+
+        {/* Right text layer (visible when toggled OFF) */}
+        <Animated.View style={[styles.switchTextRightContainer, animatedRightTextStyle]}>
+          <Text style={[styles.switchTimeText, { color: textColor }]}>
+            {tab.label}
+          </Text>
+        </Animated.View>
+        
+        {/* Visual Switch Sliding Knob */}
+        <Animated.View style={[styles.switchKnob, animatedKnobStyle]}>
+          <Icon size={12} color={isSelected ? tab.color : '#64748B'} strokeWidth={2.5} />
+        </Animated.View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
 export default function HomeScreen() {
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -712,35 +786,19 @@ export default function HomeScreen() {
 
         {/* ── Time Slots Tabs ───────────────────────────── */}
         <View style={styles.timeTabsContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.timeTabsContent}
-          >
+          <View style={styles.timeTabsGrid}>
             {TIME_TABS.map((tab) => {
               const isSelected = selectedTimeTab === tab.id;
-              const Icon = tab.icon;
               return (
-                <TouchableOpacity
+                <TimeTabToggle
                   key={tab.id}
-                  activeOpacity={0.8}
+                  tab={tab}
+                  isSelected={isSelected}
                   onPress={() => setSelectedTimeTab(isSelected ? null : tab.id)}
-                  style={[
-                    styles.timeTabChip,
-                    isSelected && { borderColor: tab.color, backgroundColor: tab.color }
-                  ]}
-                >
-                  <View style={[styles.timeTabIconBox, { backgroundColor: isSelected ? 'rgba(0,0,0,0.1)' : '#F1F5F9' }]}>
-                    <Icon size={16} color={isSelected ? '#000000' : '#64748B'} strokeWidth={2.5} />
-                  </View>
-                  <View>
-                    <Text style={[styles.timeTabLabel, isSelected && { color: '#000000' }]}>{tab.label}</Text>
-                    <Text style={[styles.timeTabSub, isSelected && { color: 'rgba(0,0,0,0.6)' }]}>{tab.sub}</Text>
-                  </View>
-                </TouchableOpacity>
+                />
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         {/* ── Time-Filtered Grounds Section ────────────────── */}
@@ -748,7 +806,6 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionLabel}>Available Slots</Text>
                 <Text style={styles.sectionTitle}>
                   Available at {TIME_TABS.find(t => t.id === selectedTimeTab)?.label}
                 </Text>
@@ -822,7 +879,6 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionLabel}>Search Results</Text>
                 <Text style={styles.sectionTitle}>
                   {filteredGrounds.length} {SPORT_SUFFIXES[sportFilter] || 'grounds'} found
                 </Text>
@@ -1173,48 +1229,70 @@ const styles = StyleSheet.create({
 
   // ── Time Tabs ─────────────────────────────────
   timeTabsContainer: {
-    marginTop: 10,
+    marginTop: 14,
+    paddingHorizontal: 16,
     zIndex: 1000,
   },
-  timeTabsContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-    paddingBottom: 10,
+  timeTabsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  timeTabChipTouch: {
+    flex: 1,
+    height: 38,
   },
   timeTabChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    gap: 12,
+    width: '100%',
+    height: '100%',
+    borderRadius: 19,
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    position: 'relative',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+    padding: 4,
   },
-  timeTabIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+  switchKnob: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    left: 4,
+    top: 4.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 1.5,
+    elevation: 1.5,
   },
-  timeTabLabel: {
-    fontSize: 13,
+  switchTextLeftContainer: {
+    position: 'absolute',
+    left: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  switchTextRightContainer: {
+    position: 'absolute',
+    right: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  switchTimeText: {
+    fontSize: 8.2,
     fontWeight: '800',
-    color: '#64748B',
     fontFamily: 'Inter',
-  },
-  timeTabSub: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#94A3B8',
-    fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
 
   // ── Sport Categories ──────────────────────────
@@ -1245,7 +1323,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   sportCatTextActive: {
-    color: '#a5ff8a',
+    color: '#00ea6b',
     fontFamily: 'Inter',
   },
 
@@ -1299,8 +1377,8 @@ const styles = StyleSheet.create({
   // ── Premium Immersive Hero ────────────────────
   premiumHero: {
     backgroundColor: '#06392e',
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingBottom: 64,
     position: 'relative',
     zIndex: 100,

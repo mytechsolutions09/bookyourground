@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking, TouchableOpacity } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, Heart, Navigation2, Map as MapIcon, SlidersHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react-native';
+import { MapPin, Star, Heart, Navigation2, Map as MapIcon, SlidersHorizontal, ArrowUpDown, ChevronDown, ArrowLeft } from 'lucide-react-native';
 import NativeMap from '@/components/grounds/NativeMap';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment, makeGroundPath } from '@/utils/groundSlug';
@@ -886,19 +886,30 @@ export default function GroundDetailsScreen() {
               ellipsizeMode="tail" 
               style={{
                 fontFamily: 'Inter', 
-                fontSize: 16, 
-                fontWeight: '700', 
-                color: '#111827',
+                fontSize: 15, 
+                fontWeight: '600', 
+                color: '#0F172A',
                 letterSpacing: 1.2,
                 textAlign: 'center',
                 maxWidth: 180,
               }}
             >
-              {(ground?.name ?? 'Ground').toUpperCase()}
+              {(() => {
+                const name = ground?.name ?? 'Ground';
+                return name
+                  .toLowerCase()
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+              })()}
             </Text>
           ),
           headerTitleAlign: 'center',
-          headerLeft: () => null,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16, padding: 4 }}>
+              <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>

@@ -842,8 +842,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               style={{
                 fontFamily: 'Inter', 
                 fontSize: 15, 
-                fontWeight: '700', 
-                color: '#01b854',
+                fontWeight: '600', 
+                color: '#0F172A',
                 letterSpacing: 1.2,
                 textAlign: 'center',
                 maxWidth: 180,
@@ -860,7 +860,11 @@ export default function GroundDetailsPrettyUrlScreen() {
             </Text>
           ),
           headerTitleAlign: 'center',
-          headerLeft: () => null,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16, padding: 4 }}>
+              <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>

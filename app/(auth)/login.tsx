@@ -349,7 +349,11 @@ export default function LoginScreen() {
 
     // Role-based defaults if no redirect path
     if (profile.role === 'super_admin') {
-      router.replace('/(admin)/dashboard');
+      if (Platform.OS === 'web') {
+        router.replace('/(admin)/dashboard');
+      } else {
+        router.replace('/(tabs)/profile');
+      }
     } else {
       // For both players and ground owners, land on the home discovery screen
       // This ensures a consistent entry point as requested
@@ -360,14 +364,22 @@ export default function LoginScreen() {
   const renderOtpModal = () => (
     <Modal visible={showOtpModal} transparent animationType="fade">
       <View style={modalStyles.overlay}>
-        <BlurView intensity={Platform.OS === 'web' ? 40 : 90} tint="light" style={[modalStyles.card, { maxWidth: 450, padding: 32 }]}>
-          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
-            <Smartphone size={36} color="#01b854" strokeWidth={2.5} />
+        <BlurView 
+          intensity={Platform.OS === 'web' ? 40 : 80} 
+          tint={Platform.OS === 'web' ? 'light' : 'dark'} 
+          style={[
+            modalStyles.card, 
+            Platform.OS !== 'web' && modalStyles.glassCardMobile,
+            { maxWidth: 450, padding: 32 }
+          ]}
+        >
+          <View style={[modalStyles.iconBg, { backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.1)' : 'rgba(0, 234, 107, 0.15)' }]}>
+            <Smartphone size={36} color={Platform.OS === 'web' ? '#01b854' : '#00ea6b'} strokeWidth={2.5} />
           </View>
-          <Text style={modalStyles.title}>Verify Your Mobile</Text>
-          <Text style={[modalStyles.message, { marginBottom: 20 }]}>
+          <Text style={[modalStyles.title, Platform.OS !== 'web' && { color: '#FFFFFF' }]}>Verify Your Mobile</Text>
+          <Text style={[modalStyles.message, { marginBottom: 20 }, Platform.OS !== 'web' && { color: 'rgba(255, 255, 255, 0.7)' }]}>
             We've sent a 6-digit verification code to the number ending in{' '}
-            <Text style={{ fontWeight: '700', color: '#1E293B' }}>
+            <Text style={{ fontWeight: '700', color: Platform.OS === 'web' ? '#1E293B' : '#00ea6b' }}>
               {profile && profile.phone ? profile.phone.slice(-4) : 'XXXX'}
             </Text>
             . Enter it below to authenticate.
@@ -384,12 +396,12 @@ export default function LoginScreen() {
                   height: 48,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: val ? '#01b854' : 'rgba(15, 23, 42, 0.15)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderColor: val ? '#00ea6b' : (Platform.OS === 'web' ? 'rgba(15, 23, 42, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
+                  backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.05)',
                   textAlign: 'center',
                   fontSize: 20,
                   fontWeight: '700',
-                  color: '#0F172A',
+                  color: Platform.OS === 'web' ? '#0F172A' : '#FFFFFF',
                 }}
                 value={val}
                 keyboardType="number-pad"
@@ -422,14 +434,18 @@ export default function LoginScreen() {
 
           {/* Verification & Cancel Buttons */}
           <TouchableOpacity
-            style={[modalStyles.button, loading && { opacity: 0.7 }]}
+            style={[
+              modalStyles.button, 
+              Platform.OS !== 'web' && { backgroundColor: '#00ea6b' },
+              loading && { opacity: 0.7 }
+            ]}
             onPress={handleVerifyOtp}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={Platform.OS === 'web' ? '#FFF' : '#06392e'} />
             ) : (
-              <Text style={modalStyles.buttonText}>VERIFY & SIGN IN</Text>
+              <Text style={[modalStyles.buttonText, Platform.OS !== 'web' && { color: '#06392e', fontWeight: '800' }]}>VERIFY & SIGN IN</Text>
             )}
           </TouchableOpacity>
 
@@ -438,13 +454,13 @@ export default function LoginScreen() {
               onPress={otpTimer === 0 && !sendingOtp ? handleResendOtp : undefined}
               style={{ opacity: otpTimer > 0 || sendingOtp ? 0.5 : 1 }}
             >
-              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 14 }}>
                 {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend OTP'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleCancelOtp}>
-              <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ color: Platform.OS === 'web' ? '#64748B' : 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14 }}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -744,19 +760,19 @@ export default function LoginScreen() {
         </View>
 
         <BlurView 
-          intensity={90} 
-          tint="light" 
+          intensity={65} 
+          tint="dark" 
           style={styles.card}
         >
           {/* Mobile Login Toggle */}
           <View style={{
             flexDirection: 'row',
-            backgroundColor: 'rgba(15, 23, 42, 0.05)',
+            backgroundColor: 'rgba(15, 23, 42, 0.3)',
             borderRadius: 12,
             padding: 4,
             marginBottom: 20,
             borderWidth: 1,
-            borderColor: 'rgba(15, 23, 42, 0.1)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           }}>
             <TouchableOpacity
               onPress={() => setLoginMethod('email')}
@@ -764,7 +780,7 @@ export default function LoginScreen() {
                 flex: 1,
                 paddingVertical: 8,
                 borderRadius: 10,
-                backgroundColor: loginMethod === 'email' ? '#01b854' : 'transparent',
+                backgroundColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
                 borderColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
                 borderWidth: 1,
                 alignItems: 'center',
@@ -775,7 +791,7 @@ export default function LoginScreen() {
               }}
             >
               <Text style={{
-                color: loginMethod === 'email' ? '#FFF' : '#64748B',
+                color: loginMethod === 'email' ? '#06392e' : 'rgba(255, 255, 255, 0.7)',
                 fontWeight: '700',
                 fontSize: 13,
               }}>
@@ -789,7 +805,7 @@ export default function LoginScreen() {
                 flex: 1,
                 paddingVertical: 8,
                 borderRadius: 10,
-                backgroundColor: loginMethod === 'phone' ? '#01b854' : 'transparent',
+                backgroundColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
                 borderColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
                 borderWidth: 1,
                 alignItems: 'center',
@@ -800,7 +816,7 @@ export default function LoginScreen() {
               }}
             >
               <Text style={{
-                color: loginMethod === 'phone' ? '#FFF' : '#64748B',
+                color: loginMethod === 'phone' ? '#06392e' : 'rgba(255, 255, 255, 0.7)',
                 fontWeight: '700',
                 fontSize: 13,
               }}>
@@ -823,14 +839,14 @@ export default function LoginScreen() {
                     emailFocused && styles.inputRowFocused,
                   ]}
                 >
-                  <Mail size={17} color={emailFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <Mail size={17} color={emailFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
                   <TextInput
                     ref={emailRef}
                     style={styles.textInput}
                     value={email}
                     onChangeText={setEmail}
                     placeholder=""
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
@@ -852,14 +868,14 @@ export default function LoginScreen() {
                     passwordFocused && styles.inputRowFocused,
                   ]}
                 >
-                  <Lock size={17} color={passwordFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <Lock size={17} color={passwordFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
                   <TextInput
                     ref={passwordRef}
                     style={styles.textInput}
                     value={password}
                     onChangeText={setPassword}
                     placeholder=""
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     secureTextEntry={!showPassword}
                     autoComplete="password"
                     onFocus={() => setPasswordFocused(true)}
@@ -867,9 +883,9 @@ export default function LoginScreen() {
                   />
                   <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
                     {showPassword ? (
-                      <EyeOff size={17} color="#6b7280" strokeWidth={2} />
+                      <EyeOff size={17} color="rgba(255, 255, 255, 0.5)" strokeWidth={2} />
                     ) : (
-                      <Eye size={17} color="#6b7280" strokeWidth={2} />
+                      <Eye size={17} color="rgba(255, 255, 255, 0.5)" strokeWidth={2} />
                     )}
                   </Pressable>
                 </Pressable>
@@ -893,7 +909,7 @@ export default function LoginScreen() {
                     phoneFocused && styles.inputRowFocused,
                   ]}
                 >
-                  <Smartphone size={17} color={phoneFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                  <Smartphone size={17} color={phoneFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
                   <TextInput
                     ref={phoneRef}
                     style={[styles.textInput, { flex: 1 }]}
@@ -904,7 +920,7 @@ export default function LoginScreen() {
                       if (otpSuccessMessage) setOtpSuccessMessage('');
                     }}
                     placeholder=""
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     keyboardType="phone-pad"
                     autoCapitalize="none"
                     editable={!phoneOtpSent}
@@ -916,7 +932,7 @@ export default function LoginScreen() {
                       onPress={sendPhoneOtp}
                       disabled={loading}
                       style={{
-                        backgroundColor: '#01b854',
+                        backgroundColor: '#00ea6b',
                         paddingHorizontal: 10,
                         paddingVertical: 5,
                         borderRadius: 6,
@@ -924,21 +940,21 @@ export default function LoginScreen() {
                       }}
                     >
                       {loading ? (
-                        <ActivityIndicator size="small" color="#FFF" />
+                        <ActivityIndicator size="small" color="#06392e" />
                       ) : (
-                        <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>SEND OTP</Text>
+                        <Text style={{ color: '#06392e', fontWeight: '800', fontSize: 11 }}>SEND OTP</Text>
                       )}
                     </TouchableOpacity>
                   ) : (
                     <View style={{ marginLeft: 8, paddingHorizontal: 6 }}>
-                      <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 11 }}>SENT</Text>
+                      <Text style={{ color: '#00ea6b', fontWeight: '800', fontSize: 11 }}>SENT</Text>
                     </View>
                   )}
                 </Pressable>
               </View>
 
               {!phoneOtpSent ? (
-                <Text style={{ color: '#64748B', fontSize: 11, marginTop: 8, marginBottom: 10, width: '100%' }}>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, marginTop: 8, marginBottom: 10, width: '100%' }}>
                   Enter your phone number and tap SEND OTP to receive your 6-digit verification code.
                 </Text>
               ) : (
@@ -971,14 +987,14 @@ export default function LoginScreen() {
                         phoneOtpFocused && styles.inputRowFocused,
                       ]}
                     >
-                      <Lock size={17} color={phoneOtpFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
+                      <Lock size={17} color={phoneOtpFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
                       <TextInput
                         ref={phoneOtpRef}
                         style={styles.textInput}
                         value={phoneOtpVal}
                         onChangeText={setPhoneOtpVal}
                         placeholder=""
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
                         keyboardType="number-pad"
                         maxLength={6}
                         onFocus={() => setPhoneOtpFocused(true)}
@@ -992,13 +1008,13 @@ export default function LoginScreen() {
                       onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
                       style={{ opacity: phoneOtpTimer > 0 ? 0.6 : 1 }}
                     >
-                      <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 13 }}>
+                      <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 13 }}>
                         {phoneOtpTimer > 0 ? `Resend in ${phoneOtpTimer}s` : 'Resend OTP'}
                       </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => setPhoneOtpSent(false)}>
-                      <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 13 }}>
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 13 }}>
                         Change Phone
                       </Text>
                     </TouchableOpacity>
@@ -1022,17 +1038,15 @@ export default function LoginScreen() {
               <Text style={styles.signInBtnText}>SIGN IN</Text>
             </Pressable>
   
-            {loginMethod !== 'phone' && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.outlineBtn,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => router.push('/(auth)/signup')}
-              >
-                <Text style={styles.outlineBtnText}>SIGN UP</Text>
-              </Pressable>
-            )}
+            <Pressable
+              style={({ pressed }) => [
+                styles.outlineBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => router.push('/(auth)/signup')}
+            >
+              <Text style={styles.outlineBtnText}>SIGN UP</Text>
+            </Pressable>
           </View>
         </BlurView>
       </ScrollView>
@@ -1149,16 +1163,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'web' ? 60 : 100,
+    paddingTop: Platform.OS === 'web' ? 60 : 40,
     paddingBottom: 40,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '100%',
-    marginBottom: 48,
+    marginBottom: 32,
   },
   logoContainer: {
     flex: 1,
@@ -1173,8 +1188,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(6, 57, 46, 0.7)',
     borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     padding: 24,
     width: '100%',
     maxWidth: 400,
@@ -1192,8 +1209,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 11,
-    fontWeight: '400',
-    color: '#334155',
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
     letterSpacing: 0.2,
     fontFamily: 'Inter',
@@ -1201,27 +1218,27 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
   },
   inputRowFocused: {
-    backgroundColor: '#FFFFFF',
-    borderColor: 'transparent',
-    shadowColor: '#1e293b',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#00ea6b',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 2,
   },
   textInput: {
     flex: 1,
     fontSize: 13,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
     fontWeight: '300',
   },
@@ -1232,7 +1249,7 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: '#01b854',
+    backgroundColor: '#00ea6b',
     borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 10,
@@ -1248,7 +1265,7 @@ const styles = StyleSheet.create({
   signInBtnText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#06392e',
     letterSpacing: -0.3,
     fontFamily: 'Inter',
   },
@@ -1257,7 +1274,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 46,
     borderWidth: 1.5,
-    borderColor: '#94A3B8',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1276,7 +1293,7 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#00ea6b',
     fontFamily: 'Inter',
   },
 });
@@ -1389,6 +1406,11 @@ const modalStyles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 30,
     elevation: 10,
+  },
+  glassCardMobile: {
+    backgroundColor: 'rgba(6, 57, 46, 0.85)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   iconBg: {
     width: 80,

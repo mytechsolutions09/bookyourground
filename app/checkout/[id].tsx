@@ -1925,15 +1925,15 @@ export default function CheckoutScreen() {
                                     return (
                                         <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <Calendar size={16} color="#059669" />
+                                                <Calendar size={16} color="#00ea6b" />
                                                 <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
-                                                <Clock size={16} color="#059669" style={{ marginLeft: 16 }} />
+                                                <Clock size={16} color="#00ea6b" style={{ marginLeft: 16 }} />
                                                 <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
                                             </View>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                 {!isNets && (
-                                                    <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
-                                                        <RNText style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>{teamsLabel}</RNText>
+                                                    <View style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                                                        <RNText style={{ fontSize: 12, color: '#06392e', fontWeight: '600' }}>{teamsLabel}</RNText>
                                                     </View>
                                                 )}
                                                 <RNText style={{ fontSize: 14, color: '#333', fontWeight: '600' }}>{formatCurrency(pricePerSlot)}</RNText>
@@ -1943,7 +1943,7 @@ export default function CheckoutScreen() {
                                 })
                             ) : (
                                 <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                                    <RNText style={{ color: '#059669', fontWeight: '600' }}>1 Team</RNText>
+                                    <RNText style={{ color: '#00ea6b', fontWeight: '600' }}>1 Team</RNText>
                                     <RNText style={{ color: '#333', fontWeight: '600', marginTop: 4 }}>
                                         {formatDateDDMMYYYY(booking.booking_date)} | {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)} | {formatCurrency(baseGroundPrice)}
                                     </RNText>
@@ -1952,10 +1952,10 @@ export default function CheckoutScreen() {
                         </ScrollView>
 
                         <TouchableOpacity
-                            style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                            style={{ backgroundColor: '#00ea6b', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsSlotsModalVisible(false)}
                         >
-                            <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
+                            <RNText style={{ color: '#06392e', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -2554,15 +2554,15 @@ export default function CheckoutScreen() {
                                         return (
                                             <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                    <Calendar size={16} color="#059669" />
+                                                    <Calendar size={16} color="#00ea6b" />
                                                     <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
-                                                    <Clock size={16} color="#059669" style={{ marginLeft: 16 }} />
+                                                    <Clock size={16} color="#00ea6b" style={{ marginLeft: 16 }} />
                                                     <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
                                                 </View>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                     {!isNets && (
-                                                        <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
-                                                            <RNText style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>{teamsLabel}</RNText>
+                                                        <View style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                                                            <RNText style={{ fontSize: 12, color: '#06392e', fontWeight: '600' }}>{teamsLabel}</RNText>
                                                         </View>
                                                     )}
                                                     <RNText style={{ fontSize: 14, color: '#333', fontWeight: '600' }}>{formatCurrency(pricePerSlot)}</RNText>
@@ -2572,7 +2572,7 @@ export default function CheckoutScreen() {
                                     })
                                 ) : (
                                     <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                                        <RNText style={{ color: '#059669', fontWeight: '600' }}>1 Team</RNText>
+                                        <RNText style={{ color: '#00ea6b', fontWeight: '600' }}>1 Team</RNText>
                                         <RNText style={{ color: '#333', fontWeight: '600', marginTop: 4 }}>
                                             {formatDateDDMMYYYY(booking.booking_date)} | {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)} | {formatCurrency(baseGroundPrice)}
                                         </RNText>
@@ -2581,10 +2581,10 @@ export default function CheckoutScreen() {
                             </ScrollView>
 
                             <TouchableOpacity
-                                style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                                style={{ backgroundColor: '#00ea6b', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                                 onPress={() => setIsSlotsModalVisible(false)}
                             >
-                                <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
+                                <RNText style={{ color: '#06392e', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
                             </TouchableOpacity>
                         </View>
                     </Pressable>

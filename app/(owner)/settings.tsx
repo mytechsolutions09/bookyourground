@@ -658,7 +658,7 @@ function OwnerSettingsInner() {
   return (
     <View style={{ flex: 1 }}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Settings" titleColor="#01b854" />
+        <MobileAppNavbar title="Settings" titleColor="#0F172A" lightBg />
         <View style={[styles.tabContainer, { marginBottom: 12 }, isUltraNarrow && { padding: 4 }]}>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 

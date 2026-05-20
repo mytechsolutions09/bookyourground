@@ -157,7 +157,7 @@ export default function BookMyGroundPage() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout hideHeader={width < 900}>
+      <WebLayout hideHeader={true}>
         {width < 900 && (
           <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
             <MobileAppNavbar

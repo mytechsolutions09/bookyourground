@@ -11,6 +11,7 @@ import {
   TextInput,
   Image,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { Calendar as RNCalendar, LocaleConfig } from 'react-native-calendars';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -38,7 +39,8 @@ import {
   Heart, 
   SlidersHorizontal, 
   Grid, 
-  List 
+  List,
+  ArrowLeft
 } from 'lucide-react-native';
 import { makeGroundPath } from '@/utils/groundSlug';
 import GroundCard from '@/components/grounds/GroundCard';
@@ -440,7 +442,7 @@ export default function SearchScreen() {
   const renderDropdownOptions = (type: 'location' | 'type' | 'date' | 'time' | 'price') => {
     const isDate = type === 'date';
     return (
-      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown]}>
+      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, isCompact && styles.floatingDropdownMobile]}>
         {isDate ? (
           <View style={styles.dateDropdownContainer}>
             <View style={styles.dateQuickOptions}>
@@ -450,6 +452,7 @@ export default function SearchScreen() {
                   style={[
                     styles.dropdownOption, 
                     styles.dateQuickBtn, 
+                    isCompact && styles.dateQuickBtnMobile,
                     dateKey === d && styles.dateQuickBtnActive
                   ]} 
                   onPress={() => { setDateKey(d); toggleFilterModal(null); }}
@@ -457,12 +460,13 @@ export default function SearchScreen() {
                   <Text style={[
                     styles.dropdownOptionText, 
                     styles.dateQuickBtnText, 
+                    isCompact && styles.dateQuickBtnTextMobile,
                     dateKey === d && styles.dateQuickBtnTextActive
                   ]}>{d}</Text>
                 </Pressable>
               ))}
             </View>
-            <View style={styles.calendarWrapper}>
+            <View style={[styles.calendarWrapper, isCompact && { borderTopColor: 'rgba(0, 234, 107, 0.2)' }]}>
               <RNCalendar
                 current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
                 minDate={new Date().toISOString().split('T')[0]}
@@ -470,7 +474,20 @@ export default function SearchScreen() {
                   setDateKey(day.dateString);
                   toggleFilterModal(null);
                 }}
-                theme={{
+                theme={isCompact ? {
+                  calendarBackground: '#06392e',
+                  textSectionTitleColor: '#00ea6b',
+                  selectedDayBackgroundColor: '#00ea6b',
+                  selectedDayTextColor: '#06392e',
+                  todayTextColor: '#00ea6b',
+                  dayTextColor: '#ffffff',
+                  textDisabledColor: 'rgba(255, 255, 255, 0.25)',
+                  arrowColor: '#00ea6b',
+                  monthTextColor: '#ffffff',
+                  textDayFontWeight: '600',
+                  textMonthFontWeight: '800',
+                  textDayHeaderFontWeight: '600',
+                } : {
                   todayTextColor: '#01e669',
                   arrowColor: '#01e669',
                   selectedDayBackgroundColor: '#01e669',
@@ -484,11 +501,11 @@ export default function SearchScreen() {
             {type === 'location' && (
               <>
                 <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>All Locations</Text>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Locations</Text>
                 </Pressable>
                 {locations.map(l => (
                   <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); toggleFilterModal(null); }}>
-                    <Text style={styles.dropdownOptionText}>{l.label || l.city}</Text>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{l.label || l.city}</Text>
                   </Pressable>
                 ))}
               </>
@@ -496,14 +513,14 @@ export default function SearchScreen() {
             {type === 'type' && (
               <>
                 <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('all'); setTypeKey(''); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>All Types</Text>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Types</Text>
                 </Pressable>
                 <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('matches'); setTypeKey(''); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>Find Opposition</Text>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>Find Opposition</Text>
                 </Pressable>
                 {types.map(t => (
                   <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); toggleFilterModal(null); }}>
-                    <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{t.label || t.name}</Text>
                   </Pressable>
                 ))}
               </>
@@ -512,7 +529,7 @@ export default function SearchScreen() {
               <>
                 {PRICE_RANGES.map(p => (
                   <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); toggleFilterModal(null); }}>
-                    <Text style={styles.dropdownOptionText}>{p.label}</Text>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{p.label}</Text>
                   </Pressable>
                 ))}
               </>
@@ -520,11 +537,11 @@ export default function SearchScreen() {
             {type === 'time' && (
               <>
                 <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); toggleFilterModal(null); }}>
-                  <Text style={styles.dropdownOptionText}>All Times</Text>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Times</Text>
                 </Pressable>
                 {availableTimes.map(t => (
                   <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); toggleFilterModal(null); }}>
-                    <Text style={styles.dropdownOptionText}>{t}</Text>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{t}</Text>
                   </Pressable>
                 ))}
               </>
@@ -697,37 +714,35 @@ export default function SearchScreen() {
       showsVerticalScrollIndicator={false}
     >
       
-      {/* 1. STADIUM HERO SECTION */}
-      <View style={[styles.heroSection, isCompact && styles.heroSectionMobile]}>
-        {!isCompact && (
+      {/* 1. STADIUM HERO SECTION — web only */}
+      {!isCompact && (
+        <View style={styles.heroSection}>
           <Image 
             source={require('@/assets/stadium_hero_bg.png')} 
             style={styles.heroBackground}
           />
-        )}
-        <LinearGradient
-          colors={['#FFFFFF', 'rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.3)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: isCompact ? 1 : 0.7, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
+          <LinearGradient
+            colors={['#FFFFFF', 'rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.3)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.7, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
 
-        <View style={[styles.heroContainer, isCompact && styles.heroContainerMobile]}>
-          <View style={styles.heroLeft}>
-            <Text style={styles.perfectText}>FIND THE PERFECT</Text>
-            
-            <View style={styles.heroTitleContainer}>
-              <Text style={[styles.heroTitle, isCompact && styles.heroTitleMobile]}>
-                Cricket <Text style={styles.heroTitleHighlight}>Ground</Text>
+          <View style={styles.heroContainer}>
+            <View style={styles.heroLeft}>
+              <Text style={styles.perfectText}>FIND THE PERFECT</Text>
+              
+              <View style={styles.heroTitleContainer}>
+                <Text style={styles.heroTitle}>
+                  Cricket <Text style={styles.heroTitleHighlight}>Ground</Text>
+                </Text>
+                <View style={styles.titleUnderline} />
+              </View>
+              
+              <Text style={styles.heroSubtitle}>
+                Explore and book the best cricket grounds near you in just a few clicks.
               </Text>
-              <View style={[styles.titleUnderline, isCompact && styles.titleUnderlineMobile]} />
-            </View>
-            
-            <Text style={[styles.heroSubtitle, isCompact && styles.heroSubtitleMobile]}>
-              Explore and book the best cricket grounds near you in just a few clicks.
-            </Text>
-            
-            {!isCompact && (
+              
               <View style={styles.foundBadge}>
                 <View style={styles.foundIconBg}>
                   <View style={styles.foundIconInner} />
@@ -737,17 +752,15 @@ export default function SearchScreen() {
                   <Text style={styles.foundSubText}>Across New Delhi, Gurugram & more</Text>
                 </View>
               </View>
-            )}
-          </View>
+            </View>
 
-          {!isCompact && (
             <View style={styles.heroRight}>
               <View style={[styles.stadiumLight, { top: 20, left: 30 }]} />
               <View style={[styles.stadiumLight, { top: 30, right: 40 }]} />
             </View>
-          )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* 2. FLOATING FILTER BAR */}
       <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }]}>
@@ -853,9 +866,9 @@ export default function SearchScreen() {
                 {showTimeModal && renderDropdownOptions('time')}
               </Pressable>
 
-              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
-                <SlidersHorizontal size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.applyFiltersBtnText}>Apply Filters</Text>
+              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile, isCompact && styles.applyFiltersBtnMobileTheme]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
+                <SlidersHorizontal size={14} color={isCompact ? '#06392e' : '#FFFFFF'} style={{ marginRight: 6 }} />
+                <Text style={[styles.applyFiltersBtnText, isCompact && { color: '#06392e' }]}>Apply Filters</Text>
               </Pressable>
             </>
           )}
@@ -1013,7 +1026,16 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.mobileContainer}>
-      <MobileAppNavbar title="Search" bgColor="#06392e" titleColor="#00ea6b" />
+      <MobileAppNavbar 
+        title="Search" 
+        titleColor="#0F172A" 
+        lightBg 
+        leftAction={
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+          </TouchableOpacity>
+        }
+      />
       {content}
     </View>
   );
@@ -1441,7 +1463,7 @@ const styles = StyleSheet.create({
   mobileToggleFiltersText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#06392e',
+    color: '#00ea6b',
     fontFamily: 'Inter',
   },
   mobileVenuesFoundContainer: {
@@ -1461,9 +1483,9 @@ const styles = StyleSheet.create({
   filterItemMobile: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0, 234, 107, 0.15)',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1483,15 +1505,41 @@ const styles = StyleSheet.create({
   filterItemMobileNoBorder: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0, 234, 107, 0.15)',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
     minHeight: 44,
     flexGrow: 1,
     minWidth: '46%',
+  },
+  floatingDropdownMobile: {
+    backgroundColor: '#06392e',
+    borderColor: 'rgba(0, 234, 107, 0.3)',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
+    shadowOpacity: 0.1,
+  },
+  dropdownOptionTextMobile: {
+    color: '#FFFFFF',
+  },
+  dateQuickBtnMobile: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dateQuickBtnTextMobile: {
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  applyFiltersBtnMobileTheme: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   heroSectionMobile: {
     height: 280,

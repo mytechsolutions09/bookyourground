@@ -19,6 +19,7 @@ import Animated from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Search, MapPin, Calendar, LayoutGrid, ChevronDown, Activity, User, Users, X } from 'lucide-react-native';
 import { GroundWithImages, GroundType, Location } from '@/types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -172,7 +173,7 @@ interface LandingBookingFormProps {
   noCard?: boolean;
   /** Hide the "Book a Ground" heading (e.g. on ground detail where the nav title is the ground name). */
   hideTitle?: boolean;
-  /** Ground detail page: location/type fields use green/tan accents; Book Now fill `#01b854` (compact on native). */
+  /** Ground detail page: location/type fields use green/tan accents; Book Now fill `#00ea6b` (compact on native). */
   groundPageAccent?: boolean;
   /** Native /book-my-ground & Grounds tab: pin form to top with tight spacing (not vertically centered). */
   bookGroundScreenNative?: boolean;
@@ -217,7 +218,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   } = props;
   const hasMounted = useHasMounted();
   const isCompact = useIsCompact();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const lastTapRef = React.useRef<{ [key: string]: number }>({});
   const handleSlotDoubleTap = (slotValue: string) => {
@@ -1293,7 +1294,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     /** When set, menu open state is fully controlled by the parent. */
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    /** Ground detail: #043529 field + #01b854 border/text. */
+    /** Ground detail: #06392e field + #00ea6b border/text. */
     groundPageDropdown?: boolean;
     /** Book a ground tab (native): tan text/borders instead of white. */
     bookGroundNative?: boolean;
@@ -1423,7 +1424,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   }) {
     return (
       <Modal visible={visible} onClose={onClose} title={title}>
-        <View style={styles.modalOptionList}>
+        <ScrollView contentContainerStyle={styles.modalOptionList} showsVerticalScrollIndicator={false}>
           {options.map((opt) => (
             <Pressable
               key={opt.key}
@@ -1447,7 +1448,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               {opt.key === value && <View style={styles.dropdownOptionDot} />}
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       </Modal>
     );
   }
@@ -1909,7 +1910,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       {searching ? (
         <ActivityIndicator
           style={styles.searchSpinner}
-          color="#10b981"
+          color="#00ea6b"
         />
       ) : null}
 
@@ -2074,7 +2075,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       )}
 
       <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen, { flexWrap: 'wrap' }]}>
-        {!(isWeb && groundPageAccent) && (
+        {!(isWeb && groundPageAccent) && (!useLandingSearchFlow || !isWeb || windowWidth < 900) && (
           <View
             style={[
               styles.section,
@@ -2120,7 +2121,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           </View>
         )}
 
-        {!(isWeb && groundPageAccent) && (
+        {!(isWeb && groundPageAccent) && (!useLandingSearchFlow || !isWeb || windowWidth < 900) && (
           <View
             style={[
               styles.section,
@@ -2289,6 +2290,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       ) : null}
 
+      {(!useLandingSearchFlow || !isWeb || windowWidth < 900) && (
       <View
         style={[
           styles.section,
@@ -2461,6 +2463,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           );
         })()}
       </View>
+      )}
 
       {(!useLandingSearchFlow || bookingDate) && (
         <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
@@ -2469,7 +2472,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             {!timeSlots.length ? (
               <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
             ) : loadingSlots ? (
-              <ActivityIndicator color="#10b981" />
+              <ActivityIndicator color="#00ea6b" />
             ) : bookingDate && !availableTimeSlots.length ? (
               <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
             ) : (
@@ -2576,7 +2579,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             style={[
               styles.input,
               { flex: 1, height: 40, minHeight: 40, paddingVertical: 0, borderRadius: 12 },
-              isCouponFocused && { borderColor: '#01b854', ...Platform.select({ web: { outlineStyle: 'none' } }) },
+              isCouponFocused && { borderColor: '#00ea6b', ...Platform.select({ web: { outlineStyle: 'none' } }) },
               nativeTanChrome && styles.inputBookGroundNative,
               appliedCoupon && styles.couponInputApplied,
             ]}
@@ -2649,6 +2652,182 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   }
 
   return (
+    <>
+      {useLandingSearchFlow && isWeb && windowWidth >= 900 && (
+        <View style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, height: 72,
+          backgroundColor: '#06392e', // user requested color
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingHorizontal: 24, zIndex: 9999,
+          borderBottomWidth: 1, borderBottomColor: '#00ea6b' // user requested color
+        }}>
+          {/* LOGO */}
+          <Pressable onPress={() => router.push('/')}>
+            <Image source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')} style={{ width: 120, height: 48 }} resizeMode="contain" />
+          </Pressable>
+
+          {/* FILTER PILL */}
+          <View style={{
+            flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 999,
+            alignItems: 'center', paddingLeft: 12, paddingRight: 6, paddingVertical: 4,
+            height: 52, flex: 1, maxWidth: 650, marginHorizontal: 24,
+            shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12,
+          }}>
+            {/* Where */}
+            <Pressable onPress={() => setOpenSelectMenu('location')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <MapPin size={14} color="#0F172A" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Where</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
+                  {locationOptions.find(o => o.key === locationKey)?.label || 'Location'}
+                </Text>
+                <ChevronDown size={12} color="#64748B" />
+              </View>
+            </Pressable>
+
+            {/* Sport */}
+            <Pressable onPress={() => setOpenSelectMenu('type')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Activity size={14} color="#0F172A" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Sport</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
+                  {typeOptions.find(o => o.key === typeKey)?.label || 'Venue Type'}
+                </Text>
+                <ChevronDown size={12} color="#64748B" />
+              </View>
+            </Pressable>
+
+            {/* Date */}
+            <Pressable onPress={() => setOpenSelectMenu('date')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Calendar size={14} color="#0F172A" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Date</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
+                  {bookingDate ? formatDateButtonLabel(bookingDate) : 'Date'}
+                </Text>
+                <ChevronDown size={12} color="#64748B" />
+              </View>
+            </Pressable>
+            {/* Teams */}
+            <Pressable onPress={() => setOpenSelectMenu('teams' as any)} style={{ flex: 1, paddingHorizontal: 12, height: 40, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Users size={14} color="#0F172A" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Teams</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={{ fontSize: 13, color: '#64748B' }}>
+                  {teamType === 'one' ? '1 Team' : 'Both Teams'}
+                </Text>
+                <ChevronDown size={12} color="#64748B" />
+              </View>
+            </Pressable>
+
+            {/* Search Button */}
+            <Pressable
+              onPress={() => handleSearch(0)}
+              style={({ pressed }) => [{
+                backgroundColor: '#00ea6b', // user requested color
+                width: 44, height: 44, borderRadius: 22,
+                alignItems: 'center', justifyContent: 'center',
+                marginLeft: 4
+              }, pressed && { opacity: 0.8 }]}
+            >
+              {searching ? <ActivityIndicator color="#06392e" size="small" /> : <Search size={18} color="#06392e" />}
+            </Pressable>
+          </View>
+
+          {/* RIGHT SIDE */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+            {/* Opposition tab */}
+            <Pressable
+              onPress={() => router.push('/find-an-opponent' as any)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>Opposition</Text>
+            </Pressable>
+
+            {user ? (
+              <Pressable onPress={() => router.push('/profile')}>
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                ) : (
+                  <User size={24} color="#00ea6b" />
+                )}
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => router.push('/(auth)/login')}>
+                <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>SIGN IN</Text>
+              </Pressable>
+            )}
+          </View>
+          
+          <ModalSelector
+              visible={openSelectMenu === 'location'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Location"
+              value={locationKey}
+              options={locationOptions}
+              onChange={(k) => {
+                setLocationKey(k);
+                if (useLandingSearchFlow) clearSearchState();
+                else selectGroundByLocationAndType(k, typeKey);
+              }}
+          />
+
+          <ModalSelector
+              visible={openSelectMenu === 'type'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Venue Type"
+              value={typeKey}
+              options={typeOptions}
+              onChange={(t) => {
+                setTypeKey(t);
+                if (useLandingSearchFlow) clearSearchState();
+                else selectGroundByLocationAndType(locationKey, t);
+              }}
+          />
+
+          <ModalSelector
+              visible={openSelectMenu === 'date'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Date"
+              value={bookingDate}
+              options={upcomingDates.map(d => ({ key: d.iso, label: `${d.label} (${d.weekdayShort})` }))}
+              onChange={(d) => {
+                setBookingDate(d);
+                if (useLandingSearchFlow) {
+                  clearSearchState();
+                  setStartTime('' as TimeString);
+                }
+              }}
+          />
+
+          <ModalSelector
+              visible={openSelectMenu === 'teams'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Teams"
+              value={teamType}
+              options={[
+                { key: 'one', label: '1 Team' },
+                { key: 'both', label: 'Both Teams' }
+              ]}
+              onChange={(t) => {
+                setTeamType(t as 'one' | 'both');
+                if (useLandingSearchFlow) {
+                  clearSearchState();
+                }
+              }}
+          />
+        </View>
+      )}
+
     <View
       style={[
         styles.wrapper,
@@ -2657,11 +2836,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         fullWidth && !isWeb && bookGroundScreenNative && styles.wrapperBookGroundScreenNative,
         fullWidth && !isWeb && groundPageAccent && styles.groundPageFormWrapperNative,
         isWeb && windowWidth < 640 && styles.wrapperMobileTight,
+        useLandingSearchFlow && isWeb && windowWidth >= 900 && { marginTop: 72 } // offset for fixed fake navbar
       ]}
     >
       <View style={[
         isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flexDirection: 'row', gap: 24 }
       ]}>
+        {(!useLandingSearchFlow || groundSelectedFromSearch || !isWeb || windowWidth < 900) && (
         <ColumnComponent
           style={[
             isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
@@ -2723,7 +2904,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#1E293B' }}>{label}</Text>
                                 {!isNets && <Text style={{ fontSize: 11, color: '#64748B' }}>{slotTeamType === 'one' ? '1 Team' : 'Both Teams'}</Text>}
                               </View>
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>{formatCurrency(price)}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>{formatCurrency(price)}</Text>
+                                <Pressable
+                                  onPress={() => setSelectedNetsSlots(prev => prev.filter(item => item !== s))}
+                                  style={({ pressed }) => [{ padding: 4, marginLeft: -4, opacity: pressed ? 0.5 : 1 }]}
+                                  hitSlop={8}
+                                >
+                                  <X size={16} color="#94A3B8" />
+                                </Pressable>
+                              </View>
                             </View>
                           );
                         })}
@@ -2750,7 +2940,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
                         Total
                       </Text>
-                      <Text style={[{ fontSize: 18, fontWeight: '800', color: '#01b854' }]}>
+                      <Text style={[{ fontSize: 18, fontWeight: '800', color: '#00ea6b' }]}>
                         {formatCurrency(finalAmount)}
                       </Text>
                     </View>
@@ -2901,8 +3091,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       justifyContent: 'center', 
                       alignItems: 'center', 
                       borderRadius: 12,
-                      backgroundColor: '#01b854',
-                      borderColor: '#01b854',
+                      backgroundColor: '#00ea6b',
+                      borderColor: '#00ea6b',
                       width: '100%',
                     }
                   ]}
@@ -2974,6 +3164,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             </ContainerComponent>
           )}
         </ColumnComponent>
+        )}
 
         {separateSearchResults ? (
           <ColumnComponent
@@ -3012,6 +3203,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         ) : null}
       </View>
     </View>
+    </>
   );
 }
 
@@ -3054,10 +3246,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 16,
   },
   premiumGlassButton: {
-    backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.7)' : '#01b854',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.7)' : '#00ea6b',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.8)' : '#01b854',
+    borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.8)' : '#00ea6b',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(12px)',
@@ -3287,7 +3479,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     backgroundColor: '#FFFFFF',
   },
   groundChipActive: {
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
     backgroundColor: 'transparent',
   },
   groundChipText: {
@@ -3297,7 +3489,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: '#374151',
   },
   groundChipTextActive: {
-    color: '#01b854',
+    color: '#00ea6b',
     fontWeight: '700',
   },
   teamToggle: {
@@ -3340,7 +3532,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   teamToggleOptionActive: {
     backgroundColor: 'transparent',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
     borderWidth: 1.5,
   },
   teamToggleText: {
@@ -3370,7 +3562,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     minHeight: 48,
     paddingVertical: 8,
     paddingHorizontal: 24,
-    backgroundColor: '#01b854',
+    backgroundColor: '#00ea6b',
   },
   summary: {
     marginTop: 12,
@@ -3449,7 +3641,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   applyBtnApplied: {
     backgroundColor: '#F8FAFC',
-    borderColor: '#10b981',
+    borderColor: '#00ea6b',
     borderWidth: 1.5,
   },
   applyBtnText: {
@@ -3458,10 +3650,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 14,
   },
   applyBtnTextApplied: {
-    color: '#043529',
+    color: '#06392e',
   },
   couponSuccess: {
-    color: '#10b981',
+    color: '#00ea6b',
     fontSize: 12,
     marginTop: 6,
     fontWeight: '600',
@@ -3479,7 +3671,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontWeight: '400',
   },
   couponInputApplied: {
-    borderColor: '#10b981',
+    borderColor: '#00ea6b',
     borderWidth: 2,
   },
   actions: {
@@ -3497,11 +3689,11 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#01b854',
+    color: '#00ea6b',
   },
   dateChipPressed: {
     backgroundColor: '#F1F5F9',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
   },
   searchResultsSection: {
     marginTop: 4,
@@ -3572,13 +3764,13 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   searchResultsGridTwoCol: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 20,
+    gap: 16,
   },
   searchResultTile: {
     width: '100%',
   },
   searchResultTileWeb: {
-    width: (windowWidth >= 1200 ? '23.5%' : windowWidth >= 900 ? '31.5%' : '48.5%') as any,
+    width: 'calc(25% - 12px)' as any,
   },
   searchResultTileHalf: {
     width: 'calc(50% - 10px)' as any,
@@ -3631,7 +3823,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: '#01b854',
+    color: '#00ea6b',
     fontWeight: '500',
     fontSize: 14,
     marginTop: 0,
@@ -3731,31 +3923,31 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#01b854',
+    backgroundColor: '#00ea6b',
   },
 
   /** Ground detail: Location / Type — web keeps green accent; native uses tan (#dcc093). */
   dropdownButtonGroundPage: {
-    backgroundColor: isLight ? 'transparent' : '#043529',
+    backgroundColor: isLight ? 'transparent' : '#06392e',
     ...Platform.select({
-      web: { borderColor: isLight ? 'transparent' : '#01b854' },
+      web: { borderColor: isLight ? 'transparent' : '#00ea6b' },
       default: { borderColor: isLight ? 'transparent' : '#dcc093' },
     }),
     borderWidth: isLight ? 0 : 1,
     paddingHorizontal: 0,
   },
   dropdownButtonOpenGroundPage: {
-    backgroundColor: isLight ? 'transparent' : '#043529',
+    backgroundColor: isLight ? 'transparent' : '#06392e',
     ...Platform.select({
-      web: { borderColor: isLight ? '#01b854' : '#01b854' },
-      default: { borderColor: isLight ? '#01b854' : '#dcc093' },
+      web: { borderColor: isLight ? '#00ea6b' : '#00ea6b' },
+      default: { borderColor: isLight ? '#00ea6b' : '#dcc093' },
     }),
     borderWidth: isLight ? 0 : 1,
   },
   dropdownButtonSelectedGroundPage: {
-    backgroundColor: isLight ? 'transparent' : '#043529',
+    backgroundColor: isLight ? 'transparent' : '#06392e',
     ...Platform.select({
-      web: { borderColor: isLight ? 'transparent' : '#01b854' },
+      web: { borderColor: isLight ? 'transparent' : '#00ea6b' },
       default: { borderColor: isLight ? 'transparent' : '#dcc093' },
     }),
     borderWidth: isLight ? 0 : 1,
@@ -3769,8 +3961,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   dropdownButtonTextGroundPage: {
     ...Platform.select({
-      web: { color: isLight ? '#01b854' : '#01b854' },
-      default: { color: isLight ? '#01b854' : '#dcc093' },
+      web: { color: isLight ? '#00ea6b' : '#00ea6b' },
+      default: { color: isLight ? '#00ea6b' : '#dcc093' },
     }),
   },
   dropdownButtonTextSelectedGroundPage: {
@@ -3788,22 +3980,22 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   dropdownMenuGroundPage: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
   },
   dropdownOptionActiveGroundPage: {
     backgroundColor: '#F1F5F9',
   },
   dropdownOptionTextGroundPage: {
     ...Platform.select({
-      web: { color: isLight ? '#000000' : '#01b854' },
+      web: { color: isLight ? '#000000' : '#00ea6b' },
       default: { color: isLight ? '#000000' : '#dcc093' },
     }),
   },
   dropdownOptionTextActiveGroundPage: {
     fontWeight: '800',
     ...Platform.select({
-      web: { color: '#01b854' },
-      default: { color: isLight ? '#01b854' : '#dcc093' },
+      web: { color: '#00ea6b' },
+      default: { color: isLight ? '#00ea6b' : '#dcc093' },
     }),
   },
   dateChipsWrap: {
@@ -3848,7 +4040,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   dateChipActive: {
     backgroundColor: 'transparent',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
     borderWidth: 1.5,
   },
   dateChipDisabled: {
@@ -3917,7 +4109,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 14,
     fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#01b854',
+    color: '#00ea6b',
   },
   dateArrowTextDisabled: {
     color: '#9CA3AF',
@@ -3981,7 +4173,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   timeSlotChipActive: {
     backgroundColor: 'transparent',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
     borderWidth: 1.5,
   },
   timeSlotChipDisabled: {
@@ -3990,11 +4182,11 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   timeSlotChipPressed: {
     backgroundColor: isLight ? '#F3F4F6' : '#06392e',
-    borderColor: isLight ? '#01b854' : '#FFFFFF',
+    borderColor: isLight ? '#00ea6b' : '#FFFFFF',
   },
   timeSlotChipPressedBookGroundNative: {
     backgroundColor: '#06392e',
-    borderColor: '#01b854',
+    borderColor: '#00ea6b',
   },
   groundChipDisabled: {
     opacity: 0.6,
@@ -4020,7 +4212,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
   },
   bookGroundNativeButtonText: {
-    color: '#043529',
+    color: '#06392e',
     fontWeight: '700',
   },
   /** Book Now CTA fill neon green — dark label for classic premium look. */

@@ -72,6 +72,7 @@ interface WebLayoutProps {
   showAddForm?: boolean;
   isPublicNoSidebar?: boolean;
   defaultSidebarOpen?: boolean;
+  headerContent?: React.ReactNode;
 }
 
 const NavLink = React.memo(({
@@ -187,7 +188,11 @@ const NavLink = React.memo(({
   );
 });
 
-export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar, defaultSidebarOpen }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm = false,
+  isPublicNoSidebar: propIsPublicNoSidebar = false,
+  defaultSidebarOpen = true,
+  headerContent,
+}: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
   const params = useLocalSearchParams();
@@ -549,12 +554,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     };
   }, [isLanding, isMarketing, isShop]);
 
-  // We don't early return here to avoid hook sequence mismatch.
-  // Instead, we check the condition inside the return statement.
-
-  // Navbar search: fetch ground suggestions as user types on landing pages.
-
-  // Navbar search: fetch ground suggestions as user types on landing pages.
   const adminEmail = 'invirtualcoin@gmail.com';
   
   const isSuperAdmin = useMemo(() => 
@@ -588,9 +587,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/(admin)/cricketdata',
   ];
 
-  // Important: "admin route" should be determined by the current path,
-  // not by the viewer's role. Otherwise super admins would be treated as
-  // being on an admin route even on public pages like `/`.
   const isAdminRoute = useMemo(() =>
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
@@ -617,11 +613,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     [isGroundOwner, isSuperAdmin, cleanPath]
   );
 
-  // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
-  // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar = useMemo(() =>
-    // Hide sidebar on public/marketing style pages even for super admins.
-    // The sidebar should only appear when they are actually on admin pages.
     !isAdminRoute && (
       propIsPublicNoSidebar ||
       isLanding ||
@@ -656,7 +648,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   const shouldHideAppHeader = useMemo(() => {
     if (isCompact) {
-      // Hide header for owners on settings pages to save space on mobile web
       if (isGroundOwner && (cleanPath === '/settings' || cleanPath === '/(owner)/settings')) {
         return true;
       }
@@ -698,8 +689,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     return false;
   }, [isCompact, isGroundOwner, isSuperAdmin, cleanPath]);
 
-  // Treat the presence of a Supabase `user` as authenticated even if `profile`
-  // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
   const showMenuPanel = !isPublicNoSidebar && isAuthenticated && (!isCompact || isSidebarOpenOnSmallScreen);
 
@@ -710,8 +699,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;
   const bodyStyle = (isPublicNoSidebar || isCompact) ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
-  // Ground/booking detail pretty URLs must always get the top bar (logo, search, Grounds, Sign in).
-  // Do not exclude super admins here — otherwise neither hero nor the app header renders on /ground/... .
   const showHeroHeader =
     isLanding ||
     isMarketing ||
@@ -1010,7 +997,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book My Venues — home"
+              accessibilityLabel="Book My Venues - home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -1023,30 +1010,38 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-
+            {headerContent && (
+              <View style={{ flex: 1, paddingHorizontal: 16, alignItems: 'center' }}>
+                {headerContent}
+              </View>
+            )}
 
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
-                    <Text style={[
-                      styles.headerNavLink,
-                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
-                      (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
-                    ]}>
-                      VENUES
-                    </Text>
-                  </TouchableOpacity>
+                  {cleanPath !== '/search' && (
+                    <>
+                      <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                        <Text style={[
+                          styles.headerNavLink,
+                          (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
+                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                        ]}>
+                          VENUES
+                        </Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => router.push('/shop' as any)}>
-                    <Text style={[
-                      styles.headerNavLink,
-                      cleanPath.startsWith('/shop') && styles.headerNavLinkActive,
-                      (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
-                    ]}>
-                      SHOP
-                    </Text>
-                  </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                        <Text style={[
+                          styles.headerNavLink,
+                          cleanPath.startsWith('/shop') && { color: '#ff3564' },
+                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                        ]}>
+                          SHOP
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
 
                   {isShop && (
                     <TouchableOpacity

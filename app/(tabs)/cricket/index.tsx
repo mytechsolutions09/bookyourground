@@ -40,8 +40,45 @@ export default function CricketHubScreen() {
   ]);
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [postRole, setPostRole] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
   const [postMessage, setPostMessage] = useState('');
+
+  const BATSMAN = ['Top-order Batsman', 'Middle-order Batsman', 'Opening Batsman'];
+  const BOWLER = ['Right-arm Fast', 'Right-arm Medium', 'Spin Bowler', 'Left-arm Spinner'];
+  const WK = ['Wicket-keeper'];
+  const ALL_ROUNDER = ['All-rounder'];
+  const CRICKET_ROLES = [...BATSMAN, ...WK, ...BOWLER, ...ALL_ROUNDER];
+
+  const handleRoleToggle = (role: string) => {
+    let newRoles = [...selectedRoles];
+    if (newRoles.includes(role)) {
+      newRoles = newRoles.filter(r => r !== role);
+    } else {
+      const isBatsman = BATSMAN.includes(role);
+      const isBowler = BOWLER.includes(role);
+      const isWk = WK.includes(role);
+      const isAllRounder = ALL_ROUNDER.includes(role);
+
+      if (isAllRounder) {
+        newRoles = [role];
+      } else {
+        newRoles = newRoles.filter(r => !ALL_ROUNDER.includes(r));
+        if (isBatsman) {
+          newRoles = newRoles.filter(r => !BATSMAN.includes(r));
+        }
+        if (isBowler) {
+          newRoles = newRoles.filter(r => !BOWLER.includes(r) && !WK.includes(r));
+        }
+        if (isWk) {
+          newRoles = newRoles.filter(r => !WK.includes(r) && !BOWLER.includes(r));
+        }
+        newRoles.push(role);
+      }
+    }
+    setSelectedRoles(newRoles);
+    setPostRole(newRoles.join(', '));
+  };
 
   const handleCreatePost = () => {
     if (!postRole || !postCity || !postMessage) return;
@@ -59,6 +96,7 @@ export default function CricketHubScreen() {
     }
     setIsPostModalVisible(false);
     setPostRole('');
+    setSelectedRoles([]);
     setPostCity('');
     setPostMessage('');
   };
@@ -201,39 +239,24 @@ export default function CricketHubScreen() {
         <View style={styles.mainCard}>
           {/* Tabs row */}
           <View style={[styles.tabBar, isMobile && styles.tabBarMobile]}>
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'profile' && styles.tabButtonActive,
-                isMobile && styles.tabButtonMobile,
-              ]}
-              onPress={() => setActiveTab('profile')}
-            >
-              <Shield size={18} color={activeTab === 'profile' ? '#01b854' : '#64748B'} style={styles.tabIcon} />
-              <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
-                Player Profile
-              </Text>
-            </TouchableOpacity>
+            <View style={[styles.leftTabs, isMobile && { flexDirection: 'column' }]}>
+              <TouchableOpacity
+                style={[
+                  styles.tabButton,
+                  activeTab === 'profile' && styles.tabButtonActive,
+                  isMobile && styles.tabButtonMobile,
+                ]}
+                onPress={() => setActiveTab('profile')}
+              >
+                <Shield size={18} color={activeTab === 'profile' ? '#01b854' : '#64748B'} style={styles.tabIcon} />
+                <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
+                  Player Profile
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'board' && styles.tabButtonActive,
-                isMobile && styles.tabButtonMobile,
-              ]}
-              onPress={() => setActiveTab('board')}
-            >
-              <ClipboardList size={18} color={activeTab === 'board' ? '#01b854' : '#64748B'} style={styles.tabIcon} />
-              <Text style={[styles.tabText, activeTab === 'board' && styles.tabTextActive]}>
-                Notice Board
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Main Content Area */}
-          {activeTab === 'board' && (
-            <View style={styles.boardContainer}>
-              <View style={styles.boardSubTabs}>
+            {activeTab === 'board' && (
+              <View style={[styles.rightActions, isMobile && styles.rightActionsMobile]}>
                 <View style={styles.subTabGroup}>
                   <TouchableOpacity
                     style={[styles.subTabBtn, boardSubTab === 'players_needed' && styles.subTabBtnActive]}
@@ -248,12 +271,17 @@ export default function CricketHubScreen() {
                     <Text style={[styles.subTabText, boardSubTab === 'teams_needed' && styles.subTabTextActive]}>Players looking for Teams</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.createPostBtn} onPress={() => setIsPostModalVisible(true)}>
+                <TouchableOpacity style={[styles.createPostBtn, isMobile && { width: '100%', justifyContent: 'center', marginTop: 8 }]} onPress={() => setIsPostModalVisible(true)}>
                   <Plus size={16} color="#ffffff" style={{ marginRight: 4 }} />
                   <Text style={styles.createPostBtnText}>Create Post</Text>
                 </TouchableOpacity>
               </View>
+            )}
+          </View>
 
+          {/* Main Content Area */}
+          {activeTab === 'board' && (
+            <View style={styles.boardContainer}>
               <FlatList
                 data={boardSubTab === 'players_needed' ? playerRequests : teamRequests}
                 renderItem={renderBoardItem}
@@ -268,7 +296,6 @@ export default function CricketHubScreen() {
           )}
         </View>
 
-        <SiteFooter />
       </ScrollView>
 
       {/* Create Post Modal */}
@@ -290,11 +317,27 @@ export default function CricketHubScreen() {
             </View>
             <View style={styles.modalBody}>
               <Text style={styles.inputLabel}>{boardSubTab === 'players_needed' ? 'Role Needed' : 'Your Specialization'}</Text>
+              
+              <View style={styles.rolesContainer}>
+                {CRICKET_ROLES.map((role) => (
+                  <TouchableOpacity
+                    key={role}
+                    style={[styles.roleChip, selectedRoles.includes(role) && styles.roleChipActive]}
+                    onPress={() => handleRoleToggle(role)}
+                  >
+                    <Text style={[styles.roleChipText, selectedRoles.includes(role) && styles.roleChipTextActive]}>{role}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <TextInput
                 style={styles.modalInput}
                 placeholder={boardSubTab === 'players_needed' ? "e.g. Top-order Batsman" : "e.g. Right-arm Fast"}
                 value={postRole}
-                onChangeText={setPostRole}
+                onChangeText={(text) => {
+                  setPostRole(text);
+                  if (text === '') setSelectedRoles([]);
+                }}
               />
               
               <Text style={styles.inputLabel}>City/Location</Text>
@@ -488,15 +531,35 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 234, 107, 0.08)',
     paddingBottom: 16,
     marginBottom: 24,
-    gap: 12,
+    gap: 16,
+    flexWrap: 'wrap',
   },
   tabBarMobile: {
     flexDirection: 'column',
-    gap: 8,
+    alignItems: 'stretch',
+    gap: 16,
+  },
+  leftTabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  rightActionsMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    width: '100%',
   },
   tabButton: {
     flexDirection: 'row',
@@ -862,6 +925,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155',
     marginBottom: 6,
+  },
+  rolesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  roleChip: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  roleChipActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#01b854',
+  },
+  roleChipText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  roleChipTextActive: {
+    color: '#166534',
+    fontWeight: '700',
   },
   modalInput: {
     backgroundColor: '#F8FAFC',

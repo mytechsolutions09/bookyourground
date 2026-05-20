@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { useSegments } from 'expo-router';
 import { useUI } from '@/contexts/UIContext';
+import { useAuth } from '@/contexts/AuthContext';
 import MobileTabBar from './MobileTabBar';
 
 /**
@@ -11,18 +12,20 @@ import MobileTabBar from './MobileTabBar';
 export function MobileTabBarHost() {
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
+  const { user, profile } = useAuth();
   
   if (!isTabBarVisible) return null;
 
   const root = segments[0];
   const sub = segments[1];
   const isInventory = segments.includes('inventory');
+  const isSuperAdmin = profile?.role === 'super_admin' || (user?.email?.toLowerCase() === 'invirtualcoin@gmail.com');
   
   if (
     root === 'welcome' ||
     root === '(auth)' ||
     (root === '(owner)' && !isInventory) ||
-    (root === '(admin)' && !isInventory) ||
+    (!isSuperAdmin && root === '(admin)' && !isInventory) ||
     root === 'players' ||
     root === 'teams' ||
     root === 'live' ||

@@ -289,7 +289,7 @@ export default function UserSettingsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
-      {!isOwner && <MobileAppNavbar title="Settings" titleColor="#0F172A" />}
+      {!isOwner && <MobileAppNavbar title="Settings" titleColor="#0F172A" lightBg />}
       <UserSettingsInner />
     </View>
   );

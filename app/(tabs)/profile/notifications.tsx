@@ -19,6 +19,7 @@ import {
   ChevronRight, 
   AlertCircle,
   Trophy,
+  ArrowLeft,
 } from 'lucide-react-native';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
 import { supabase } from '@/lib/supabase';
@@ -241,7 +242,6 @@ export default function NotificationsScreen() {
   const { width } = useWindowDimensions();
   const { profile } = useAuth();
   const isCompact = width < 900;
-  const isOwner = profile?.role === 'ground_owner';
 
   return (IS_WEB && !isCompact) ? (
     <WebLayout noCard>
@@ -249,7 +249,16 @@ export default function NotificationsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
-      {!isOwner && <MobileAppNavbar title="Notifications" titleColor="#0F172A" lightBg />}
+      <MobileAppNavbar 
+        title="Notifications" 
+        titleColor="#0F172A" 
+        lightBg 
+        leftAction={
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+          </TouchableOpacity>
+        }
+      />
       <NotificationsInner />
     </View>
   );

@@ -590,14 +590,15 @@ export default function OwnerGroundsScreen() {
       {Platform.OS !== 'web' ? (
         <MobileAppNavbar 
           title="My Venues" 
-          titleColor="#01b854" 
+          titleColor="#0F172A" 
+          lightBg
           rightAction={
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity onPress={handleImportGround} style={{ padding: 4 }}>
-                <Text style={{ color: '#01b854', fontSize: 12, fontWeight: '700' }}>Import</Text>
+                <Text style={{ color: '#0F172A', fontSize: 12, fontWeight: '700' }}>Import</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/(owner)/add-ground')} style={{ padding: 4 }}>
-                <Plus size={20} color="#01b854" />
+                <Plus size={20} color="#0F172A" />
               </TouchableOpacity>
             </View>
           }
