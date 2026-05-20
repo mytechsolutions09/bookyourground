@@ -6,6 +6,15 @@ import { ChevronRight, Calendar, User, Clock } from 'lucide-react-native';
 
 const ARTICLES = [
   {
+    id: 'rain-refund',
+    title: "Rain Playing Spoilsport? We've Got You Covered!",
+    excerpt: 'Discover our new transparent T20 Rain Refund Policy. Find out exactly how much you get back if the weather interrupts your match.',
+    date: 'May 21, 2026',
+    author: 'Admin',
+    readTime: '3 min read',
+    image: require('@/assets/images/rain-refund.png')
+  },
+  {
     id: 'mvp-calculation',
     title: 'How Most Valuable Player (MVP) is Calculated?',
     excerpt: 'Ever wondered how we decide who the Player of the Match is? Dive into our advanced scoring algorithm that evaluates batting, bowling, and fielding.',
@@ -33,7 +42,10 @@ export default function BlogIndex() {
                style={styles.card}
                onPress={() => router.push(`/blog/${article.id}` as any)}
              >
-                <Image source={{ uri: article.image }} style={styles.cardImage} />
+                <Image 
+                  source={typeof article.image === 'string' ? { uri: article.image } : article.image} 
+                  style={styles.cardImage} 
+                />
                 <View style={styles.cardContent}>
                    <View style={styles.meta}>
                       <View style={styles.metaItem}><Calendar size={14} color="#9CA3AF" /><Text style={styles.metaText}>{article.date}</Text></View>

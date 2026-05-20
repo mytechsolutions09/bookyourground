@@ -2716,18 +2716,20 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               </View>
             </Pressable>
             {/* Teams */}
-            <Pressable onPress={() => setOpenSelectMenu('teams' as any)} style={{ flex: 1, paddingHorizontal: 12, height: 40, justifyContent: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Users size={14} color="#0F172A" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Teams</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 13, color: '#64748B' }}>
-                  {teamType === 'one' ? '1 Team' : 'Both Teams'}
-                </Text>
-                <ChevronDown size={12} color="#64748B" />
-              </View>
-            </Pressable>
+            {typeKey === 'Cricket Ground' && (
+              <Pressable onPress={() => setOpenSelectMenu('teams' as any)} style={{ flex: 1, paddingHorizontal: 12, height: 40, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <Users size={14} color="#0F172A" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Teams</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 13, color: '#64748B' }}>
+                    {teamType === 'one' ? '1 Team' : 'Both Teams'}
+                  </Text>
+                  <ChevronDown size={12} color="#64748B" />
+                </View>
+              </Pressable>
+            )}
 
             {/* Search Button */}
             <Pressable

@@ -764,7 +764,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || cleanPath === '/cricket' || isMarketing) && styles.logoImageCompact,
+                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isMarketing) && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -986,7 +986,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           style={[
             styles.header,
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
-            (cleanPath === '/search' || cleanPath === '/cricket') && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
+            (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -1003,7 +1003,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isShop || cleanPath === '/search' || cleanPath === '/cricket') && styles.logoImageCompact,
+                  (isCompact || isShop || cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -1025,7 +1025,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <Text style={[
                           styles.headerNavLink,
                           (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
-                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }
                         ]}>
                           VENUES
                         </Text>
@@ -1035,7 +1035,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <Text style={[
                           styles.headerNavLink,
                           cleanPath.startsWith('/shop') && { color: '#ff3564' },
-                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }
                         ]}>
                           SHOP
                         </Text>
@@ -1054,7 +1054,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                   {!isAuthenticated ? (
                     <Text
-                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }]}
+                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }]}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
                       SIGN IN
