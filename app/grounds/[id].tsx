@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking, TouchableOpacity } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, Heart, Navigation2, Map as MapIcon, SlidersHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react-native';
+import { MapPin, Star, Heart, Navigation2, Map as MapIcon, SlidersHorizontal, ArrowUpDown, ChevronDown, ArrowLeft } from 'lucide-react-native';
 import NativeMap from '@/components/grounds/NativeMap';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment, makeGroundPath } from '@/utils/groundSlug';
@@ -150,11 +150,21 @@ export default function GroundDetailsScreen() {
       }
 
       const groundData = data as GroundWithImages;
-      setGround(groundData);
-      fetchNearbyGrounds(groundData);
-      setExistingReviewId(null);
-      setReviewBookingId(null);
-      setCanReview(false);
+
+      // Clean redirect to the pretty-url (city/slug) ground details page.
+      const path = makeGroundPath(groundData);
+      
+      const redirectParams: any = {};
+      if (date) redirectParams.date = date;
+      if (time) redirectParams.time = time;
+      if (teams) redirectParams.teams = teams;
+      if (date && time) redirectParams.lock = 'true';
+
+      router.replace({
+        pathname: path as any,
+        params: redirectParams,
+      });
+      return;
     } catch (error) {
       console.error('Error loading ground:', error);
       Alert.alert('Error', 'Failed to load ground details');
@@ -831,6 +841,7 @@ export default function GroundDetailsScreen() {
                   <View key={g.id} style={styles.nearbyCardWrapper}>
                     <GroundCard
                       ground={g}
+                      glass={true}
                       onPress={() => {
                         const path = makeGroundPath(g);
                         router.push(path as any);
@@ -849,6 +860,7 @@ export default function GroundDetailsScreen() {
                   <View key={g.id} style={styles.nearbyCardWrapper}>
                     <GroundCard
                       ground={g}
+                      glass={true}
                       onPress={() => {
                         const path = makeGroundPath(g);
                         router.push(path as any);
@@ -868,15 +880,36 @@ export default function GroundDetailsScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: (ground?.name ?? 'Ground').toUpperCase(),
-          headerTitleStyle: { 
-            fontFamily: 'Inter', 
-            fontSize: 16, 
-            fontWeight: '700', 
-            color: '#111827',
-            letterSpacing: 1.2,
-          },
-          headerLeft: () => null,
+          headerTitle: () => (
+            <Text 
+              numberOfLines={1} 
+              ellipsizeMode="tail" 
+              style={{
+                fontFamily: 'Inter', 
+                fontSize: 15, 
+                fontWeight: '600', 
+                color: '#0F172A',
+                letterSpacing: 1.2,
+                textAlign: 'center',
+                maxWidth: 180,
+              }}
+            >
+              {(() => {
+                const name = ground?.name ?? 'Ground';
+                return name
+                  .toLowerCase()
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+              })()}
+            </Text>
+          ),
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16, padding: 4 }}>
+              <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>

@@ -15,7 +15,7 @@ export default function RefundPolicyScreen() {
 
           <Text style={styles.sectionTitle}>1.1. General</Text>
           <Text style={styles.paragraph}>
-            Refunds for bookings made through Book my ground are governed by this Refund
+            Refunds for bookings made through Book Your Ground are governed by this Refund
             policy, together with each venue&apos;s individual rules. By confirming a
             booking you agree to the applicable cancellation and refund terms.
           </Text>

@@ -379,23 +379,23 @@ export default function UserOrdersScreen() {
       {/* Tab Bar */}
       <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
         <TouchableOpacity 
-          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#059669' : 'transparent' }}
+          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#ff3564' : 'transparent' }}
           onPress={() => setActiveTab('orders')}
         >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'orders' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'orders' ? '#ff3564' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#059669' : 'transparent' }}
+          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#ff3564' : 'transparent' }}
           onPress={() => setActiveTab('wishlist')}
         >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'wishlist' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'wishlist' ? '#ff3564' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
         </TouchableOpacity>
       </View>
 
       {activeTab === 'orders' ? (
         loading ? (
           <View style={[styles.center, { flex: 1 }]}>
-            <ActivityIndicator size="large" color="#059669" />
+            <ActivityIndicator size="large" color="#ff3564" />
           </View>
         ) : (
           <FlatList
@@ -423,7 +423,7 @@ export default function UserOrdersScreen() {
       ) : (
         wishlistLoading ? (
           <View style={[styles.center, { flex: 1 }]}>
-            <ActivityIndicator size="large" color="#059669" />
+            <ActivityIndicator size="large" color="#ff3564" />
           </View>
         ) : (
           <FlatList
@@ -480,7 +480,7 @@ export default function UserOrdersScreen() {
                      setIsDatePickerVisible(true);
                    }}
                  >
-                    <Calendar size={16} color="#059669" />
+                    <Calendar size={16} color="#ff3564" />
                     <Text style={styles.filterText}>
                       {fromDate ? (
                         toDate ? `${formatDate(fromDate)} - ${formatDate(toDate)}` : `From ${formatDate(fromDate)}`
@@ -490,22 +490,36 @@ export default function UserOrdersScreen() {
                  </TouchableOpacity>
 
                  {showFilterMenu && (
-                   <View style={styles.dropdownMenu}>
-                     {statuses.map((status) => (
-                       <TouchableOpacity 
-                         key={status.value}
-                         style={[styles.dropdownItem, statusFilter === status.value && styles.dropdownItemActive]}
-                         onPress={() => {
-                           setStatusFilter(status.value);
-                           setShowFilterMenu(false);
-                         }}
-                       >
-                         <Text style={[styles.dropdownItemText, statusFilter === status.value && styles.dropdownItemTextActive]}>
-                           {status.label}
-                         </Text>
-                       </TouchableOpacity>
-                     ))}
-                   </View>
+                   <>
+                     <Pressable 
+                       style={{
+                         position: IS_WEB ? 'fixed' : 'absolute',
+                         top: 0,
+                         bottom: 0,
+                         left: 0,
+                         right: 0,
+                         zIndex: 99,
+                         backgroundColor: 'transparent',
+                       }}
+                       onPress={() => setShowFilterMenu(false)}
+                     />
+                     <View style={[styles.dropdownMenu, { zIndex: 100 }]}>
+                       {statuses.map((status) => (
+                         <TouchableOpacity 
+                           key={status.value}
+                           style={[styles.dropdownItem, statusFilter === status.value && styles.dropdownItemActive]}
+                           onPress={() => {
+                             setStatusFilter(status.value);
+                             setShowFilterMenu(false);
+                           }}
+                         >
+                           <Text style={[styles.dropdownItemText, statusFilter === status.value && styles.dropdownItemTextActive]}>
+                             {status.label}
+                           </Text>
+                         </TouchableOpacity>
+                       ))}
+                     </View>
+                   </>
                  )}
                </View>
             </View>
@@ -513,23 +527,23 @@ export default function UserOrdersScreen() {
             {/* Tab Bar */}
             <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF', marginBottom: 24 }}>
               <TouchableOpacity 
-                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#059669' : 'transparent' }}
+                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#ff3564' : 'transparent' }}
                 onPress={() => setActiveTab('orders')}
               >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'orders' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'orders' ? '#ff3564' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#059669' : 'transparent' }}
+                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#ff3564' : 'transparent' }}
                 onPress={() => setActiveTab('wishlist')}
               >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'wishlist' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'wishlist' ? '#ff3564' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
               </TouchableOpacity>
             </View>
 
             {activeTab === 'orders' ? (
               loading ? (
                 <View style={[styles.center, { paddingVertical: 100 }]}>
-                  <ActivityIndicator size="large" color="#059669" />
+                  <ActivityIndicator size="large" color="#ff3564" />
                 </View>
               ) : (
                 <>
@@ -559,7 +573,7 @@ export default function UserOrdersScreen() {
             ) : (
               wishlistLoading ? (
                 <View style={[styles.center, { paddingVertical: 100 }]}>
-                  <ActivityIndicator size="large" color="#059669" />
+                  <ActivityIndicator size="large" color="#ff3564" />
                 </View>
               ) : (
                 <>
@@ -615,7 +629,7 @@ export default function UserOrdersScreen() {
                         style={[styles.quickRangeItem, ((range.id === 'all' && !tempFromDate) || (range.id === 'custom' && tempFromDate)) && styles.quickRangeItemActive]}
                         onPress={() => setQuickRange(range.id)}
                       >
-                        <Calendar size={14} color={((range.id === 'all' && !tempFromDate) || (range.id === 'custom' && tempFromDate)) ? '#059669' : '#64748B'} />
+                        <Calendar size={14} color={((range.id === 'all' && !tempFromDate) || (range.id === 'custom' && tempFromDate)) ? '#ff3564' : '#64748B'} />
                         <Text style={[styles.quickRangeText, ((range.id === 'all' && !tempFromDate) || (range.id === 'custom' && tempFromDate)) && styles.quickRangeTextActive]}>
                           {range.label}
                         </Text>
@@ -685,7 +699,7 @@ export default function UserOrdersScreen() {
           {!loading && orders.length > 0 && (
             <View style={styles.helpSection}>
                <View style={styles.helpIconBox}>
-                  <ShoppingBag size={20} color="#10B981" />
+                  <ShoppingBag size={20} color="#ff3564" />
                </View>
                <View style={styles.helpContent}>
                   <Text style={styles.helpTitle}>Can’t find your order?</Text>
@@ -704,7 +718,7 @@ export default function UserOrdersScreen() {
       <StatusBar style="dark" />
       <MobileAppNavbar 
         title="My Orders" 
-        titleColor="#01b854"
+        titleColor="#0F172A"
         lightBg
       />
       {content}
@@ -871,7 +885,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   quickRangeItemActive: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FFF1F2',
   },
   quickRangeText: {
     fontSize: 14,
@@ -879,7 +893,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   quickRangeTextActive: {
-    color: '#059669',
+    color: '#ff3564',
   },
   dpSelectionArea: {
     flex: 1,
@@ -961,10 +975,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   calCellSelected: {
-    backgroundColor: '#059669',
+    backgroundColor: '#ff3564',
   },
   calCellInRange: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FFF1F2',
     borderRadius: 0,
   },
   calCellStart: {
@@ -984,7 +998,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   calDayTextInRange: {
-    color: '#065F46',
+    color: '#9F1239',
     fontWeight: '600',
   },
   calHint: {
@@ -1026,7 +1040,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#059669',
+    backgroundColor: '#ff3564',
   },
   dpApplyText: {
     fontSize: 14,
@@ -1231,7 +1245,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FFF1F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1259,7 +1273,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#2d3450',
     marginTop: 20,
   },
   emptySubtitle: {
@@ -1272,7 +1286,7 @@ const styles = StyleSheet.create({
   },
   shopBtn: {
     marginTop: 32,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#2d3450',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 16,

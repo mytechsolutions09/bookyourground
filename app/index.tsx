@@ -50,7 +50,7 @@ export default function IndexScreen() {
     if (!loading && welcomeChecked && os !== 'web') {
       if (user) {
         if (profile?.role === 'super_admin') {
-          router.replace('/(admin)/dashboard');
+          router.replace('/(tabs)/profile');
         } else {
           router.replace('/(tabs)/home_tab');
         }

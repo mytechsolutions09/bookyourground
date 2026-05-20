@@ -14,6 +14,7 @@ export default function GroundLayout() {
           fontSize: 17,
         },
         headerShadowVisible: false,
+        headerTitleAlign: 'center',
         contentStyle: { backgroundColor: '#FFFFFF' },
         animation: 'slide_from_right',
       }}

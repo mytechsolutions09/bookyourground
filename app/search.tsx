@@ -11,8 +11,40 @@ import {
   TextInput,
   Image,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { Calendar as RNCalendar, LocaleConfig } from 'react-native-calendars';
+import { useLocalSearchParams, router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '../components/MobileAppNavbar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  Search, 
+  MapPin, 
+  Building2, 
+  Swords, 
+  Trophy, 
+  Star, 
+  ArrowRight, 
+  ChevronDown, 
+  ChevronRight, 
+  Calendar, 
+  Clock, 
+  IndianRupee, 
+  Shield, 
+  Lock, 
+  Zap, 
+  Users, 
+  Heart, 
+  SlidersHorizontal, 
+  Grid, 
+  List,
+  ArrowLeft
+} from 'lucide-react-native';
+import { makeGroundPath } from '@/utils/groundSlug';
+import GroundCard from '@/components/grounds/GroundCard';
+import { useLocation } from '@/contexts/LocationContext';
 
 LocaleConfig.locales['en'] = {
   monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -22,16 +54,6 @@ LocaleConfig.locales['en'] = {
   today: 'Today'
 };
 LocaleConfig.defaultLocale = 'en';
-import { useLocalSearchParams, router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import WebLayout from '@/components/web/WebLayout';
-import MobileAppNavbar from '../components/MobileAppNavbar';
-import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, ChevronRight, Calendar, Clock, IndianRupee } from 'lucide-react-native';
-import GroundCard from '@/components/grounds/GroundCard';
-import { makeGroundPath } from '@/utils/groundSlug';
-import { formatCurrency } from '@/utils/helpers';
-import Button from '@/components/ui/Button';
-import { Location, GroundType } from '@/types';
 
 type SearchTab = 'all' | 'grounds' | 'matches';
 const PRICE_RANGES = [
@@ -47,15 +69,10 @@ export default function SearchScreen() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const isCompact = width < 900;
-  const IS_DARK = !isWeb || isCompact;
+  const { latitude: userLat, longitude: userLng } = useLocation();
   
   const [query, setQuery] = useState((params.q as string) || '');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
-  const labels: Record<string, string> = {
-    all: 'All',
-    grounds: 'Grounds',
-    matches: 'Find Opposition'
-  };
   const [results, setResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [loading, setLoading] = useState(false);
 
@@ -63,8 +80,9 @@ export default function SearchScreen() {
   const [typeKey, setTypeKey] = useState<string>((params.type as string) || '');
   const [dateKey, setDateKey] = useState<string>((params.date as string) || 'All');
   const [timeKey, setTimeKey] = useState<string>((params.time as string) || '');
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [types, setTypes] = useState<GroundType[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
+  
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
@@ -72,6 +90,11 @@ export default function SearchScreen() {
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [priceRange, setPriceRange] = useState(PRICE_RANGES[0]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState('Popularity');
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -90,15 +113,11 @@ export default function SearchScreen() {
     loadFilters();
   }, []);
 
-  // Sync state with URL params when they change (important for hero-to-search or internal navigation)
   useEffect(() => {
     if (params.q !== undefined) setQuery((params.q as string) || '');
     if (params.location !== undefined) setLocationKey((params.location as string) || '');
     if (params.type !== undefined) setTypeKey((params.type as string) || '');
-    if (params.date !== undefined) {
-      const d = params.date as string;
-      setDateKey(d || 'All');
-    }
+    if (params.date !== undefined) setDateKey((params.date as string) || 'All');
     if (params.time !== undefined) setTimeKey((params.time as string) || '');
   }, [params.q, params.location, params.type, params.date, params.time]);
 
@@ -107,20 +126,26 @@ export default function SearchScreen() {
   }, [query, locationKey, typeKey, dateKey, timeKey, priceRange]);
 
   useEffect(() => {
+    if (isCompact && viewMode === 'list') {
+      setViewMode('grid');
+    }
+  }, [isCompact, viewMode]);
+
+  useEffect(() => {
     const fetchAvailableTimes = async () => {
       try {
-        let query = supabase
+        let q = supabase
           .from('time_slots')
           .select('start_time, grounds!inner(city, state, pitch_type)')
           .eq('is_available', true);
 
         if (locationKey) {
           const [city, state] = locationKey.split('__');
-          query = query.eq('grounds.city', city).eq('grounds.state', state);
+          q = q.eq('grounds.city', city).eq('grounds.state', state);
         }
 
         if (typeKey) {
-          query = query.eq('grounds.pitch_type', typeKey);
+          q = q.eq('grounds.pitch_type', typeKey);
         }
 
         if (dateKey && dateKey !== 'All') {
@@ -135,20 +160,15 @@ export default function SearchScreen() {
           } else {
             dow = days[new Date(dateKey).getDay()];
           }
-          query = query.eq('day_of_week', dow);
+          q = q.eq('day_of_week', dow);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await q;
         if (error) throw error;
 
         if (data) {
           const uniqueTimes = Array.from(new Set(data.map(item => item.start_time.slice(0, 5)))).sort();
           setAvailableTimes(uniqueTimes);
-          
-          // If current timeKey is not in available times, reset it (but keep "All" option logic)
-          if (timeKey && !uniqueTimes.includes(timeKey)) {
-            // setTimeKey(''); // Optional: auto-reset if slot vanishes
-          }
         }
       } catch (e) {
         console.error('Error fetching available times:', e);
@@ -158,7 +178,7 @@ export default function SearchScreen() {
     fetchAvailableTimes();
   }, [locationKey, typeKey, dateKey]);
 
-  const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string, price?: { min: number, max: number }) => {
+  const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string, price?: { label: string, min: number, max: number }) => {
     setLoading(true);
     try {
       const ts = `%${(s || '').trim()}%`;
@@ -228,7 +248,7 @@ export default function SearchScreen() {
         }
       }
 
-      // 2. Search Matches using the same logic as "Find an Opponent"
+      // 2. Search Matches
       const todayISO = new Date().toISOString().split('T')[0];
       const { data: ms, error: mError } = await supabase
         .rpc('get_open_matchmaking_bookings', { p_today: todayISO })
@@ -240,12 +260,10 @@ export default function SearchScreen() {
 
       if (mError) console.error('Match search error:', mError);
 
-      // Filter out nets from matchmaking results
       let filteredMs = (ms || []).filter((m: any) => 
         !String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')
       );
 
-      // Manual filtering for keywords/location/type on match results
       if (s.trim() || locKey || typKey) {
         filteredMs = filteredMs.filter((m: any) => {
           const matchesKeyword = !s.trim() || 
@@ -280,14 +298,18 @@ export default function SearchScreen() {
 
       const additionalMs = (ps || [])
         .flatMap(p => (p.bookings || []).map(b => ({ ...b, user: { team_name: p.team_name, full_name: p.full_name } })))
-        .filter(b => b.ground);
+        .filter(b => 
+          b.ground && 
+          b.status !== 'cancelled' && 
+          b.status !== 'rejected' && 
+          (b.team_type === 'one' || (b.notes && b.notes.includes('1 Team')))
+        );
 
-      // 3. Enhance matches with precise pricing logic
       const enhancedMatches = await Promise.all((ms || []).map(async (m: any) => {
         try {
           const parts = m.booking_date.split('-');
           const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          const dow = dateObj.getDay(); // Simple fallback for DOW
+          const dow = dateObj.getDay();
 
           const { data: slotData } = await supabase
             .from('time_slots')
@@ -308,10 +330,9 @@ export default function SearchScreen() {
 
           const enhancedMatch = { ...m, total_amount: Math.round((totalMatchPrice / 2) * 100) / 100 };
           
-          // Price filter for matches
           if (price && price.label !== 'All Prices') {
             if (enhancedMatch.total_amount < price.min || enhancedMatch.total_amount > price.max) {
-              return null; // Exclude
+              return null;
             }
           }
 
@@ -344,7 +365,194 @@ export default function SearchScreen() {
     } as any);
   };
 
-  const renderGround = ({ item }: { item: any }) => {
+  const toggleFilterModal = (target: 'location' | 'type' | 'date' | 'time' | 'price' | null) => {
+    setShowLocationModal(target === 'location' ? !showLocationModal : false);
+    setShowTypeModal(target === 'type' ? !showTypeModal : false);
+    setShowDateModal(target === 'date' ? !showDateModal : false);
+    setShowTimeModal(target === 'time' ? !showTimeModal : false);
+    setShowPriceModal(target === 'price' ? !showPriceModal : false);
+  };
+
+  const combinedResults = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    let filteredMatches = results.matches.filter((m: any) => {
+      if (String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')) return false;
+      if (m.booking_date < todayStr) return false;
+      if (m.booking_date === todayStr) {
+        const [h, min] = (m.start_time || '00:00').split(':').map(Number);
+        const slotMins = h * 60 + min;
+        return slotMins > currentMins;
+      }
+      return true;
+    });
+
+    if (dateKey !== 'All') {
+      const today = new Date().toISOString().split('T')[0];
+      if (dateKey === 'Today') {
+        filteredMatches = filteredMatches.filter(m => m.booking_date === today);
+      } else if (dateKey === 'Tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        filteredMatches = filteredMatches.filter(m => m.booking_date === tomorrowStr);
+      } else {
+        filteredMatches = filteredMatches.filter(m => m.booking_date === dateKey);
+      }
+    }
+
+    if (activeTab === 'grounds') return results.grounds.map(g => ({ ...g, _type: 'ground' }));
+    if (activeTab === 'matches') return filteredMatches.map(m => ({ ...m, _type: 'match' }));
+    return [
+      ...results.grounds.map(g => ({ ...g, _type: 'ground' })),
+      ...filteredMatches.map(m => ({ ...m, _type: 'match' }))
+    ];
+  }, [results, activeTab, dateKey]);
+
+  const sortedCombinedResults = useMemo(() => {
+    let list = [...combinedResults];
+    if (sortBy === 'Price: Low to High') {
+      list.sort((a, b) => {
+        const priceA = a._type === 'ground' 
+          ? (a.min_price ?? a.base_price_per_hour ?? 0) 
+          : (a.team_type === 'both' ? (a.total_amount ?? 0) / 2 : (a.total_amount ?? 0));
+        const priceB = b._type === 'ground' 
+          ? (b.min_price ?? b.base_price_per_hour ?? 0) 
+          : (b.team_type === 'both' ? (b.total_amount ?? 0) / 2 : (b.total_amount ?? 0));
+        return priceA - priceB;
+      });
+    } else if (sortBy === 'Price: High to Low') {
+      list.sort((a, b) => {
+        const priceA = a._type === 'ground' 
+          ? (a.min_price ?? a.base_price_per_hour ?? 0) 
+          : (a.team_type === 'both' ? (a.total_amount ?? 0) / 2 : (a.total_amount ?? 0));
+        const priceB = b._type === 'ground' 
+          ? (b.min_price ?? b.base_price_per_hour ?? 0) 
+          : (b.team_type === 'both' ? (b.total_amount ?? 0) / 2 : (b.total_amount ?? 0));
+        return priceB - priceA;
+      });
+    } else if (sortBy === 'Rating') {
+      list.sort((a, b) => (b.rating ?? 5.0) - (a.rating ?? 5.0));
+    }
+    return list;
+  }, [combinedResults, sortBy]);
+
+  const renderDropdownOptions = (type: 'location' | 'type' | 'date' | 'time' | 'price') => {
+    const isDate = type === 'date';
+    return (
+      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, isCompact && styles.floatingDropdownMobile]}>
+        {isDate ? (
+          <View style={styles.dateDropdownContainer}>
+            <View style={styles.dateQuickOptions}>
+              {['All', 'Today', 'Tomorrow'].map(d => (
+                <Pressable 
+                  key={d} 
+                  style={[
+                    styles.dropdownOption, 
+                    styles.dateQuickBtn, 
+                    isCompact && styles.dateQuickBtnMobile,
+                    dateKey === d && styles.dateQuickBtnActive
+                  ]} 
+                  onPress={() => { setDateKey(d); toggleFilterModal(null); }}
+                >
+                  <Text style={[
+                    styles.dropdownOptionText, 
+                    styles.dateQuickBtnText, 
+                    isCompact && styles.dateQuickBtnTextMobile,
+                    dateKey === d && styles.dateQuickBtnTextActive
+                  ]}>{d}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={[styles.calendarWrapper, isCompact && { borderTopColor: 'rgba(0, 234, 107, 0.2)' }]}>
+              <RNCalendar
+                current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
+                minDate={new Date().toISOString().split('T')[0]}
+                onDayPress={(day: any) => {
+                  setDateKey(day.dateString);
+                  toggleFilterModal(null);
+                }}
+                theme={isCompact ? {
+                  calendarBackground: '#06392e',
+                  textSectionTitleColor: '#00ea6b',
+                  selectedDayBackgroundColor: '#00ea6b',
+                  selectedDayTextColor: '#06392e',
+                  todayTextColor: '#00ea6b',
+                  dayTextColor: '#ffffff',
+                  textDisabledColor: 'rgba(255, 255, 255, 0.25)',
+                  arrowColor: '#00ea6b',
+                  monthTextColor: '#ffffff',
+                  textDayFontWeight: '600',
+                  textMonthFontWeight: '800',
+                  textDayHeaderFontWeight: '600',
+                } : {
+                  todayTextColor: '#01e669',
+                  arrowColor: '#01e669',
+                  selectedDayBackgroundColor: '#01e669',
+                  selectedDayTextColor: '#ffffff',
+                }}
+              />
+            </View>
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled={true}>
+            {type === 'location' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); toggleFilterModal(null); }}>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Locations</Text>
+                </Pressable>
+                {locations.map(l => (
+                  <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); toggleFilterModal(null); }}>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{l.label || l.city}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'type' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('all'); setTypeKey(''); toggleFilterModal(null); }}>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Types</Text>
+                </Pressable>
+                <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('matches'); setTypeKey(''); toggleFilterModal(null); }}>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>Find Opposition</Text>
+                </Pressable>
+                {types.map(t => (
+                  <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); toggleFilterModal(null); }}>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{t.label || t.name}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'price' && (
+              <>
+                {PRICE_RANGES.map(p => (
+                  <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); toggleFilterModal(null); }}>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{p.label}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+            {type === 'time' && (
+              <>
+                <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); toggleFilterModal(null); }}>
+                  <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>All Times</Text>
+                </Pressable>
+                {availableTimes.map(t => (
+                  <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); toggleFilterModal(null); }}>
+                    <Text style={[styles.dropdownOptionText, isCompact && styles.dropdownOptionTextMobile]}>{t}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
+  const renderMockupGround = (item: any) => {
     const displayPrice = (() => {
       if (dateKey !== 'All' && timeKey && item.time_slots) {
         const dateObj = new Date(dateKey);
@@ -374,548 +582,442 @@ export default function SearchScreen() {
     })();
 
     const isBox = String(item.pitch_type || '').toLowerCase().includes('box');
-    const unitLabel = isBox ? '/hr' : ' / match';
+    const unitLabel = isBox ? '/hr' : '/match';
+
+    const path = makeGroundPath(item);
+    const params: any = {};
+    if (dateKey !== 'All') params.date = dateKey;
+    if (timeKey) params.time = timeKey;
+
+    const navigateToDetails = () => {
+      router.push({ pathname: path as any, params });
+    };
 
     return (
-      <View style={{ flex: 1, marginBottom: 16 }}>
-        <GroundCard
-          ground={item}
-          glass={true}
-          displayPricePerUnit={displayPrice}
-          unitLabelOverride={unitLabel}
-          onPress={() => {
-            const path = makeGroundPath(item);
-            const params: any = {};
-            if (dateKey !== 'All') params.date = dateKey;
-            if (timeKey) params.time = timeKey;
-            router.push({ pathname: path as any, params });
-          }}
-        />
-      </View>
+      <GroundCard
+        ground={item}
+        glass={true}
+        displayPricePerUnit={displayPrice}
+        unitLabelOverride={unitLabel}
+        onPress={navigateToDetails}
+      />
     );
   };
 
-  const renderMatch = ({ item }: { item: any }) => {
-    const img = item.ground?.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+  const renderMockupMatch = (item: any) => {
+    const imgUrl = item.ground?.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
     const teamName = item.user?.team_name || 'Anonymous Team';
     const captainName = item.user?.full_name || 'Anonymous';
-    
+    const dateStr = item.booking_date;
+    const timeStr = item.start_time?.slice(0, 5);
+
+    const formattedDateTime = (() => {
+      let datePart = dateStr;
+      if (dateStr && dateStr.includes('-')) {
+        const p = dateStr.split('-');
+        if (p.length === 3) {
+          datePart = `${p[2]}/${p[1]}/${p[0].slice(2)}`;
+        }
+      }
+      return `${datePart} / ${timeStr}`;
+    })();
+
+    const distance = (() => {
+      if (userLat != null && userLng != null && item.ground?.latitude != null && item.ground?.longitude != null) {
+        const lat1 = userLat;
+        const lon1 = userLng;
+        const lat2 = Number(item.ground.latitude);
+        const lon2 = Number(item.ground.longitude);
+
+        if (!isNaN(lat2) && !isNaN(lon2)) {
+          const R = 6371; // Radius of the earth in km
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const d = R * c; // Distance in km
+          return d.toFixed(1);
+        }
+      }
+      const seed = item.ground?.id ? item.ground.id.charCodeAt(0) + item.ground.id.charCodeAt(item.ground.id.length - 1) : 47;
+      return (1.2 + (seed % 89) * 0.1).toFixed(1);
+    })();
+
+    const displayPrice = (() => {
+      const amt = Number(item.total_amount) || 0;
+      if (item.team_type === 'both') {
+        return Math.round((amt / 2) * 100) / 100;
+      }
+      return amt;
+    })();
+
     return (
       <Pressable 
-        style={styles.premiumCard} 
+        style={[styles.premiumMatchCard, viewMode === 'list' && styles.customGroundCardList]} 
         onPress={() => handleJoinMatch(item)}
+        key={item.id}
       >
-        <Image source={{ uri: img }} style={styles.premiumCardImage} />
-        <View style={styles.premiumOverlay}>
-          <View style={styles.premiumMatchHeader}>
-            <Text style={[styles.premiumTitle, { fontSize: 24, marginBottom: 2 }]}>Opposition - {teamName}</Text>
-            <Text style={styles.premiumCaptainText}>Capt: {captainName}</Text>
+        <View style={styles.premiumImageWrapper}>
+          <Image source={{ uri: imgUrl }} style={styles.premiumImage} />
+          <View style={styles.bookableBadge}>
+            <Text style={styles.bookableBadgeText}>OPPOSITION</Text>
           </View>
-          
-          <View style={styles.premiumInfoCard}>
-            <View style={styles.premiumLocationRow}>
-              <Swords size={16} color="#01b854" />
-              <Text style={styles.premiumLocationText}>{item.ground?.name}</Text>
-            </View>
-            
-            <View style={styles.premiumPriceRow}>
-              <Text style={styles.premiumPriceText}>₹{item.total_amount || '---'}</Text>
-              <Text style={styles.premiumPriceUnit}> / match</Text>
-            </View>
+        </View>
 
-            <View style={styles.premiumMatchMeta}>
-                 <Text style={styles.premiumMatchMetaText}>{item.booking_date} @ {item.start_time?.slice(0, 5)}</Text>
-            </View>
+        <View style={styles.premiumContent}>
+          <View style={styles.premiumTitleRow}>
+            <Text style={styles.premiumMatchName} numberOfLines={1}>{teamName}</Text>
+            <Text style={styles.premiumPriceText}>
+              ₹{displayPrice || '---'}
+              <Text style={styles.premiumPriceUnitText}>/team</Text>
+            </Text>
           </View>
 
-          <View style={styles.premiumBottomRow}>
-            <View style={styles.premiumLocationLink}>
-              <MapPin size={10} color="#FFFFFF" />
-              <Text style={styles.premiumLocationLinkText}>{item.ground?.city}</Text>
+          <View style={styles.premiumLocationRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Text style={styles.premiumLocation} numberOfLines={1}>
+                {item.ground?.name} ({item.ground?.city})
+              </Text>
             </View>
-            <Button 
-                title="JOIN NOW" 
-                onPress={() => handleJoinMatch(item)} 
-                variant="primary"
-                style={styles.premiumJoinBtnAction}
-                textStyle={styles.premiumJoinBtnText}
-            />
+            <Text style={styles.premiumDistance}>
+              ~ {distance} km
+            </Text>
+          </View>
+
+          <View style={[styles.premiumSportsRow, { gap: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 80 }}>
+              <Text style={styles.premiumVenueType} numberOfLines={1}>
+                {captainName.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', shrink: 0 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#01e669', fontFamily: 'Inter' }}>
+                {formattedDateTime}
+              </Text>
+            </View>
           </View>
         </View>
       </Pressable>
     );
   };
 
-  const combinedResults = useMemo(() => {
-    // Filter out nets and past slots from matches
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentMins = now.getHours() * 60 + now.getMinutes();
-
-    let filteredMatches = results.matches.filter((m: any) => {
-      // Basic type filter
-      if (String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')) return false;
-
-      // Temporal filter: hide if date is past
-      if (m.booking_date < todayStr) return false;
-
-      // If date is today, hide if start_time is past
-      if (m.booking_date === todayStr) {
-        const [h, min] = (m.start_time || '00:00').split(':').map(Number);
-        const slotMins = h * 60 + min;
-        return slotMins > currentMins;
-      }
-
-      return true;
-    });
-
-    if (dateKey !== 'All') {
-      const today = new Date().toISOString().split('T')[0];
-      if (dateKey === 'Today') {
-        filteredMatches = filteredMatches.filter(m => m.booking_date === today);
-      } else if (dateKey === 'Tomorrow') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        filteredMatches = filteredMatches.filter(m => m.booking_date === tomorrowStr);
-      } else {
-        // Specific date string (YYYY-MM-DD)
-        filteredMatches = filteredMatches.filter(m => m.booking_date === dateKey);
-      }
-    }
-
-    if (activeTab === 'grounds') return results.grounds.map(g => ({ ...g, _type: 'ground' }));
-    if (activeTab === 'matches') return filteredMatches.map(m => ({ ...m, _type: 'match' }));
-    return [
-      ...results.grounds.map(g => ({ ...g, _type: 'ground' })),
-      ...filteredMatches.map(m => ({ ...m, _type: 'match' }))
-    ];
-  }, [results, activeTab, dateKey]);
+  const isAnyDropdownOpen = showTypeModal || showDateModal || showLocationModal || showPriceModal || showTimeModal;
 
   const content = (
-    <View style={styles.container}>
-      <View style={styles.mainContent}>
-        {/* Sidebar */}
-        {!isCompact && (
-          <View style={styles.sidebar}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sidebarScroll}>
-              <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Search</Text>
-                <View style={styles.sidebarSearchBox}>
-                  <Search size={16} color="#9CA3AF" />
-                  <TextInput
-                    style={styles.sidebarSearchInput}
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholder="Keywords..."
-                    placeholderTextColor="#9CA3AF"
-                    onSubmitEditing={() => performSearch(query, locationKey, typeKey)}
-                    returnKeyType="search"
-                  />
+    <ScrollView 
+      style={styles.mainContainer}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      
+      {/* 1. STADIUM HERO SECTION — web only */}
+      {!isCompact && (
+        <View style={styles.heroSection}>
+          <Image 
+            source={require('@/assets/stadium_hero_bg.png')} 
+            style={styles.heroBackground}
+          />
+          <LinearGradient
+            colors={['#FFFFFF', 'rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.3)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.7, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <View style={styles.heroContainer}>
+            <View style={styles.heroLeft}>
+              <Text style={styles.perfectText}>FIND THE PERFECT</Text>
+              
+              <View style={styles.heroTitleContainer}>
+                <Text style={styles.heroTitle}>
+                  Cricket <Text style={styles.heroTitleHighlight}>Ground</Text>
+                </Text>
+                <View style={styles.titleUnderline} />
+              </View>
+              
+              <Text style={styles.heroSubtitle}>
+                Explore and book the best cricket grounds near you in just a few clicks.
+              </Text>
+              
+              <View style={styles.foundBadge}>
+                <View style={styles.foundIconBg}>
+                  <View style={styles.foundIconInner} />
+                </View>
+                <View style={styles.foundInfo}>
+                  <Text style={styles.foundCountText}>{combinedResults.length} Grounds Found</Text>
+                  <Text style={styles.foundSubText}>Across New Delhi, Gurugram & more</Text>
                 </View>
               </View>
+            </View>
 
-              <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Venue Type</Text>
-                <Pressable style={styles.filterButton} onPress={() => setShowTypeModal(!showTypeModal)}>
-                  <Building2 size={14} color="#01b854" />
-                  <Text style={styles.filterButtonText} numberOfLines={1}>
-                    {activeTab === 'matches' ? 'Find Opposition' : (typeKey || 'All Types')}
-                  </Text>
-                  <ChevronDown size={12} color="#9CA3AF" />
-                </Pressable>
-                {showTypeModal && (
-                  <View style={styles.dropdownInline}>
-                    <ScrollView style={{ maxHeight: 200 }}>
-                      <Pressable 
-                        style={styles.dropdownOption} 
-                        onPress={() => { setActiveTab('matches'); setTypeKey(''); setShowTypeModal(false); }}
-                      >
-                        <Text style={styles.dropdownOptionText}>Find Opposition</Text>
-                      </Pressable>
-                      {types.map(t => (
-                        <Pressable 
-                          key={t.id} 
-                          style={styles.dropdownOption} 
-                          onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); setShowTypeModal(false); }}
-                        >
-                          <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-                <View style={styles.sidebarSection}>
-                  <Text style={styles.sidebarSectionTitle}>Date</Text>
-                  <Pressable style={styles.filterButton} onPress={() => setShowDateModal(!showDateModal)}>
-                    <Calendar size={14} color="#01b854" />
-                    <Text style={styles.filterButtonText} numberOfLines={1}>
-                      {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </Text>
-                    <ChevronDown size={12} color="#9CA3AF" />
-                  </Pressable>
-                  {showDateModal && (
-                    <View style={styles.dropdownInline}>
-                      <ScrollView style={{ maxHeight: 400 }}>
-                        {['All', 'Today', 'Tomorrow'].map(d => (
-                          <Pressable 
-                            key={d} 
-                            style={styles.dropdownOption} 
-                            onPress={() => { setDateKey(d); setShowDateModal(false); }}
-                          >
-                            <Text style={styles.dropdownOptionText}>{d}</Text>
-                          </Pressable>
-                        ))}
-                        <View style={styles.calendarWrapper}>
-                          <RNCalendar
-                            current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
-                            minDate={new Date().toISOString().split('T')[0]}
-                            onDayPress={(day: any) => {
-                              setDateKey(day.dateString);
-                              setShowDateModal(false);
-                            }}
-                            hideArrows={false}
-                            renderArrow={(direction) => (
-                              <ChevronRight 
-                                size={14} 
-                                color="#01b854" 
-                                style={{ transform: [{ rotate: direction === 'left' ? '180deg' : '0deg' }] }} 
-                              />
-                            )}
-                            markedDates={{
-                              [dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : '']: {
-                                selected: true,
-                                disableTouchEvent: true,
-                                selectedColor: '#01b854',
-                                selectedTextColor: '#ffffff'
-                              }
-                            }}
-                            theme={{
-                              todayTextColor: '#01b854',
-                              arrowColor: '#01b854',
-                              selectedDayBackgroundColor: '#01b854',
-                              selectedDayTextColor: '#ffffff',
-                              textDayFontFamily: 'Inter',
-                              textMonthFontFamily: 'Inter',
-                              textDayHeaderFontFamily: 'Inter',
-                              textDayFontWeight: '500',
-                              textMonthFontWeight: '600',
-                              textDayHeaderFontWeight: '600',
-                              textDayFontSize: 11,
-                              textMonthFontSize: 11,
-                              textDayHeaderFontSize: 10,
-                              calendarBackground: '#ffffff',
-                              monthTextColor: '#111827',
-                              dayTextColor: '#4B5563',
-                              textSectionTitleColor: '#9CA3AF',
-                              // @ts-ignore
-                              'stylesheet.calendar.header': {
-                                header: {
-                                  flexDirection: 'row',
-                                  justifyContent: 'center',
-                                  alignItems: 'center',
-                                  paddingLeft: 0,
-                                  paddingRight: 0,
-                                  marginTop: 6,
-                                  gap: 12,
-                                },
-                                monthText: {
-                                  fontSize: 11,
-                                  fontWeight: '600',
-                                  fontFamily: 'Inter',
-                                  color: '#111827',
-                                }
-                              }
-                            }}
-                          />
-                        </View>
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
-              <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Location</Text>
-                <Pressable style={styles.filterButton} onPress={() => setShowLocationModal(!showLocationModal)}>
-                  <MapPin size={14} color="#01b854" />
-                  <Text style={styles.filterButtonText} numberOfLines={1}>
-                    {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
-                  </Text>
-                  <ChevronDown size={12} color="#9CA3AF" />
-                </Pressable>
-                {showLocationModal && (
-                  <View style={styles.dropdownInline}>
-                    <ScrollView style={{ maxHeight: 200 }}>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); setShowLocationModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Locations</Text>
-                      </Pressable>
-                      {locations.map(l => (
-                        <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); setShowLocationModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{l.label || l.city}</Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-
-
-              <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Price</Text>
-                <Pressable style={styles.filterButton} onPress={() => setShowPriceModal(!showPriceModal)}>
-                  <IndianRupee size={14} color="#01b854" />
-                  <Text style={styles.filterButtonText} numberOfLines={1}>
-                    {priceRange.label}
-                  </Text>
-                  <ChevronDown size={12} color="#9CA3AF" />
-                </Pressable>
-                {showPriceModal && (
-                  <View style={styles.dropdownInline}>
-                    <ScrollView style={{ maxHeight: 200 }}>
-                      {PRICE_RANGES.map(p => (
-                        <Pressable 
-                          key={p.label} 
-                          style={styles.dropdownOption} 
-                          onPress={() => { setPriceRange(p); setShowPriceModal(false); }}
-                        >
-                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Time</Text>
-                <Pressable style={styles.filterButton} onPress={() => setShowTimeModal(!showTimeModal)}>
-                  <Clock size={14} color="#01b854" />
-                  <Text style={styles.filterButtonText} numberOfLines={1}>
-                    {timeKey || 'All Times'}
-                  </Text>
-                  <ChevronDown size={12} color="#9CA3AF" />
-                </Pressable>
-                {showTimeModal && (
-                  <View style={styles.dropdownInline}>
-                    <ScrollView style={{ maxHeight: 200 }}>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); setShowTimeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Times</Text>
-                      </Pressable>
-                      {availableTimes.length > 0 ? availableTimes.map(t => (
-                        <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); setShowTimeModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{t}</Text>
-                        </Pressable>
-                      )) : (
-                        <View style={{ padding: 10 }}>
-                          <Text style={{ fontSize: 12, color: '#9CA3AF' }}>No available slots for selected filters</Text>
-                        </View>
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
+            <View style={styles.heroRight}>
+              <View style={[styles.stadiumLight, { top: 20, left: 30 }]} />
+              <View style={[styles.stadiumLight, { top: 30, right: 40 }]} />
+            </View>
           </View>
-        )}
+        </View>
+      )}
 
-        {/* Results Area */}
-        <View style={styles.resultsArea}>
-          {isCompact && (
-            <View style={styles.mobileHeader}>
-              <View style={styles.sidebarSearchBox}>
-                <Search size={16} color="#9CA3AF" />
-                <TextInput
-                  style={styles.sidebarSearchInput}
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Search city, venue or team..."
-                  placeholderTextColor="#9CA3AF"
-                  onSubmitEditing={() => performSearch(query, locationKey, typeKey)}
-                  returnKeyType="search"
-                />
-              </View>
-
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                contentContainerStyle={styles.mobileFiltersSlider}
-                style={styles.filtersScrollView}
+      {/* 2. FLOATING FILTER BAR */}
+      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }]}>
+        <View style={[styles.filterBar, isCompact && styles.filterBarMobile]}>
+          <View style={[isCompact ? { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 234, 107, 0.3)', marginBottom: 4 } : { flexDirection: 'row', alignItems: 'center', flex: 1.2 }]}>
+            <View style={[styles.filterItemSearch, isCompact && { flex: 1, minHeight: 44 }]}>
+              <Search size={16} color="#00ea6b" style={{ marginRight: 8 }} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Keywords..."
+                placeholderTextColor="rgba(0, 234, 107, 0.5)"
+                style={styles.filterSearchInput}
+              />
+            </View>
+            
+            {isCompact && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.mobileToggleFiltersBtn,
+                  isFiltersExpanded && styles.mobileToggleFiltersBtnActive,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
               >
-                <Pressable style={styles.mobileFilterPill} onPress={() => setShowLocationModal(true)}>
-                  <MapPin size={12} color={locationKey ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.mobileFilterPillText, locationKey && styles.mobileFilterPillTextActive]}>
-                    {locationKey ? locationKey.split('__')[0] : 'Location'}
-                  </Text>
-                </Pressable>
+                <SlidersHorizontal size={14} color={isFiltersExpanded ? '#FFFFFF' : '#01e669'} />
+                <Text style={[styles.mobileToggleFiltersText, isFiltersExpanded && { color: '#FFFFFF' }]}>
+                  Filters
+                </Text>
+              </Pressable>
+            )}
+          </View>
+          
+          {(isFiltersExpanded || !isCompact) && (
+            <>
+              {!isCompact && <View style={styles.filterDivider} />}
 
-                <Pressable style={styles.mobileFilterPill} onPress={() => setShowDateModal(true)}>
-                  <Calendar size={12} color={dateKey !== 'All' ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.mobileFilterPillText, dateKey !== 'All' && styles.mobileFilterPillTextActive]}>
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTypeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('type')}>
+                <Building2 size={16} color="#00ea6b" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>VENUE TYPE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {typeKey || 'All Types'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showTypeModal && renderDropdownOptions('type')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, { flex: 1.4 }, isCompact && styles.filterItemMobile, showDateModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('date')}>
+                <Calendar size={16} color="#00ea6b" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>DATE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
                     {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </Text>
-                </Pressable>
-
-                <Pressable style={styles.mobileFilterPill} onPress={() => setShowTypeModal(true)}>
-                  <Building2 size={12} color={typeKey ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.mobileFilterPillText, typeKey && styles.mobileFilterPillTextActive]}>
-                    {typeKey || 'Venue'}
-                  </Text>
-                </Pressable>
-
-                <Pressable style={styles.mobileFilterPill} onPress={() => setShowPriceModal(true)}>
-                  <IndianRupee size={12} color={priceRange.label !== 'All Prices' ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.mobileFilterPillText, priceRange.label !== 'All Prices' && styles.mobileFilterPillTextActive]}>
-                    {priceRange.label === 'All Prices' ? 'Price' : priceRange.label}
-                  </Text>
-                </Pressable>
-
-                <Pressable style={styles.mobileFilterPill} onPress={() => setShowTimeModal(true)}>
-                  <Clock size={12} color={timeKey ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.mobileFilterPillText, timeKey && styles.mobileFilterPillTextActive]}>
-                    {timeKey || 'Time'}
-                  </Text>
-                </Pressable>
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Inline Modals for Mobile */}
-          {isCompact && (showLocationModal || showTypeModal || showTimeModal || showDateModal || showPriceModal) && (
-            <View style={styles.mobileFilterDropdownOverlay}>
-              <View style={styles.mobileFilterDropdownContent}>
-                <View style={styles.mobileDropdownHeader}>
-                  <Text style={styles.mobileDropdownTitle}>
-                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : showPriceModal ? 'Select Price' : showTimeModal ? 'Select Time' : 'Filter'}
-                  </Text>
-                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); setShowPriceModal(false); }}>
-                    <Text style={styles.closeText}>Done</Text>
-                  </Pressable>
                 </View>
-                <ScrollView style={{ maxHeight: 300 }}>
-                  {showLocationModal ? (
-                    <>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setLocationKey(''); setShowLocationModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Locations</Text>
-                      </Pressable>
-                      {locations.map(l => (
-                        <Pressable key={`${l.city}__${l.state}`} style={styles.dropdownOption} onPress={() => { setLocationKey(`${l.city}__${l.state}`); setShowLocationModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{l.label || l.city}</Text>
-                        </Pressable>
-                      ))}
-                    </>
-                  ) : showTypeModal ? (
-                    <>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(''); setShowTypeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Venues</Text>
-                      </Pressable>
-                      <Pressable 
-                        style={styles.dropdownOption} 
-                        onPress={() => { setActiveTab('matches'); setTypeKey(''); setShowTypeModal(false); }}
-                      >
-                        <Text style={styles.dropdownOptionText}>Find Opposition</Text>
-                      </Pressable>
-                      {types.map(t => (
-                        <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); setShowTypeModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
-                        </Pressable>
-                      ))}
-                    </>
-                  ) : showPriceModal ? (
-                    <>
-                      {PRICE_RANGES.map(p => (
-                        <Pressable key={p.label} style={styles.dropdownOption} onPress={() => { setPriceRange(p); setShowPriceModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{p.label}</Text>
-                        </Pressable>
-                      ))}
-                    </>
-                  ) : showDateModal ? (
-                    <>
-                      {['All', 'Today', 'Tomorrow'].map(d => (
-                        <Pressable 
-                          key={d} 
-                          style={styles.dropdownOption} 
-                          onPress={() => { setDateKey(d); setShowDateModal(false); }}
-                        >
-                          <Text style={styles.dropdownOptionText}>{d} {d === 'All' ? 'Dates' : ''}</Text>
-                        </Pressable>
-                      ))}
-                      <View style={styles.calendarWrapper}>
-                        <RNCalendar
-                          current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
-                          minDate={new Date().toISOString().split('T')[0]}
-                          onDayPress={(day: any) => {
-                            setDateKey(day.dateString);
-                            setShowDateModal(false);
-                          }}
-                          markedDates={{
-                            [dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : '']: {
-                              selected: true,
-                              disableTouchEvent: true,
-                              selectedColor: '#01b854',
-                              selectedTextColor: '#ffffff'
-                            }
-                          }}
-                          theme={{
-                            todayTextColor: '#01b854',
-                            arrowColor: '#01b854',
-                            selectedDayBackgroundColor: '#01b854',
-                            selectedDayTextColor: '#ffffff',
-                            textDayFontFamily: 'Inter',
-                            textMonthFontFamily: 'Inter',
-                            textDayHeaderFontFamily: 'Inter',
-                            textDayFontWeight: '600',
-                            textMonthFontWeight: '800',
-                            textDayHeaderFontWeight: '800',
-                          }}
-                        />
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); setShowTimeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Times</Text>
-                      </Pressable>
-                      {availableTimes.length > 0 ? availableTimes.map(t => (
-                        <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); setShowTimeModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{t}</Text>
-                        </Pressable>
-                      )) : (
-                        <View style={{ padding: 10 }}>
-                          <Text style={{ fontSize: 12, color: '#9CA3AF' }}>No available slots</Text>
-                        </View>
-                      )}
-                    </>
-                  )}
-                </ScrollView>
-              </View>
-            </View>
-          )}
+                <ChevronDown size={14} color="#00ea6b" />
+                {showDateModal && renderDropdownOptions('date')}
+              </Pressable>
 
-          {loading ? (
-            <ActivityIndicator color="#01b854" style={{ marginTop: 40 }} />
-          ) : combinedResults.length === 0 ? (
-            <View style={styles.empty}>
-              <Trophy size={48} color="#E5E7EB" />
-              <Text style={styles.emptyTitle}>No results found</Text>
-              <Text style={styles.emptySubtitle}>Adjust your filters or try a different search term.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={combinedResults}
-              key={isWeb && width > 1200 ? 'cols-2' : 'cols-1'}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => item._type === 'ground' ? renderGround({ item }) : renderMatch({ item })}
-              contentContainerStyle={styles.list}
-              numColumns={isWeb && width > 1200 ? 2 : 1}
-              columnWrapperStyle={isWeb && width > 1200 ? { gap: 16 } : undefined}
-            />
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showLocationModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('location')}>
+                <MapPin size={16} color="#00ea6b" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>LOCATION</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showLocationModal && renderDropdownOptions('location')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showPriceModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('price')}>
+                <IndianRupee size={16} color="#00ea6b" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>PRICE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {priceRange.label}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showPriceModal && renderDropdownOptions('price')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTimeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('time')}>
+                <Clock size={16} color="#00ea6b" />
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>TIME</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {timeKey || 'All Times'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showTimeModal && renderDropdownOptions('time')}
+              </Pressable>
+
+              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile, isCompact && styles.applyFiltersBtnMobileTheme]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
+                <SlidersHorizontal size={14} color={isCompact ? '#06392e' : '#FFFFFF'} style={{ marginRight: 6 }} />
+                <Text style={[styles.applyFiltersBtnText, isCompact && { color: '#06392e' }]}>Apply Filters</Text>
+              </Pressable>
+            </>
           )}
         </View>
       </View>
-    </View>
+
+      {/* 3. SORTING AND VIEW TOGGLE */}
+      <View style={[styles.sortRowContainer, showSortModal && { zIndex: 999, position: 'relative' }]}>
+        <View style={styles.sortRow}>
+          <View style={styles.sortLeft}>
+            {!isCompact && <Text style={styles.sortLabel}>Sort by:</Text>}
+            <Pressable style={styles.sortBtn} onPress={() => setShowSortModal(!showSortModal)}>
+              <Text style={styles.sortBtnText}>{sortBy}</Text>
+              <ChevronDown size={12} color="#94A3B8" />
+              {showSortModal && (
+                <View style={styles.sortDropdown}>
+                  {['Popularity', 'Price: Low to High', 'Price: High to Low', 'Rating'].map(s => (
+                    <Pressable key={s} style={styles.dropdownOption} onPress={() => { setSortBy(s); setShowSortModal(false); }}>
+                      <Text style={styles.dropdownOptionText}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </Pressable>
+          </View>
+
+          {!isCompact && (
+            <View style={styles.sortRight}>
+              <Pressable 
+                style={[styles.toggleBtn, viewMode === 'grid' && styles.toggleBtnActive]} 
+                onPress={() => setViewMode('grid')}
+              >
+                <Grid size={14} color={viewMode === 'grid' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.toggleBtnText, viewMode === 'grid' && styles.toggleBtnTextActive]}>Grid View</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]} 
+                onPress={() => setViewMode('list')}
+              >
+                <List size={14} color={viewMode === 'list' ? '#FFFFFF' : '#64748B'} style={{ marginRight: 6 }} />
+                <Text style={[styles.toggleBtnText, viewMode === 'list' && styles.toggleBtnTextActive]}>List View</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {isCompact && (
+          <View style={styles.mobileVenuesFoundContainer}>
+            <Text style={styles.mobileVenuesFoundText}>
+              {combinedResults.length} {combinedResults.length === 1 ? 'Venue' : 'Venues'} Found
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* 4. RESULTS DISPLAY */}
+      <View style={styles.resultsContainer}>
+        {loading ? (
+          <ActivityIndicator color="#01b854" size="large" style={{ marginTop: 60 }} />
+        ) : sortedCombinedResults.length === 0 ? (
+          <View style={styles.empty}>
+            <Trophy size={48} color="#E2E8F0" />
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptySubtitle}>Adjust your filters or try a different search term.</Text>
+          </View>
+        ) : (
+          <View style={[
+            styles.list,
+            isWeb && viewMode === 'grid' && {
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 20,
+            },
+            isWeb && viewMode === 'list' && {
+              alignItems: 'center',
+            }
+          ]}>
+            {sortedCombinedResults.map(item => (
+              <View 
+                key={item.id} 
+                style={[
+                  isWeb && viewMode === 'grid' ? {
+                    width: width > 1300 ? '23.5%' : width > 900 ? '48%' : '100%',
+                  } : {
+                    width: !isCompact ? 700 : width > 480 ? 440 : '100%',
+                    maxWidth: '100%',
+                    alignSelf: 'center',
+                  }
+                ]}
+              >
+                {item._type === 'ground' ? renderMockupGround(item) : renderMockupMatch(item)}
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* 5. FOOTER VALUE PROPS */}
+      <View style={styles.highlightsContainer}>
+        <View style={[styles.footerHighlightsBar, isCompact && { flexDirection: 'column', gap: 20 }]}>
+          <View style={styles.highlightItem}>
+            <View style={styles.highlightIconContainer}>
+              <Shield size={18} color="#01b854" strokeWidth={2.5} />
+            </View>
+            <View style={styles.highlightTextContainer}>
+              <Text style={styles.highlightTitle}>Verified Venues</Text>
+              <Text style={styles.highlightDesc}>Quality you can trust</Text>
+            </View>
+          </View>
+
+          <View style={styles.highlightDivider} />
+
+          <View style={styles.highlightItem}>
+            <View style={styles.highlightIconContainer}>
+              <Lock size={18} color="#01b854" strokeWidth={2.5} />
+            </View>
+            <View style={styles.highlightTextContainer}>
+              <Text style={styles.highlightTitle}>Secure Booking</Text>
+              <Text style={styles.highlightDesc}>100% safe & secure</Text>
+            </View>
+          </View>
+
+          <View style={styles.highlightDivider} />
+
+          <View style={styles.highlightItem}>
+            <View style={styles.highlightIconContainer}>
+              <Zap size={18} color="#01b854" strokeWidth={2.5} />
+            </View>
+            <View style={styles.highlightTextContainer}>
+              <Text style={styles.highlightTitle}>Instant Confirmation</Text>
+              <Text style={styles.highlightDesc}>Book in just a few clicks</Text>
+            </View>
+          </View>
+
+          <View style={styles.highlightDivider} />
+
+          <View style={styles.highlightItem}>
+            <View style={styles.highlightIconContainer}>
+              <Users size={18} color="#01b854" strokeWidth={2.5} />
+            </View>
+            <View style={styles.highlightTextContainer}>
+              <Text style={styles.highlightTitle}>Elite Community</Text>
+              <Text style={styles.highlightDesc}>Play. Compete. Grow.</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+    </ScrollView>
   );
 
   if (isWeb) {
@@ -923,546 +1025,951 @@ export default function SearchScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <MobileAppNavbar title="Search" />
+    <View style={styles.mobileContainer}>
+      <MobileAppNavbar 
+        title="Search" 
+        titleColor="#0F172A" 
+        lightBg 
+        leftAction={
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+          </TouchableOpacity>
+        }
+      />
       {content}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FAFAFA',
   },
-  pillRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+  scrollContent: {
+    flexGrow: 1,
   },
-  pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  pillActive: {
-    backgroundColor: 'rgba(1,184,84,0.1)',
-    borderColor: '#01b854',
-  },
-  pillText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  pillTextActive: {
-    color: '#01b854',
-  },
-  mainContent: {
+  mobileContainer: {
     flex: 1,
-    flexDirection: 'row',
-  },
-  sidebar: {
-    width: 220,
     backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
-    borderRightColor: '#F3F4F6',
-    ...Platform.select({
-      web: {
-        position: 'sticky' as any,
-        top: 64,
-        height: 'calc(100vh - 64px)' as any,
-      }
-    }) as any,
   },
-  sidebarScroll: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 20,
+  heroSection: {
+    width: '100%',
+    height: Platform.OS === 'web' ? 380 : 260,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  sidebarSearchBox: {
+  heroContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 8,
+    justifyContent: 'space-between',
+    zIndex: 2,
   },
-  sidebarSearchInput: {
-    flex: 1,
-    color: '#111827',
-    fontSize: 13,
+  heroLeft: {
+    flex: 1.2,
+    maxWidth: 580,
+    justifyContent: 'center',
+  },
+  perfectText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#01b854',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  heroTitleContainer: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
+  heroTitle: {
+    fontSize: Platform.OS === 'web' ? 56 : 32,
+    fontWeight: '900',
+    color: '#043529',
     fontFamily: 'Inter',
-    fontWeight: '400',
-    ...Platform.select({
-      web: { outlineStyle: 'none' }
-    }) as any,
+    letterSpacing: -1.5,
   },
-  sidebarSection: {
-    gap: 8,
+  heroTitleHighlight: {
+    color: '#01b854',
   },
-  sidebarSectionTitle: {
-    fontSize: 10,
+  titleUnderline: {
+    height: 4,
+    backgroundColor: '#01b854',
+    borderRadius: 2,
+    width: 140,
+    position: 'absolute',
+    bottom: -6,
+    right: 0,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#475569',
     fontWeight: '500',
-    color: '#4B5563',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: 24,
     fontFamily: 'Inter',
   },
-  sidebarTab: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+  foundBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    gap: 12,
+  },
+  foundIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#01b854',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foundIconInner: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     backgroundColor: 'transparent',
   },
-  sidebarTabActive: {
-    backgroundColor: 'rgba(216, 247, 157, 0.08)',
+  foundInfo: {
+    justifyContent: 'center',
   },
-  sidebarTabText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#4B5563',
+  foundCountText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#043529',
     fontFamily: 'Inter',
   },
-  sidebarTabTextActive: {
-    color: '#01b854',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 8,
-  },
-  filterButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#111827',
-    flex: 1,
-    fontFamily: 'Inter',
-  },
-  dropdownInline: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginTop: 4,
-    padding: 4,
-  },
-  dropdownOption: {
-    padding: 10,
-    borderRadius: 8,
-  },
-  dropdownOptionText: {
-    fontSize: 12,
-    color: '#4B5563',
-    fontFamily: 'Inter',
-  },
-  mobileFiltersSlider: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    flexDirection: 'row',
-  },
-  mobileFilterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 6,
-  },
-  mobileFilterPillText: {
-    fontSize: 12,
-    color: '#6B7280',
+  foundSubText: {
+    fontSize: 11,
+    color: '#64748B',
     fontWeight: '500',
     fontFamily: 'Inter',
   },
-  mobileFilterPillTextActive: {
-    color: '#01b854',
+  heroRight: {
+    flex: 1.1,
+    height: '100%',
+    position: 'relative',
+    overflow: 'visible',
   },
-  mobileFilterDropdownOverlay: {
-    position: 'absolute' as any,
+  heroBackground: {
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    zIndex: 1000,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  mobileFilterDropdownContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
     width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
+    height: '100%',
+    resizeMode: 'cover',
   },
-  mobileDropdownHeader: {
+  stadiumLight: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 30,
+  },
+  glowingTrail: {
+    position: 'absolute',
+    width: 320,
+    height: 60,
+    right: 130,
+    top: 60,
+    borderRadius: 30,
+    transform: [{ rotate: '-12deg' }],
+  },
+  wicketsContainer: {
+    position: 'absolute',
+    bottom: 15,
+    right: 240,
+    width: 80,
+    height: 140,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-end',
+    opacity: 0.95,
   },
-  mobileDropdownTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  closeText: {
-    fontSize: 14,
-    color: '#01b854',
-    fontWeight: '700',
-  },
-  calendarWrapper: {
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 12,
-  },
-  resultsArea: {
-    flex: 1,
-  },
-  mobileHeader: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    gap: 8,
-  },
-  filtersScrollView: {
-    marginTop: 4,
-    marginHorizontal: -16, // Bleed out to edges for better scroll feel
-  },
-  mobileFiltersSlider: {
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-    gap: 8,
-  },
-  mobileTabs: {
-    marginTop: 4,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
-  tabActive: {
-    backgroundColor: '#01b854',
-  },
-  tabText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    fontFamily: 'Inter',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  list: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 80,
-    gap: 16,
-  },
-  premiumCard: {
-    flex: 1,
-    height: 380,
-    backgroundColor: '#111827',
-    borderRadius: 24,
-    overflow: 'hidden',
-    marginBottom: 24,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-  premiumCardImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.6,
-  },
-  premiumOverlay: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  premiumMatchHeader: {
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 24,
-  },
-  premiumTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    marginBottom: 6,
-    fontFamily: 'Inter',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
-  premiumCaptainText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    opacity: 0.9,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  premiumInfoCard: {
-    backgroundColor: 'rgba(25, 25, 25, 0.85)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
+  wicketStump: {
+    width: 8,
+    height: 125,
+    backgroundColor: '#E5A93C',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#C67A13',
     shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    marginBottom: 24,
+    shadowOffset: { width: 1, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
-  premiumLocationRow: {
+  wicketBail: {
+    position: 'absolute',
+    top: 10,
+    left: -2,
+    right: -2,
+    height: 8,
+    backgroundColor: '#E5A93C',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: '#C67A13',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  cricketBall: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    right: 70,
+    top: 40,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  ballSeam: {
+    position: 'absolute',
+    width: 130,
+    height: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#7F0000',
+    top: '46%',
+    left: '-20%',
+    transform: [{ rotate: '42deg' }],
+    opacity: 0.9,
+  },
+  ballSeamStitch: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#7F0000',
+  },
+  ballShine: {
+    position: 'absolute',
+    width: 28,
+    height: 16,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    top: 10,
+    left: 18,
+    transform: [{ rotate: '-15deg' }],
+  },
+  filterBarContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    marginTop: Platform.OS === 'web' ? -35 : 15,
+    zIndex: 90,
+    ...Platform.select({
+      web: {
+        position: 'sticky' as any,
+        top: -5,
+      },
+    }),
+  },
+  filterBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 6,
-    width: '100%',
+    backgroundColor: '#06392e',
+    borderRadius: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#00ea6b',
   },
-  premiumLocationText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  premiumPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 8,
-    width: '100%',
-  },
-  premiumPriceText: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#01b854',
-    textAlign: 'center',
-  },
-  premiumPriceUnit: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  premiumAmenities: {
+  filterBarMobile: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 20,
+    padding: 12,
   },
-  premiumAmenityBadge: {
+  filterItemSearch: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
+    flex: 1.2,
+    minHeight: 44,
   },
-  premiumAmenityText: {
-    fontSize: 10,
-    color: '#FFFFFF',
+  filterSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: '#00ea6b',
     fontWeight: '600',
+    fontFamily: 'Inter',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
   },
-  premiumRatingContainer: {
-    alignItems: 'flex-end',
-    gap: 4,
+  filterDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(0, 234, 107, 0.2)',
+    marginHorizontal: 12,
   },
-  premiumStars: {
+  filterItem: {
     flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minHeight: 44,
+    position: 'relative',
+    gap: 8,
+  },
+  filterTextContent: {
+    flex: 1,
     gap: 2,
   },
-  premiumMatchMeta: {
-    marginBottom: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  premiumMatchMetaText: {
-    fontSize: 12,
-    color: '#FFFFFF',
+  filterItemLabel: {
+    fontSize: 9,
     fontWeight: '800',
-    textAlign: 'center',
+    color: 'rgba(0, 234, 107, 0.7)',
+    letterSpacing: 1,
   },
-  premiumDateTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(1, 184, 84, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 4,
-    marginBottom: 12,
+  filterItemValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#00ea6b',
+    fontFamily: 'Inter',
+  },
+  floatingDropdown: {
+    position: 'absolute',
+    top: '110%',
+    left: -10,
+    right: -10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.3)',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    padding: 6,
+    zIndex: 100,
   },
-  premiumDateTimeText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    letterSpacing: 0.5,
+  dateDropdown: {
+    width: 360,
+    maxWidth: 320,
+    left: Platform.OS === 'web' ? -100 : -60,
+    padding: 16,
+    maxHeight: 480,
   },
-  premiumBottomRow: {
-    position: 'absolute' as any,
-    bottom: 20,
-    left: 20,
-    right: 20,
+  dateDropdownContainer: {
+    width: '100%',
+  },
+  dateQuickOptions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    gap: 8,
+    marginBottom: 12,
   },
-  premiumReviewText: {
-    fontSize: 10,
+  dateQuickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  dateQuickBtnActive: {
+    backgroundColor: '#01e669',
+  },
+  dateQuickBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  dateQuickBtnTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    opacity: 0.9,
   },
-  premiumJoinBtnAction: {
-    width: 140,
-    height: 40,
-    borderRadius: 99,
+  dropdownOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
   },
-  premiumJoinBtnText: {
+  dropdownOptionText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
   },
-  premiumLocationLink: {
+  calendarWrapper: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 8,
+  },
+  applyFiltersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#06392e',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginLeft: 12,
+  },
+  applyFiltersBtnMobile: {
+    width: '100%',
+    justifyContent: 'center',
+    marginLeft: 0,
+    marginTop: 8,
+  },
+  mobileToggleFiltersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    opacity: 0.9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 230, 105, 0.25)',
+    backgroundColor: 'rgba(1, 230, 105, 0.05)',
   },
-  premiumLocationLinkText: {
+  mobileToggleFiltersBtnActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  mobileToggleFiltersText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: '#00ea6b',
+    fontFamily: 'Inter',
+  },
+  mobileVenuesFoundContainer: {
+    width: '100%',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 10,
+    alignItems: 'flex-start',
+  },
+  mobileVenuesFoundText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#06392e',
+    fontFamily: 'Inter',
+  },
+  filterItemMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    flexGrow: 1,
+    minWidth: '46%',
+  },
+  filterItemSearchMobile: {
+    width: '100%',
+    flex: 0,
+    flexBasis: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 8,
+    marginBottom: 4,
+  },
+  filterItemMobileNoBorder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 44,
+    flexGrow: 1,
+    minWidth: '46%',
+  },
+  floatingDropdownMobile: {
+    backgroundColor: '#06392e',
+    borderColor: 'rgba(0, 234, 107, 0.3)',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
+    shadowOpacity: 0.1,
+  },
+  dropdownOptionTextMobile: {
+    color: '#FFFFFF',
+  },
+  dateQuickBtnMobile: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dateQuickBtnTextMobile: {
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  applyFiltersBtnMobileTheme: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroSectionMobile: {
+    height: 280,
+  },
+  heroContainerMobile: {
+    paddingHorizontal: 16,
+  },
+  heroTitleMobile: {
+    fontSize: 32,
+    letterSpacing: -0.5,
+  },
+  titleUnderlineMobile: {
+    width: 100,
+    bottom: -4,
+  },
+  heroSubtitleMobile: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  applyFiltersBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  sortRowContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sortLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sortLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  sortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
+    position: 'relative',
+  },
+  sortBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#043529',
+    fontFamily: 'Inter',
+  },
+  sortDropdown: {
+    position: 'absolute',
+    top: '110%',
+    left: 0,
+    width: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    padding: 4,
+    zIndex: 90,
+  },
+  sortRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#043529',
+    borderColor: '#043529',
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  toggleBtnTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  card: {
-    flex: 1,
+  resultsContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+  list: {
+    paddingBottom: 40,
+  },
+  customGroundCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    marginBottom: 16,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 3,
+    flex: 1,
+    marginBottom: 20,
   },
-  cardContent: {
-    padding: 16,
-    gap: 8,
-  },
-  cardHeader: {
+  customGroundCardList: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+  cardImgContainer: {
+    width: '100%',
+    height: 220,
+    position: 'relative',
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+  cardImgContainerList: {
+    width: 220,
+    height: 180,
   },
-  badgeText: {
+  cardImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  cardTypeBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: '#043529',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  cardTypeBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#6B7280',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-  metaRow: {
-    flexDirection: 'row',
+  favoriteCircle: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
-  metaText: {
-    fontSize: 13,
-    color: '#6B7280',
+  cardDetails: {
+    padding: 20,
   },
-  bottomRow: {
+  cardTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  customCardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+    flex: 1.1,
+  },
+  customCardPrice: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#01b854',
+    fontFamily: 'Inter',
+  },
+  customCardUnit: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  cardLocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  customCardLocText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  cardRatingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
+  ratingVal: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#01b854',
+  },
+  ratingText: {
+    fontSize: 11,
+    color: '#01b854',
+    fontWeight: '600',
+  },
+  cardDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
     marginTop: 4,
   },
-  ctaButton: {
-    paddingHorizontal: 16,
-    height: 36,
+  cardDetailsBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
-  empty: {
+  highlightsContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+  },
+  footerHighlightsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  highlightItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
     flex: 1,
+  },
+  highlightIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#E8F8F0',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 60,
-    gap: 16,
+  },
+  highlightTextContainer: {
+    gap: 2,
+  },
+  highlightTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+  },
+  highlightDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  highlightDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 16,
+  },
+  empty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#043529',
     fontFamily: 'Inter',
   },
   emptySubtitle: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
-    maxWidth: 300,
-    lineHeight: 22,
+    fontSize: 14,
+    color: '#64748B',
     fontFamily: 'Inter',
+  },
+  premiumMatchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    marginBottom: 20,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    padding: 0,
+  },
+  premiumImageWrapper: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 16 / 9,
+    overflow: 'hidden',
+  },
+  premiumImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E0E0E0',
+  },
+  premiumContent: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  premiumTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  premiumName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginRight: 8,
+  },
+  premiumMatchName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginRight: 8,
+  },
+  premiumPriceText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2D3450',
+    fontFamily: 'Inter',
+  },
+  premiumPriceUnitText: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#64748B',
+  },
+  premiumLocationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  premiumLocation: {
+    flex: 1,
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '400',
+  },
+  premiumDistance: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  premiumSportsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bookableBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#01e669',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderTopLeftRadius: 8,
+  },
+  bookableBadgeText: {
+    color: '#06392e',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
   },
 });

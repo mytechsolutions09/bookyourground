@@ -13,7 +13,7 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Our Mission</Text>
             <Text style={styles.paragraph}>
-              At Book my ground, our mission is to make sports accessible to everyone. 
+              At Book Your Ground, our mission is to make sports accessible to everyone. 
               We bridge the gap between sports enthusiasts and venue owners by providing a 
               seamless, technology-driven booking platform. Whether it's a late-night cricket match 
               with friends or a corporate tournament, we ensure that finding and booking the perfect 
@@ -37,7 +37,7 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Our Story</Text>
             <Text style={styles.paragraph}>
-              Founded in 2026, Book my ground started with a simple problem: the difficulty of 
+              Founded in 2026, Book Your Ground started with a simple problem: the difficulty of 
               finding locally available turfs without making dozens of phone calls. Today, we are 
               growing into a community of thousands of players and hundreds of partner venues, 
               striving to digitize the local sports infrastructure.

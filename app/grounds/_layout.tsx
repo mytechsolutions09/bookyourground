@@ -14,6 +14,7 @@ export default function GroundsIdLayout() {
           fontSize: 17,
         },
         headerShadowVisible: false,
+        headerTitleAlign: 'center',
         contentStyle: { backgroundColor: '#F5F5F5' },
         animation: 'slide_from_right',
       }}

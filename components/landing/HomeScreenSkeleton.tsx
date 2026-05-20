@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
   // ── Premium Hero ────────────────────
   premiumHero: {
     backgroundColor: '#F1F5F9', // Light grey instead of dark green
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingBottom: 64,
   },
   heroPadding: {

@@ -38,11 +38,14 @@ function getActiveTab(
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
   if (root === 'shop') return 'shop';
-  // Also check if we are in (owner) or (admin) inventory / bookings
+  // Also check if we are in (owner) or (admin) inventory / bookings / other admin pages
   if (segments.includes('(owner)') && segments.includes('inventory')) return 'inventory';
-  if (segments.includes('(admin)') && segments.includes('inventory')) return 'inventory';
   if (segments.includes('(owner)') && segments.includes('ground-bookings')) return 'bookings';
-  if (segments.includes('(admin)') && segments.includes('ground-bookings')) return 'bookings';
+  if (segments.includes('(admin)')) {
+    if (segments.includes('inventory')) return 'inventory';
+    if (segments.includes('bookings') || segments.includes('ground-bookings')) return 'bookings';
+    return 'profile';
+  }
   if (segments.includes('ground-bookings')) return 'bookings';
 
   if (root !== '(tabs)') return 'home';
@@ -152,7 +155,7 @@ export default function MobileTabBar() {
   const showInventoryTab = isOwner || isSuperAdmin;
   const showOwnerBookings = isOwner || isSuperAdmin;
   
-  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', 'stats'];
+  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', isSuperAdmin ? 'profile' : 'stats'];
 
   const go = (href: string, tabName: string) => {
     const currentIndex = TAB_ORDER.indexOf(activeTab);
@@ -248,13 +251,23 @@ export default function MobileTabBar() {
         <Text style={[styles.label, { color: activeTab === 'shop' ? '#f8688a' : INACTIVE }]}>Shop</Text>
       </Pressable>
 
-      <Pressable
-        style={styles.item}
-        onPress={() => go('/(tabs)/cricket/stats', 'stats')}
-      >
-        <BarChart2 size={size} color={activeTab === 'stats' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'stats' ? ACTIVE : INACTIVE }]}>Stats</Text>
-      </Pressable>
+      {isSuperAdmin ? (
+        <Pressable
+          style={styles.item}
+          onPress={() => go('/(tabs)/profile', 'profile')}
+        >
+          <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
+          <Text style={[styles.label, { color: activeTab === 'profile' ? ACTIVE : INACTIVE }]}>Profile</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          style={styles.item}
+          onPress={() => go('/(tabs)/cricket/stats', 'stats')}
+        >
+          <BarChart2 size={size} color={activeTab === 'stats' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
+          <Text style={[styles.label, { color: activeTab === 'stats' ? ACTIVE : INACTIVE }]}>Stats</Text>
+        </Pressable>
+      )}
     </Animated.View>
   );
 }

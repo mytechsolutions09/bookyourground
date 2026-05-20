@@ -13,7 +13,8 @@ import {
   ShoppingBag,
   IndianRupee,
   Star,
-  AlertCircle
+  AlertCircle,
+  Heart
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -230,9 +231,7 @@ export default function AdminDashboardScreen() {
               { label: 'Bookings', icon: Calendar, color: '#FF9800', path: '/(admin)/bookings' },
               { label: 'Grounds Inventory', icon: Building2, color: '#4CAF50', path: '/(admin)/grounds' },
               { label: 'Inventory & Occupancy', icon: Package, color: '#6366F1', path: '/(admin)/inventory' },
-              { label: 'Categories', icon: ShoppingBag, color: '#EC4899', path: '/(admin)/categories' },
               { label: 'Locations', icon: LifeBuoy, color: '#3B82F6', path: '/(admin)/locations' },
-              { label: 'Reviews', icon: Star, color: '#F59E0B', path: '/(admin)/reviews' },
             ].map((action, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -257,8 +256,11 @@ export default function AdminDashboardScreen() {
           <View style={styles.actionsGrid}>
             {[
               { label: 'Products', icon: Package, color: '#8B5CF6', path: '/(admin)/products' },
+              { label: 'Categories', icon: ShoppingBag, color: '#EC4899', path: '/(admin)/categories' },
               { label: 'Orders', icon: ShoppingBag, color: '#059669', path: '/(admin)/orders' },
               { label: 'Returns', icon: AlertCircle, color: '#EF4444', path: '/(admin)/returns' },
+              { label: 'Reviews', icon: Star, color: '#F59E0B', path: '/(admin)/reviews' },
+              { label: 'Wishlists', icon: Heart, color: '#EF4444', path: '/(admin)/wishlists' },
               { label: 'Support Tickets', icon: LifeBuoy, color: '#6366F1', path: '/(admin)/messages' },
               { label: 'Settings', icon: Settings, color: '#6B7280', path: '/(admin)/settings' },
             ].map((action, idx) => (

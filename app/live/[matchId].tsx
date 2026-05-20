@@ -2371,7 +2371,7 @@ export default function LiveScorecard() {
                    try {
                      await Share.share({
                        url: `https://bookyourground.com/live/${match.id}`,
-                       message: `Follow ${match.team_a} vs ${match.team_b} LIVE on Book My Ground!\nhttps://bookyourground.com/live/${match.id}`,
+                       message: `Follow ${match.team_a} vs ${match.team_b} LIVE on Book Your Ground!\nhttps://bookyourground.com/live/${match.id}`,
                        title: `${match.team_a} vs ${match.team_b} Live Score`
                      });
                    } catch (e) {

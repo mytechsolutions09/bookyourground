@@ -974,7 +974,7 @@ export default function OwnerBookingsScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: isSmallScreen ? '#F8FAFC' : '#FFFFFF' }}>
-        {isSmallScreen && <MobileAppNavbar title="Bookings" titleColor="#0F172A" />}
+        {isSmallScreen && <MobileAppNavbar title="Bookings" titleColor="#0F172A" lightBg />}
         {isWeb && !isSmallScreen ? (
           <WebLayout>
              <BookingListSkeleton isWeb={isWeb} isSmallScreen={isSmallScreen} />
@@ -1814,7 +1814,7 @@ export default function OwnerBookingsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Ground Bookings" titleColor="#059669" />
+      <MobileAppNavbar title="Ground Bookings" titleColor="#0F172A" lightBg />
       {content}
       {datePickerModal}
     </View>

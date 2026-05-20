@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText, Star, MessageSquare, CheckCircle, Copy } from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText, Star, MessageSquare, CheckCircle, Copy, Heart } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -16,13 +16,15 @@ export default function AdminProductsScreen() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'products' | 'categories' | 'reviews' | 'fetch'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'categories' | 'reviews' | 'wishlists' | 'fetch'>('products');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [reviews, setReviews] = useState<any[]>([]);
+  const [wishlists, setWishlists] = useState<any[]>([]);
+  const [wishlistTab, setWishlistTab] = useState<'analytics' | 'recent'>('analytics');
   const [newColorVariant, setNewColorVariant] = useState({ name: '', hex: '#f8688a' });
   const [amazonUrl, setAmazonUrl] = useState('');
 
@@ -122,13 +124,15 @@ export default function AdminProductsScreen() {
     fetchProducts();
     fetchCategories();
     fetchReviews();
+    fetchWishlists();
 
     const handleOpenForm = () => setShowAddForm(true);
     const handleSetView = (e: any) => {
       const mode = Platform.OS === 'web' ? e.detail : e;
-      if (mode === 'products' || mode === 'categories' || mode === 'reviews') {
+      if (mode === 'products' || mode === 'categories' || mode === 'reviews' || mode === 'wishlists') {
         setViewMode(mode);
         setShowAddForm(false);
+        if (mode === 'wishlists') fetchWishlists();
       }
     };
 
@@ -157,6 +161,9 @@ export default function AdminProductsScreen() {
       setViewMode('categories');
     } else if (params.view === 'reviews') {
       setViewMode('reviews');
+    } else if (params.view === 'wishlists') {
+      setViewMode('wishlists');
+      fetchWishlists();
     } else if (params.view === 'products') {
       setViewMode('products');
     } else if (params.view === 'fetch') {
@@ -253,6 +260,50 @@ export default function AdminProductsScreen() {
       setReviews(data || []);
     } catch (err: any) {
       console.error('Error fetching reviews:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWishlists = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Fetch wishlists
+      const { data: favoriteData, error: favoriteError } = await supabase
+        .from('shop_favorites')
+        .select(`
+          id,
+          created_at,
+          user_id,
+          product:shop_products(id, name, price, images, category:shop_categories(name))
+        `)
+        .order('created_at', { ascending: false });
+
+      if (favoriteError) throw favoriteError;
+
+      // 2. Fetch profiles to get user names and emails
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email');
+
+      if (profileError) {
+        console.warn('Could not fetch profiles for wishlists:', profileError);
+      }
+
+      // 3. Merge profiles data into wishlist items
+      const merged = (favoriteData || []).map(item => {
+        const userProfile = profileData?.find(p => p.id === item.user_id);
+        return {
+          ...item,
+          user_name: userProfile?.full_name || 'Anonymous User',
+          user_email: userProfile?.email || 'No email'
+        };
+      });
+
+      setWishlists(merged);
+    } catch (err: any) {
+      console.error('Error fetching wishlists:', err);
     } finally {
       setLoading(false);
     }
@@ -1067,6 +1118,203 @@ export default function AdminProductsScreen() {
               <Text style={{ fontSize: 12, color: '#6B7280', fontFamily: 'Inter' }}>
                 This will fetch product name, price, images, and specifications (where possible) and open the product form.
               </Text>
+            </View>
+          ) : viewMode === 'wishlists' ? (
+            <View style={styles.wishlistsContainer}>
+              <View style={styles.wishlistHeaderRow}>
+                {/* Search Bar */}
+                <View style={styles.searchBarWishlist}>
+                  <Search size={18} color="#9CA3AF" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={wishlistTab === 'analytics' ? "Search wishlisted products..." : "Search by product or user ID..."}
+                    placeholderTextColor="#9CA3AF"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+
+                {/* Tab Toggles */}
+                <View style={styles.tabToggleRow}>
+                  <TouchableOpacity 
+                    style={[styles.toggleBtn, wishlistTab === 'analytics' && styles.toggleBtnActive]}
+                    onPress={() => setWishlistTab('analytics')}
+                  >
+                    <Text style={[styles.toggleBtnText, wishlistTab === 'analytics' && styles.toggleBtnTextActive]}>
+                      Demand Analytics
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.toggleBtn, wishlistTab === 'recent' && styles.toggleBtnActive]}
+                    onPress={() => setWishlistTab('recent')}
+                  >
+                    <Text style={[styles.toggleBtnText, wishlistTab === 'recent' && styles.toggleBtnTextActive]}>
+                      Recent Wishlists
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {wishlistTab === 'analytics' ? (
+                // 1. Analytics view: Most Wishlisted Products
+                <View style={styles.tableContainer}>
+                  <View style={styles.tableHeader}>
+                    <View style={[styles.headerCell, { flex: 0.8 }]}>
+                      <Text style={styles.headerLabel}>Image</Text>
+                    </View>
+                    <View style={[styles.headerCell, { flex: 2 }]}>
+                      <Text style={styles.headerLabel}>Product Name</Text>
+                    </View>
+                    <View style={[styles.headerCell, { flex: 1.2 }]}>
+                      <Text style={styles.headerLabel}>Category</Text>
+                    </View>
+                    <View style={[styles.headerCell, { flex: 1 }]}>
+                      <Text style={styles.headerLabel}>Price</Text>
+                    </View>
+                    <View style={[styles.headerCell, { flex: 1.2 }]}>
+                      <Text style={styles.headerLabel}>Wishlist Count</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.tableBody}>
+                    {loading ? (
+                      <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+                    ) : (() => {
+                      // Process and group the wishlists by product
+                      const wishlistedProductsMap: { [key: string]: { product: any, count: number, latestDate: string } } = {};
+                      wishlists.forEach(item => {
+                        if (!item.product) return;
+                        const prodId = item.product.id;
+                        if (!wishlistedProductsMap[prodId]) {
+                          wishlistedProductsMap[prodId] = {
+                            product: item.product,
+                            count: 0,
+                            latestDate: item.created_at
+                          };
+                        }
+                        wishlistedProductsMap[prodId].count += 1;
+                        if (new Date(item.created_at) > new Date(wishlistedProductsMap[prodId].latestDate)) {
+                          wishlistedProductsMap[prodId].latestDate = item.created_at;
+                        }
+                      });
+
+                      const sortedWishlistProducts = Object.values(wishlistedProductsMap)
+                        .filter(item => item.product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => b.count - a.count);
+
+                      if (sortedWishlistProducts.length === 0) {
+                        return (
+                          <View style={styles.emptyState}>
+                            <Heart size={48} color="#E5E7EB" />
+                            <Text style={styles.emptyText}>No wishlists found</Text>
+                          </View>
+                        );
+                      }
+
+                      return sortedWishlistProducts.map(({ product, count, latestDate }) => (
+                        <View key={product.id} style={styles.productRow}>
+                          <View style={[styles.tableCell, { flex: 0.8 }]}>
+                            <View style={styles.tableImageContainer}>
+                              {(product.images && product.images[0]) ? (
+                                <Image source={{ uri: product.images[0] }} style={styles.tableImage} />
+                              ) : (
+                                <Package size={20} color="#E5E7EB" />
+                              )}
+                            </View>
+                          </View>
+                          <View style={[styles.tableCell, { flex: 2 }]}>
+                            <Text style={styles.tableProductName}>{product.name}</Text>
+                            <Text style={styles.tableDescription} numberOfLines={1}>
+                              Last added: {new Date(latestDate).toLocaleDateString()}
+                            </Text>
+                          </View>
+                          <View style={[styles.tableCell, { flex: 1.2 }]}>
+                            <View style={styles.categoryBadge}>
+                              <Text style={styles.categoryBadgeText}>{product.category?.name || 'Uncategorized'}</Text>
+                            </View>
+                          </View>
+                          <View style={[styles.tableCell, { flex: 1 }]}>
+                            <Text style={styles.tablePrice}>₹{Number(product.price).toLocaleString('en-IN')}</Text>
+                          </View>
+                          <View style={[styles.tableCell, { flex: 1.2 }]}>
+                            <View style={[styles.stockIndicator, { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center' }]}>
+                              <Heart size={12} color="#EF4444" fill="#EF4444" style={{ marginRight: 4 }} />
+                              <Text style={[styles.stockIndicatorText, { color: '#B91C1C', fontWeight: '700' }]}>
+                                {count} {count === 1 ? 'user' : 'users'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      ));
+                    })()}
+                  </View>
+                </View>
+              ) : (
+                // 2. Recent Wishlist activity log
+                <View style={styles.wishlistsGrid}>
+                  {loading ? (
+                    <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+                  ) : (() => {
+                    const filteredWishlists = wishlists.filter(w => 
+                      w.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      w.user_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      w.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      w.user_email?.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+
+                    if (filteredWishlists.length === 0) {
+                      return (
+                        <View style={styles.emptyState}>
+                          <Heart size={48} color="#E5E7EB" />
+                          <Text style={styles.emptyText}>No recent wishlist activity</Text>
+                        </View>
+                      );
+                    }
+
+                    return filteredWishlists.map(item => (
+                      <View key={item.id} style={styles.wishlistCard}>
+                        <View style={styles.wishlistMain}>
+                          <View style={styles.wishlistUserRow}>
+                            <View style={styles.userInfo}>
+                              <Text style={styles.wishlistUserName} numberOfLines={1}>
+                                {item.user_name}
+                              </Text>
+                              <Text style={styles.wishlistUserEmail} numberOfLines={1}>
+                                {item.user_email}
+                              </Text>
+                              <Text style={styles.wishlistUserId} numberOfLines={1}>
+                                ID: {item.user_id}
+                              </Text>
+                              <Text style={styles.wishlistDate}>
+                                Added on: {new Date(item.created_at).toLocaleString()}
+                              </Text>
+                            </View>
+                            <Heart size={16} color="#EF4444" fill="#EF4444" />
+                          </View>
+
+                          <View style={styles.wishlistProductInfo}>
+                            <View style={styles.productMiniThumb}>
+                              {item.product?.images?.[0] ? (
+                                <Image source={{ uri: item.product.images[0] }} style={styles.miniThumbImg} />
+                              ) : (
+                                <Package size={14} color="#9CA3AF" />
+                              )}
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                              <Text style={styles.productMiniName} numberOfLines={1}>
+                                {item.product?.name || 'Deleted Product'}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: '#6B7280', fontFamily: 'Inter' }}>
+                                Price: ₹{Number(item.product?.price || 0).toLocaleString('en-IN')}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    ));
+                  })()}
+                </View>
+              )}
             </View>
           ) : viewMode === 'reviews' ? (
             <View style={styles.reviewsContainer}>
@@ -2141,5 +2389,119 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
+  },
+  wishlistsContainer: {
+    marginTop: 8,
+  },
+  wishlistHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  searchBarWishlist: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flex: 1,
+    minWidth: 260,
+  },
+  tabToggleRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    height: 44,
+    alignItems: 'center',
+  },
+  toggleBtn: {
+    paddingHorizontal: 16,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  toggleBtnTextActive: {
+    color: '#10b981',
+  },
+  wishlistsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 8,
+  },
+  wishlistCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    padding: 16,
+    width: Platform.OS === 'web' ? '31.5%' : '100%',
+    minWidth: 280,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+  },
+  wishlistMain: {
+    flex: 1,
+  },
+  wishlistUserRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  wishlistUserName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  wishlistUserEmail: {
+    fontSize: 11,
+    color: '#4B5563',
+    fontFamily: 'Inter',
+    marginTop: 1,
+  },
+  wishlistUserId: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+    marginTop: 1,
+  },
+  wishlistDate: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 4,
+    fontFamily: 'Inter',
+  },
+  wishlistProductInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

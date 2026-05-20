@@ -850,7 +850,7 @@ export default function WalletScreen() {
 
   return (
     <View style={styles.nativeWrapper}>
-      <MobileAppNavbar title="Wallet" titleColor="#01b854" lightBg />
+      <MobileAppNavbar title="Wallet" titleColor="#0F172A" lightBg />
       {content}
       {datePickerModal}
 

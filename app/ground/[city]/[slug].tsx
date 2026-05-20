@@ -32,6 +32,7 @@ import { formatDate } from '@/utils/helpers';
 import { slugifyGroundSegment, makeGroundPath } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { GroundWithImages } from '@/types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -84,12 +85,8 @@ const CLEAN_MAP_STYLES = [
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
+  const { latitude: userLat, longitude: userLng } = useLocation();
 
-  const effectiveDate = useMemo(() => {
-    if (typeof date === 'string') return date;
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }, [date]);
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
@@ -102,6 +99,38 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+
+  const distance = useMemo(() => {
+    if (!userLat || !userLng || !ground?.latitude || !ground?.longitude) return null;
+    const lat1 = Number(userLat);
+    const lon1 = Number(userLng);
+    const lat2 = Number(ground.latitude);
+    const lon2 = Number(ground.longitude);
+
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    return d;
+  }, [userLat, userLng, ground?.latitude, ground?.longitude]);
+
+  const distanceText = useMemo(() => {
+    if (distance === null) return null;
+    return distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)} km`;
+  }, [distance]);
+
+  const effectiveDate = useMemo(() => {
+    if (typeof date === 'string') return date;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, [date]);
 
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
@@ -496,6 +525,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                           <MapPin size={16} color="#64748B" />
                           <Text style={styles.webLocationTextLarge}>
                             {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+                            {distanceText && ` • ${distanceText} away`}
                           </Text>
                         </View>
                         
@@ -634,6 +664,14 @@ export default function GroundDetailsPrettyUrlScreen() {
                     {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
                   </Text>
                 </View>
+                {distanceText && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginBottom: 2 }}>
+                    <MapPin size={12} color="#059669" />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#059669', fontFamily: 'Inter' }}>
+                      {distanceText} away
+                    </Text>
+                  </View>
+                )}
                 
                 <View style={styles.formContainer}>
                   <LandingBookingForm
@@ -659,8 +697,8 @@ export default function GroundDetailsPrettyUrlScreen() {
                       onPress={() => setAboutExpanded(!aboutExpanded)} 
                       style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: aboutExpanded ? 12 : 0 }}
                     >
-                      <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>About the Venue</Text>
-                      <ChevronRight size={20} color="#64748B" style={aboutExpanded && { transform: [{ rotate: '90deg' }] }} />
+                      <Text style={styles.accordionTitle}>About the Venue</Text>
+                      <ChevronRight size={16} color="#64748B" style={aboutExpanded && { transform: [{ rotate: '90deg' }] }} />
                     </TouchableOpacity>
                     {aboutExpanded && (
                       <Text style={styles.description}>{ground.description}</Text>
@@ -673,8 +711,8 @@ export default function GroundDetailsPrettyUrlScreen() {
                     onPress={() => setAmenitiesExpanded(!amenitiesExpanded)} 
                     style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: amenitiesExpanded ? 12 : 0 }}
                   >
-                    <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Amenities & Facilities</Text>
-                    <ChevronRight size={20} color="#64748B" style={amenitiesExpanded && { transform: [{ rotate: '90deg' }] }} />
+                    <Text style={styles.accordionTitle}>Amenities & Facilities</Text>
+                    <ChevronRight size={16} color="#64748B" style={amenitiesExpanded && { transform: [{ rotate: '90deg' }] }} />
                   </TouchableOpacity>
                   {amenitiesExpanded && <AmenitiesList ground={ground} />}
                 </View>
@@ -684,8 +722,8 @@ export default function GroundDetailsPrettyUrlScreen() {
                     onPress={() => setDetailsExpanded(!detailsExpanded)} 
                     style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: detailsExpanded ? 12 : 0 }}
                   >
-                    <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Venue Details</Text>
-                    <ChevronRight size={20} color="#64748B" style={detailsExpanded && { transform: [{ rotate: '90deg' }] }} />
+                    <Text style={styles.accordionTitle}>Venue Details</Text>
+                    <ChevronRight size={16} color="#64748B" style={detailsExpanded && { transform: [{ rotate: '90deg' }] }} />
                   </TouchableOpacity>
                   {detailsExpanded && (
                     <>
@@ -757,6 +795,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View key={g.id} style={styles.nearbyCardWrapper}>
                       <GroundCard
                         ground={g}
+                        glass={true}
                         onPress={() => {
                           const path = makeGroundPath(g);
                           router.push(path as any);
@@ -775,6 +814,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View key={g.id} style={styles.nearbyCardWrapper}>
                       <GroundCard
                         ground={g}
+                        glass={true}
                         onPress={() => {
                           const path = makeGroundPath(g);
                           router.push(path as any);
@@ -795,15 +835,36 @@ export default function GroundDetailsPrettyUrlScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: (ground?.name ?? 'Ground').toUpperCase(),
-          headerTitleStyle: { 
-            fontFamily: 'Inter', 
-            fontSize: 16, 
-            fontWeight: '700', 
-            color: '#01b854',
-            letterSpacing: 1.2,
-          },
-          headerLeft: () => null,
+          headerTitle: () => (
+            <Text 
+              numberOfLines={1} 
+              ellipsizeMode="tail" 
+              style={{
+                fontFamily: 'Inter', 
+                fontSize: 15, 
+                fontWeight: '600', 
+                color: '#0F172A',
+                letterSpacing: 1.2,
+                textAlign: 'center',
+                maxWidth: 180,
+              }}
+            >
+              {(() => {
+                const name = ground?.name ?? 'Ground';
+                return name
+                  .toLowerCase()
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+              })()}
+            </Text>
+          ),
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16, padding: 4 }}>
+              <ArrowLeft size={24} color="#0F172A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 15 }}>
@@ -1782,6 +1843,12 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 12,
   },
+  accordionTitle: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#334155',
+  },
   description: {
     fontFamily: 'Inter',
     fontSize: 14,
@@ -2323,8 +2390,8 @@ const styles = StyleSheet.create({
   },
   nearbyTitle: {
     fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#0F172A',
     letterSpacing: -0.4,
   },

@@ -28,23 +28,23 @@ function OwnerSettingsInner() {
   const isTablet = width >= 600 && width < 900;
   const insets = useSafeAreaInsets();
   const { tab } = useLocalSearchParams<{ tab: string }>();
-  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>((tab as any) || 'payout');
+  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'help'>((tab as any) || 'payout');
   
   const horizontalPagerRef = React.useRef<any>(null);
   const lastScrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
 
-  const onTabPress = (target: 'payout' | 'bank' | 'coupons' | 'help') => {
+  const onTabPress = (target: 'payout' | 'bank' | 'help') => {
     setActiveTab(target);
-    const idx = target === 'payout' ? 0 : target === 'bank' ? 1 : target === 'coupons' ? 2 : 3;
+    const idx = target === 'payout' ? 0 : target === 'bank' ? 1 : 2;
     horizontalPagerRef.current?.scrollTo({ x: idx * width, animated: true });
   };
 
   const horizontalScrollHandler = useAnimatedScrollHandler({
     onMomentumEnd: (event) => {
       const idx = Math.round(event.contentOffset.x / width);
-      const target = idx === 0 ? 'payout' : idx === 1 ? 'bank' : idx === 2 ? 'coupons' : 'help';
+      const target = idx === 0 ? 'payout' : idx === 1 ? 'bank' : 'help';
       runOnJS(setActiveTab)(target as any);
     },
   });
@@ -98,7 +98,6 @@ function OwnerSettingsInner() {
 
   useEffect(() => {
     if (user) {
-      if (activeTab === 'coupons') loadOwnerData();
       if (activeTab === 'bank') loadBankDetails();
     }
   }, [user, activeTab]);
@@ -643,12 +642,6 @@ function OwnerSettingsInner() {
               <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText]}>Bank</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton]} 
-              onPress={() => setActiveTab('coupons')}
-            >
-              <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText]}>Coupons</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
               style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton]} 
               onPress={() => setActiveTab('help')}
             >
@@ -656,7 +649,7 @@ function OwnerSettingsInner() {
             </TouchableOpacity>
           </View>
 
-          {activeTab === 'payout' ? renderPayouts() : activeTab === 'bank' ? renderBank() : activeTab === 'coupons' ? renderCoupons() : renderHelp()}
+          {activeTab === 'payout' ? renderPayouts() : activeTab === 'bank' ? renderBank() : renderHelp()}
         </View>
       </ScrollView>
     );
@@ -665,7 +658,7 @@ function OwnerSettingsInner() {
   return (
     <View style={{ flex: 1 }}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Settings" titleColor="#01b854" />
+        <MobileAppNavbar title="Settings" titleColor="#0F172A" lightBg />
         <View style={[styles.tabContainer, { marginBottom: 12 }, isUltraNarrow && { padding: 4 }]}>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
@@ -678,12 +671,6 @@ function OwnerSettingsInner() {
             onPress={() => onTabPress('bank')}
           >
             <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Bank</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
-            onPress={() => onTabPress('coupons')}
-          >
-            <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Coupons</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
@@ -729,20 +716,7 @@ function OwnerSettingsInner() {
           </AnimatedScrollView>
         </View>
 
-        {/* Slide 3: Coupons */}
-        <View style={{ width }}>
-          <AnimatedScrollView
-            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
-            scrollEventThrottle={16}
-            style={styles.container}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
-            showsVerticalScrollIndicator={false}
-          >
-            {renderCoupons()}
-          </AnimatedScrollView>
-        </View>
-
-        {/* Slide 4: Help */}
+        {/* Slide 3: Help */}
         <View style={{ width }}>
           <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}

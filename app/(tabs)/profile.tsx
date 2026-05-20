@@ -710,7 +710,7 @@ export default function ProfileScreen({
   if (!profile) {
     return (
       <View style={styles.nativeScreen}>
-        <MobileAppNavbar title="PROFILE" titleColor="#01b854" smallerTitle />
+        <MobileAppNavbar title="PROFILE" titleColor="#0F172A" smallerTitle lightBg />
         <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
           <View style={{ padding: 16, gap: 16 }}>
             {/* Profile Card Skeleton */}
@@ -743,12 +743,13 @@ export default function ProfileScreen({
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
         title="PROFILE" 
-        titleColor="#01b854"
+        titleColor="#0F172A"
         smallerTitle
+        lightBg
         rightAction={
           <TouchableOpacity onPress={() => router.push('/(tabs)/profile/notifications' as any)}>
             <View style={styles.headerIconCircle}>
-              <Bell size={20} color="#00ea6b" />
+              <Bell size={20} color="#0F172A" />
             </View>
           </TouchableOpacity>
         }

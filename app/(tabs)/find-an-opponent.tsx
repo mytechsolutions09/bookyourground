@@ -34,12 +34,22 @@ import { BookingWithDetails } from '@/types';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import MatchCard from '@/components/matches/MatchCard';
-import { Trophy, Swords, MapPin, Search, ChevronLeft, Menu, ChevronDown, Check } from 'lucide-react-native';
+import { Trophy, Swords, MapPin, Search, ChevronLeft, Menu, ChevronDown, Check, Calendar } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import MatchmakingSkeleton from '@/components/matches/MatchmakingSkeleton';
 import { getDayOfWeek } from '@/utils/helpers';
+import { Calendar as RNCalendar, LocaleConfig } from 'react-native-calendars';
+
+LocaleConfig.locales['en'] = {
+  monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  monthNamesShort: ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'],
+  dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+  dayNamesShort: ['S','M','T','W','T','F','S'],
+  today: 'Today'
+};
+LocaleConfig.defaultLocale = 'en';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -303,6 +313,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomStr = tomorrow.toISOString().split('T')[0];
         matchesDate = match.booking_date === tomStr;
+      } else if (selectedDateFilter !== 'All') {
+        matchesDate = match.booking_date === selectedDateFilter;
       }
 
       const matchesTab = activeTab === 'all' || match.user_id === user?.id;
@@ -370,7 +382,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                       </Pressable>
                     ))}
                   </View>
-                  <View style={styles.filterDivider} />
                   <View style={styles.filterGroup}>
                     <Text style={styles.filterLabel}>Date:</Text>
                     {['All', 'Today', 'Tomorrow'].map(date => (
@@ -382,6 +393,24 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                         <Text style={[styles.filterTagText, selectedDateFilter === date && styles.filterTagTextActive]}>{date}</Text>
                       </Pressable>
                     ))}
+                    <Pressable
+                      onPress={() => setActivePicker('date')}
+                      style={[
+                        styles.filterTag,
+                        selectedDateFilter !== 'All' && selectedDateFilter !== 'Today' && selectedDateFilter !== 'Tomorrow' && styles.filterTagActive,
+                        { flexDirection: 'row', alignItems: 'center', gap: 4 }
+                      ]}
+                    >
+                      <Calendar size={12} color={selectedDateFilter !== 'All' && selectedDateFilter !== 'Today' && selectedDateFilter !== 'Tomorrow' ? '#01b854' : '#9CA3AF'} />
+                      <Text style={[
+                        styles.filterTagText,
+                        selectedDateFilter !== 'All' && selectedDateFilter !== 'Today' && selectedDateFilter !== 'Tomorrow' && styles.filterTagTextActive
+                      ]}>
+                        {selectedDateFilter !== 'All' && selectedDateFilter !== 'Today' && selectedDateFilter !== 'Tomorrow'
+                          ? new Date(selectedDateFilter).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                          : 'Custom Date...'}
+                      </Text>
+                    </Pressable>
                   </View>
                   <View style={styles.filterDivider} />
                   <View style={styles.filterGroup}>
@@ -497,7 +526,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                     onPress={() => setActivePicker('date')}
                   >
                     <Text style={styles.dropdownLabel}>Date: </Text>
-                    <Text style={styles.dropdownValue}>{selectedDateFilter}</Text>
+                    <Text style={styles.dropdownValue}>
+                      {selectedDateFilter === 'All' || selectedDateFilter === 'Today' || selectedDateFilter === 'Tomorrow'
+                        ? selectedDateFilter
+                        : new Date(selectedDateFilter).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </Text>
                     <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
 
@@ -560,7 +593,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                   onPress={() => setActivePicker('date')}
                 >
                   <Text style={styles.dropdownLabel}>Date: </Text>
-                  <Text style={styles.dropdownValue}>{selectedDateFilter}</Text>
+                  <Text style={styles.dropdownValue}>
+                    {selectedDateFilter === 'All' || selectedDateFilter === 'Today' || selectedDateFilter === 'Tomorrow'
+                      ? selectedDateFilter
+                      : new Date(selectedDateFilter).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
                   <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
 
@@ -576,42 +613,80 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
           </Animated.View>
 
-          <Modal
-            visible={activePicker !== null}
-            onClose={() => setActivePicker(null)}
-            title={`Select ${activePicker === 'city' ? 'City' : activePicker === 'date' ? 'Date' : 'Pitch Type'}`}
-          >
-            <ScrollView style={{ maxHeight: 400 }}>
-              {(activePicker === 'city' ? cities : activePicker === 'date' ? ['All', 'Today', 'Tomorrow'] : pitches).map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    if (activePicker === 'city') setSelectedCity(option);
-                    else if (activePicker === 'date') setSelectedDateFilter(option);
-                    else setSelectedPitch(option);
-                    setActivePicker(null);
-                  }}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    (activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && styles.pickerOptionTextActive
-                  ]}>
-                    {option}
-                  </Text>
-                  {(activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && (
-                    <Check size={18} color="#01b854" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Modal>
-
           <View style={styles.nativeBody}>
             {mainContent}
           </View>
         </View>
       )}
+
+      {/* Date, City, Type Modal */}
+      <Modal
+        visible={activePicker !== null}
+        onClose={() => setActivePicker(null)}
+        title={`Select ${activePicker === 'city' ? 'City' : activePicker === 'date' ? 'Date' : 'Pitch Type'}`}
+      >
+        {activePicker === 'date' ? (
+          <View style={styles.dateDropdownContainer}>
+            <View style={styles.dateQuickOptions}>
+              {['All', 'Today', 'Tomorrow'].map(d => (
+                <TouchableOpacity 
+                  key={d} 
+                  style={[
+                    styles.dateQuickBtn, 
+                    selectedDateFilter === d && styles.dateQuickBtnActive
+                  ]} 
+                  onPress={() => { setSelectedDateFilter(d); setActivePicker(null); }}
+                >
+                  <Text style={[
+                    styles.dateQuickBtnText, 
+                    selectedDateFilter === d && styles.dateQuickBtnTextActive
+                  ]}>{d}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.calendarWrapper}>
+              <RNCalendar
+                current={selectedDateFilter && selectedDateFilter !== 'All' && selectedDateFilter !== 'Today' && selectedDateFilter !== 'Tomorrow' ? selectedDateFilter : new Date().toISOString().split('T')[0]}
+                minDate={new Date().toISOString().split('T')[0]}
+                onDayPress={(day: any) => {
+                  setSelectedDateFilter(day.dateString);
+                  setActivePicker(null);
+                }}
+                theme={{
+                  todayTextColor: '#01b854',
+                  arrowColor: '#01b854',
+                  selectedDayBackgroundColor: '#01b854',
+                  selectedDayTextColor: '#ffffff',
+                }}
+              />
+            </View>
+          </View>
+        ) : (
+          <ScrollView style={{ maxHeight: 400 }}>
+            {(activePicker === 'city' ? cities : pitches).map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.pickerOption}
+                onPress={() => {
+                  if (activePicker === 'city') setSelectedCity(option);
+                  else setSelectedPitch(option);
+                  setActivePicker(null);
+                }}
+              >
+                <Text style={[
+                  styles.pickerOptionText,
+                  (activePicker === 'city' ? selectedCity : selectedPitch) === option && styles.pickerOptionTextActive
+                ]}>
+                  {option}
+                </Text>
+                {(activePicker === 'city' ? selectedCity : selectedPitch) === option && (
+                  <Check size={18} color="#01b854" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -1082,5 +1157,39 @@ const styles = StyleSheet.create({
     height: 16,
     backgroundColor: '#E5E7EB',
     marginHorizontal: 4,
+  },
+  dateDropdownContainer: {
+    width: '100%',
+  },
+  dateQuickOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
+  },
+  dateQuickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  dateQuickBtnActive: {
+    backgroundColor: '#01b854',
+  },
+  dateQuickBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  dateQuickBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  calendarWrapper: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 8,
   },
 });

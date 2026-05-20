@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Image, Platform, TouchableOpacity } from 'react-native';
-import { Search, MapPin, Bell, ChevronDown, Sunrise, Sun, Sunset, Moon } from 'lucide-react-native';
+import { Search, MapPin, Bell, ChevronDown, Sunrise, Sun, Sunset, Moon, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
+
+const SPORT_CATEGORIES = [
+  { label: 'All', value: 'all' },
+  { label: 'Cricket', value: 'cricket' },
+  { label: 'Box Cricket', value: 'box' },
+  { label: 'Nets', value: 'nets' },
+];
 
 interface HeroMobileProps {
   cityName: string;
@@ -9,6 +16,8 @@ interface HeroMobileProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   handleSearch: () => void;
+  sportFilter: string;
+  setSportFilter: (sport: string) => void;
   profile: any;
   setShowProfileModal: (show: boolean) => void;
   unreadCount?: number;
@@ -21,10 +30,13 @@ export default function HeroMobile({
   searchQuery,
   setSearchQuery,
   handleSearch,
+  sportFilter,
+  setSportFilter,
   profile,
   setShowProfileModal,
   unreadCount = 0,
 }: HeroMobileProps) {
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
   return (
     <View style={styles.container}>
       {/* Background Image/Overlay */}
@@ -80,6 +92,9 @@ export default function HeroMobile({
               .join(' ');
           })()}
         </Text>
+        <Text style={styles.greetingPrompt}>
+          What sport are you in mood to play today?
+        </Text>
       </View>
 
       {/* Search Bar */}
@@ -96,6 +111,46 @@ export default function HeroMobile({
             returnKeyType="search"
           />
         </View>
+
+        {/* Divider */}
+        <View style={styles.searchDivider} />
+
+        {/* Type Filter Selector */}
+        <TouchableOpacity 
+          style={styles.filterButton} 
+          onPress={() => setShowTypeMenu(prev => !prev)}
+          activeOpacity={0.7}
+        >
+          <SlidersHorizontal size={16} color="#00EA6B" strokeWidth={2.2} style={{ marginRight: 6 }} />
+          <Text style={styles.filterButtonText} numberOfLines={1}>
+            {SPORT_CATEGORIES.find(c => c.value === sportFilter)?.label || 'All'}
+          </Text>
+          <ChevronDown size={12} color="#94A3B8" strokeWidth={2.5} style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
+
+        {/* Dropdown Menu Overlay */}
+        {showTypeMenu && (
+          <View style={styles.dropdownMenu}>
+            {SPORT_CATEGORIES.map((cat) => {
+              const isActive = sportFilter === cat.value;
+              return (
+                <TouchableOpacity
+                  key={cat.value}
+                  style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
+                  onPress={() => {
+                    setSportFilter(cat.value);
+                    setShowTypeMenu(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -107,10 +162,11 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 10,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
+    zIndex: 2000,
   },
   bgOverlay: {
     position: 'absolute',
@@ -214,7 +270,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   greetingContainer: {
-    marginBottom: 25,
+    marginBottom: 15,
   },
   greetingSub: {
     color: '#00EA6B',
@@ -229,6 +285,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Inter',
     marginTop: 4,
+  },
+  greetingPrompt: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: 'Inter',
+    marginTop: 16,
   },
   greenDot: {
     color: '#00EA6B',
@@ -274,13 +337,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginTop: 35,
+    marginTop: 30,
     marginBottom: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 4,
+    zIndex: 9999,
+    position: 'relative',
   },
   searchLeft: {
     flex: 1,
@@ -299,6 +364,53 @@ const styles = StyleSheet.create({
     height: 24,
     backgroundColor: '#E2E8F0',
     marginHorizontal: 12,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  filterButtonText: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 58,
+    right: 16,
+    width: 140,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+    padding: 6,
+    zIndex: 99999,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  dropdownItemActive: {
+    backgroundColor: 'rgba(0, 234, 107, 0.1)',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    color: '#334155',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  dropdownItemTextActive: {
+    color: '#036b33',
+    fontWeight: '700',
   },
   locationSelector: {
     flexDirection: 'row',

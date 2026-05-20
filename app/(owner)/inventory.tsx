@@ -533,7 +533,7 @@ export default function OwnerInventoryScreen() {
       ) : (
         <View style={{ flex: 1 }}>
           <Animated.View style={headerAnimatedStyle}>
-            <MobileAppNavbar title="Inventory" titleColor="#01b854" />
+            <MobileAppNavbar title="Inventory" titleColor="#0F172A" lightBg />
           </Animated.View>
           
           <ScrollView 

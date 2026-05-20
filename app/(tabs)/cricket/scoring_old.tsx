@@ -3968,7 +3968,7 @@ export default function CricketScreen() {
   const handleShareTeam = async (team: any) => {
     try {
       const result = await Share.share({
-        message: `Join our team "${team.name}" on Book My Ground! Click the link to join: https://bookyourground.com/invite-team/${team.id}`,
+        message: `Join our team "${team.name}" on Book Your Ground! Click the link to join: https://bookyourground.com/invite-team/${team.id}`,
         url: `https://bookyourground.com/invite-team/${team.id}`,
         title: `Join ${team.name}`
       });

@@ -15,7 +15,7 @@ export default function ShippingScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>1. Service Nature</Text>
             <Text style={styles.paragraph}>
-              Book my ground provides a digital platform for booking sports facilities like cricket grounds, 
+              Book Your Ground provides a digital platform for booking sports facilities like cricket grounds, 
               turfs, and nets. As these services are digital in nature, there is no physical "shipping" involved.
             </Text>
           </View>

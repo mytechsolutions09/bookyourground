@@ -72,6 +72,7 @@ interface WebLayoutProps {
   showAddForm?: boolean;
   isPublicNoSidebar?: boolean;
   defaultSidebarOpen?: boolean;
+  headerContent?: React.ReactNode;
 }
 
 const NavLink = React.memo(({
@@ -140,13 +141,23 @@ const NavLink = React.memo(({
           router.push(href as any);
         }
       }}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
       {...(Platform.OS === 'web' ? {
         title: hideLabel ? label : undefined,
-      } : {})}
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      } : {
+        onHoverIn: () => setHovered(true),
+        onHoverOut: () => setHovered(false),
+      })}
     >
-      <Icon size={18} color={iconColor} />
+      <View
+        style={[
+          Platform.OS === 'web' && { transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' } as any,
+          hovered && !hideLabel && { transform: [{ scale: 1.15 }] }
+        ]}
+      >
+        <Icon size={18} color={iconColor} />
+      </View>
       {hideLabel && Platform.OS === 'web' && (
         <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
           <Text style={styles.tooltipText}>{label}</Text>
@@ -177,7 +188,11 @@ const NavLink = React.memo(({
   );
 });
 
-export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar, defaultSidebarOpen }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm = false,
+  isPublicNoSidebar: propIsPublicNoSidebar = false,
+  defaultSidebarOpen = true,
+  headerContent,
+}: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
   const params = useLocalSearchParams();
@@ -261,7 +276,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/refund-policy' ||
     cleanPath === '/shipping' ||
     cleanPath === '/contact' ||
-    cleanPath === '/cricket/player-profile',
+    cleanPath === '/cricket/player-profile' ||
+    cleanPath === '/cricket',
     [cleanPath]
   );
   
@@ -538,12 +554,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     };
   }, [isLanding, isMarketing, isShop]);
 
-  // We don't early return here to avoid hook sequence mismatch.
-  // Instead, we check the condition inside the return statement.
-
-  // Navbar search: fetch ground suggestions as user types on landing pages.
-
-  // Navbar search: fetch ground suggestions as user types on landing pages.
   const adminEmail = 'invirtualcoin@gmail.com';
   
   const isSuperAdmin = useMemo(() => 
@@ -577,9 +587,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/(admin)/cricketdata',
   ];
 
-  // Important: "admin route" should be determined by the current path,
-  // not by the viewer's role. Otherwise super admins would be treated as
-  // being on an admin route even on public pages like `/`.
   const isAdminRoute = useMemo(() =>
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
@@ -606,11 +613,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     [isGroundOwner, isSuperAdmin, cleanPath]
   );
 
-  // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
-  // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar = useMemo(() =>
-    // Hide sidebar on public/marketing style pages even for super admins.
-    // The sidebar should only appear when they are actually on admin pages.
     !isAdminRoute && (
       propIsPublicNoSidebar ||
       isLanding ||
@@ -625,7 +628,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       cleanPath.startsWith('/shop/') ||
       cleanPath === '/search' ||
       cleanPath.startsWith('/live/') ||
-      (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) ||
+      (cleanPath.startsWith('/cricket/') || cleanPath === '/cricket') && !cleanPath.startsWith('/cricketdata') ||
       cleanPath.startsWith('/players/') ||
       cleanPath.startsWith('/blog')
     ),
@@ -645,7 +648,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   const shouldHideAppHeader = useMemo(() => {
     if (isCompact) {
-      // Hide header for owners on settings pages to save space on mobile web
       if (isGroundOwner && (cleanPath === '/settings' || cleanPath === '/(owner)/settings')) {
         return true;
       }
@@ -687,8 +689,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     return false;
   }, [isCompact, isGroundOwner, isSuperAdmin, cleanPath]);
 
-  // Treat the presence of a Supabase `user` as authenticated even if `profile`
-  // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
   const showMenuPanel = !isPublicNoSidebar && isAuthenticated && (!isCompact || isSidebarOpenOnSmallScreen);
 
@@ -699,8 +699,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;
   const bodyStyle = (isPublicNoSidebar || isCompact) ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
-  // Ground/booking detail pretty URLs must always get the top bar (logo, search, Grounds, Sign in).
-  // Do not exclude super admins here — otherwise neither hero nor the app header renders on /ground/... .
   const showHeroHeader =
     isLanding ||
     isMarketing ||
@@ -733,6 +731,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
+            cleanPath === '/book-my-ground' && { backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
             isCompact && { transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)' } as any,
           ]}
@@ -765,7 +764,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || isMarketing) && styles.logoImageCompact,
+                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || cleanPath === '/cricket' || isMarketing) && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -890,7 +889,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
                     {isAuthenticated && (
-                      <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
+                      <TouchableOpacity onPress={() => router.push('/cricket' as any)}>
                         <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
                           CRICKET
                         </Text>
@@ -925,7 +924,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {cleanPath === '/book-my-ground' && (
                       <TouchableOpacity onPress={() => router.push('/find-an-opponent')}>
-                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
+                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
                           FIND AN OPPOSITION
                         </Text>
                       </TouchableOpacity>
@@ -936,7 +935,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         style={styles.headerSecondaryButton}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
-                        <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}>
+                        <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled, cleanPath === '/book-my-ground' && { color: '#00ea6b' }]}>
                           SIGN IN
                         </Text>
                       </TouchableOpacity>
@@ -987,7 +986,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           style={[
             styles.header,
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
-            cleanPath === '/search' && { height: 60 },
+            (cleanPath === '/search' || cleanPath === '/cricket') && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -998,41 +997,51 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book My Venues — home"
+              accessibilityLabel="Book My Venues - home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  (isCompact || isShop || cleanPath === '/search') && styles.logoImageCompact,
+                  (isCompact || isShop || cleanPath === '/search' || cleanPath === '/cricket') && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
             </TouchableOpacity>
 
-
+            {headerContent && (
+              <View style={{ flex: 1, paddingHorizontal: 16, alignItems: 'center' }}>
+                {headerContent}
+              </View>
+            )}
 
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
-                  <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
-                    <Text style={[
-                      styles.headerNavLink,
-                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive
-                    ]}>
-                      VENUES
-                    </Text>
-                  </TouchableOpacity>
+                  {cleanPath !== '/search' && (
+                    <>
+                      <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                        <Text style={[
+                          styles.headerNavLink,
+                          (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
+                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                        ]}>
+                          VENUES
+                        </Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => router.push('/shop' as any)}>
-                    <Text style={[
-                      styles.headerNavLink,
-                      cleanPath.startsWith('/shop') && styles.headerNavLinkActive
-                    ]}>
-                      SHOP
-                    </Text>
-                  </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                        <Text style={[
+                          styles.headerNavLink,
+                          cleanPath.startsWith('/shop') && { color: '#ff3564' },
+                          (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }
+                        ]}>
+                          SHOP
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
 
                   {isShop && (
                     <TouchableOpacity
@@ -1045,7 +1054,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                   {!isAuthenticated ? (
                     <Text
-                      style={styles.headerSecondaryButtonText}
+                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket') && { color: '#00ea6b' }]}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
                       SIGN IN
@@ -1123,7 +1132,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 showsHorizontalScrollIndicator={false}
                 overScrollMode="never"
                 bounces={false}
-                contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }]}
+                contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }, Platform.OS === 'web' && { overflowX: 'visible' } as any]}
                 style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
               >
                 {isAuthenticated && !isPublicNoSidebar && (
@@ -1350,10 +1359,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           isActiveOverride={cleanPath === '/wallet'}
                         />
                         <NavLink
-                          href="/cricket/player-profile"
+                          href="/cricket"
                           icon={Trophy}
                           label="Cricket Hub"
-                          isActiveOverride={cleanPath === '/cricket/player-profile'}
+                          isActiveOverride={cleanPath === '/cricket' || cleanPath === '/cricket/player-profile'}
                         />
                         <NavLink
                           href="/(tabs)/support"
@@ -1406,7 +1415,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             { label: 'Venue', icon: LandPlot, href: '/book-my-ground' },
             { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
-            { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
+            { label: 'Cricket', icon: Trophy, href: '/cricket' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||

@@ -29,9 +29,9 @@ export default function NativeMap({ ground }: NativeMapProps) {
     
     const label = encodeURIComponent(ground.name || 'Ground Location');
     
-    // Construct platform-specific directions URL
+    // Construct platform-specific directions URL (using secure https for iOS to comply with ATS)
     const url = Platform.select({
-      ios: `http://maps.apple.com/?daddr=${latitude},${longitude}&q=${label}`,
+      ios: `https://maps.apple.com/?daddr=${latitude},${longitude}&q=${label}`,
       android: `google.navigation:q=${latitude},${longitude}`,
       default: `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`,
     });
@@ -39,7 +39,12 @@ export default function NativeMap({ ground }: NativeMapProps) {
     const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`;
 
     try {
-      await Linking.openURL(url);
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(fallbackUrl);
+      }
     } catch (error) {
       console.error('Error opening directions:', error);
       try {

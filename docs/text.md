@@ -3,6 +3,7 @@
 #0f4235 #dark-green
 #00ea6b #green
 #06392e #dark-green
+#134d40 #dark-green
 #01e669 #green
 #02c259 #green
 #01b854 #green

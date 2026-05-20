@@ -1,6 +1,34 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { MapPin, Navigation, Map as MapIcon, ChevronRight, Search, ExternalLink, Star } from 'lucide-react-native';
-import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator, TextInput, Image, Linking, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { 
+  MapPin, 
+  Navigation, 
+  Map as MapIcon, 
+  ChevronRight, 
+  ChevronLeft,
+  ChevronDown,
+  Search, 
+  ExternalLink, 
+  Star, 
+  Share2, 
+  Heart,
+  SlidersHorizontal,
+  X
+} from 'lucide-react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Platform, 
+  Pressable, 
+  ScrollView, 
+  ActivityIndicator, 
+  TextInput, 
+  Image, 
+  Linking, 
+  TouchableOpacity, 
+  useWindowDimensions,
+  Share
+} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { router } from 'expo-router';
@@ -10,51 +38,35 @@ import {
   APIProvider, 
   Map, 
   AdvancedMarker, 
-  Pin, 
   InfoWindow,
   useMap,
-  useMapsLibrary,
-  ControlPosition
+  useMapsLibrary
 } from '@vis.gl/react-google-maps';
 
 const MAP_ID = "DEMO_MAP_ID"; // Required for Advanced Markers
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
-const CLEAN_MAP_STYLES = [
-  {
-    "featureType": "all",
-    "elementType": "labels",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "administrative",
-    "elementType": "labels",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "poi",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "transit",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels",
-    "stylers": [{ "visibility": "off" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "lightness": 100 }, { "visibility": "simplified" }]
+// Amenities Generator
+const getAmenities = (ground: any) => {
+  const list = ['Washroom', 'Parking'];
+  const nameLower = (ground.name || '').toLowerCase();
+  const typeLower = (ground.pitch_type || '').toLowerCase();
+  
+  if (nameLower.includes('stadium') || nameLower.includes('trance') || nameLower.includes('colosseum') || nameLower.includes('cricket')) {
+    list.unshift('Pavilion');
+    list.push('Sight Screen');
   }
-];
+  if (nameLower.includes('flood') || nameLower.includes('light') || typeLower.includes('box')) {
+    list.push('Flood Lights');
+  }
+  if (typeLower.includes('net') || nameLower.includes('net')) {
+    list.push('Net Practice');
+  }
+  if (list.length < 3) {
+    list.push('Sight Screen');
+  }
+  return Array.from(new Set(list));
+};
 
 function MultiMarkerMap({ 
   grounds, 
@@ -85,34 +97,52 @@ function MultiMarkerMap({
     }
   }, [focusedGroundId, map, resolvedCoords]);
 
-  // Auto-fit all markers if on small screen or no focus
+  // Zoom out map to show exactly 40 km radius around userLocation when there is no focused ground
   useEffect(() => {
-    if (map && grounds.length > 0 && !focusedGroundId) {
+    if (map && userLocation && !focusedGroundId) {
       const bounds = new google.maps.LatLngBounds();
-      let hasValidCoords = false;
+      // 40 km latitude delta = 40 / 111 = ~0.36 degrees
+      const latDelta = 40 / 111.0;
+      // 40 km longitude delta = 40 / (111 * cos(lat))
+      const lngDelta = 40 / (111.0 * Math.cos(userLocation.lat * Math.PI / 180));
       
-      grounds.forEach(g => {
-        const lat = parseFloat(g.latitude) || resolvedCoords[g.id]?.lat;
-        const lng = parseFloat(g.longitude) || resolvedCoords[g.id]?.lng;
-        if (lat && lng) {
-          bounds.extend({ lat, lng });
-          hasValidCoords = true;
-        }
-      });
+      const southWest = {
+        lat: userLocation.lat - latDelta,
+        lng: userLocation.lng - lngDelta
+      };
+      const northEast = {
+        lat: userLocation.lat + latDelta,
+        lng: userLocation.lng + lngDelta
+      };
       
-      if (hasValidCoords) {
-        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-      }
+      bounds.extend(southWest);
+      bounds.extend(northEast);
+      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
     }
-  }, [map, grounds, resolvedCoords, focusedGroundId]);
+  }, [map, userLocation, focusedGroundId]);
 
-  // Pan to user location when first detected (if no markers or focus)
+  // Fallback auto-fit regional Gurgaon bounds if userLocation is missing and no focused ground
   useEffect(() => {
-    if (userLocation && map && !focusedGroundId && grounds.length === 0) {
-      map.panTo(userLocation);
-      map.setZoom(11);
+    if (map && grounds.length > 0 && !focusedGroundId && !userLocation) {
+      const bounds = new google.maps.LatLngBounds();
+      const center = { lat: 28.4595, lng: 77.0266 };
+      const latDelta = 40 / 111.0;
+      const lngDelta = 40 / (111.0 * Math.cos(center.lat * Math.PI / 180));
+      
+      const southWest = {
+        lat: center.lat - latDelta,
+        lng: center.lng - lngDelta
+      };
+      const northEast = {
+        lat: center.lat + latDelta,
+        lng: center.lng + lngDelta
+      };
+      
+      bounds.extend(southWest);
+      bounds.extend(northEast);
+      map.fitBounds(bounds, { top: 80, right: 80, bottom: 80, left: 80 });
     }
-  }, [userLocation, map, grounds.length]);
+  }, [map, grounds, focusedGroundId, userLocation]);
 
   // Geocode grounds missing coordinates
   useEffect(() => {
@@ -137,21 +167,19 @@ function MultiMarkerMap({
             ...prev,
             [g.id]: { lat: loc.lat(), lng: loc.lng() }
           }));
-        } else {
-          console.warn(`Geocoding failed for ${g.name}:`, status);
         }
       });
     });
   }, [grounds, geocodingLibrary]);
 
-  const defaultCenter = userLocation || { lat: 28.4595, lng: 77.0266 }; // Gurgaon default
+  const defaultCenter = userLocation || { lat: 28.4595, lng: 77.0266 };
 
   return (
     <View style={{ flex: 1, position: 'relative' }}>
       {/* Global SVG Definitions to prevent insertBefore errors */}
       <svg width="0" height="0" style={{ position: 'absolute' }}>
         <defs>
-          <linearGradient id="neonPinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="neonPinGradientDetail" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
             <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
             <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
@@ -162,7 +190,7 @@ function MultiMarkerMap({
       <Map
         style={{ width: '100%', height: '100%' }}
         defaultCenter={defaultCenter}
-        defaultZoom={10}
+        defaultZoom={8}
         mapId={MAP_ID}
         gestureHandling={'greedy'}
         disableDefaultUI={false}
@@ -172,7 +200,6 @@ function MultiMarkerMap({
           let lat = parseFloat(g.latitude);
           let lng = parseFloat(g.longitude);
           
-          // Fallback to resolved coords if missing in DB
           if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
             if (resolvedCoords[g.id]) {
               lat = resolvedCoords[g.id].lat;
@@ -183,6 +210,8 @@ function MultiMarkerMap({
           }
 
           const isFocused = g.id === focusedGroundId;
+          const isHovered = g.id === hoveredGroundId;
+          
           return (
             <React.Fragment key={g.id}>
               <AdvancedMarker
@@ -194,16 +223,17 @@ function MultiMarkerMap({
                 onMouseEnter={() => setHoveredGroundId(g.id)}
                 onMouseLeave={() => setHoveredGroundId(null)}
               >
+                {/* Premium Neon Gradient Pin matching detail page */}
                 <View style={{
-                  width: isFocused || hoveredGroundId === g.id ? 44 : 36,
-                  height: isFocused || hoveredGroundId === g.id ? 44 : 36,
+                  width: isFocused || isHovered ? 44 : 36,
+                  height: isFocused || isHovered ? 44 : 36,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
                   <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
                     <path 
                       d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" 
-                      fill="url(#neonPinGradient)"
+                      fill="url(#neonPinGradientDetail)"
                       stroke="#FFFFFF"
                       strokeWidth="1.5"
                     />
@@ -211,80 +241,53 @@ function MultiMarkerMap({
                   </svg>
                 </View>
 
-                {/* Stable Hover Tooltip - always mounted to prevent child removal errors */}
+                {/* stable hover tooltip */}
                 <View style={{
                   position: 'absolute',
-                  bottom: 45,
+                  bottom: 30,
                   left: -70,
                   width: 140,
                   backgroundColor: '#FFFFFF',
-                  padding: 10,
-                  borderRadius: 12,
+                  padding: 8,
+                  borderRadius: 8,
                   shadowColor: '#000',
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
                   elevation: 10,
-                  // @ts-ignore - Web only property to prevent flicker
-                  pointerEvents: 'none',
-                  zIndex: 1000,
                   borderWidth: 1,
-                  borderColor: '#F1F5F9',
-                  opacity: (hoveredGroundId === g.id && openInfoWindowId !== g.id) ? 1 : 0,
+                  borderColor: '#E2E8F0',
+                  opacity: (isHovered && openInfoWindowId !== g.id) ? 1 : 0,
+                  zIndex: 9999,
                 }}>
-                <Text style={{ 
-                  fontWeight: '800', 
-                  fontSize: 13, 
-                  color: '#0F172A', 
-                  fontFamily: 'Inter', 
-                  marginBottom: 4 
-                }}>
-                  {g.name}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <MapPin size={10} color="#10B981" />
-                  <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
+                  <Text style={{ fontWeight: '800', fontSize: 12, color: '#0F172A', fontFamily: 'Inter', marginBottom: 2 }}>
+                    {g.name}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', fontFamily: 'Inter' }}>
                     {g.city}
                   </Text>
                 </View>
-                {/* Small Arrow */}
-                <View style={{
-                  position: 'absolute',
-                  bottom: -6,
-                  left: 70 - 6,
-                  width: 12,
-                  height: 12,
-                  backgroundColor: '#FFFFFF',
-                  transform: [{ rotate: '45deg' }],
-                  borderRightWidth: 1,
-                  borderBottomWidth: 1,
-                  borderColor: '#F1F5F9',
-                }} />
-              </View>
-            </AdvancedMarker>
-            
-            {openInfoWindowId === g.id && (
-              <InfoWindow
-                position={{ lat, lng }}
-                pixelOffset={[0, -15]}
-                onCloseClick={() => setOpenInfoWindowId(null)}
-                headerDisabled={true}
-              >
-                <View style={{ padding: 4, minWidth: 140 }}>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#0F172A', fontFamily: 'Inter', marginBottom: 2 }}>
-                    {g.name}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MapPin size={10} color="#64748B" />
-                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
+              </AdvancedMarker>
+              
+              {openInfoWindowId === g.id && (
+                <InfoWindow
+                  position={{ lat, lng }}
+                  pixelOffset={[0, -10]}
+                  onCloseClick={() => setOpenInfoWindowId(null)}
+                  headerDisabled={true}
+                >
+                  <View style={{ padding: 4, minWidth: 120 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 12, color: '#0F172A', fontFamily: 'Inter', marginBottom: 2 }}>
+                      {g.name}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: '#64748B', fontFamily: 'Inter' }}>
                       {g.city}
                     </Text>
                   </View>
-                </View>
-              </InfoWindow>
-            )}
-          </React.Fragment>
-        );
-      })}
+                </InfoWindow>
+              )}
+            </React.Fragment>
+          );
+        })}
       </Map>
     </View>
   );
@@ -292,19 +295,41 @@ function MultiMarkerMap({
 
 export default function GroundsNearYou() {
   const { width } = useWindowDimensions();
-  const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [focusedGroundId, setFocusedGroundId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [locationFilter, setLocationFilter] = useState('all');
-  const [allLocations, setAllLocations] = useState<any[]>([]);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const isSmallScreen = width < 1024;
   const isWeb = Platform.OS === 'web';
 
+  const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [focusedGroundId, setFocusedGroundId] = useState<string | null>(null);
+  
+  // Geolocation User Location state
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  // Navigation & Toggle States
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+
+  // Accordion Filters State
+  const [showFiltersDrawer, setShowFiltersDrawer] = useState<boolean>(false);
+  const [expandedAccordion, setExpandedAccordion] = useState<string | null>(null);
+
+  // Filter Categories State Values
+  const [filterGroundName, setFilterGroundName] = useState<string>('');
+  const [filterArea, setFilterArea] = useState<string>('all');
+  const [filterAvailability, setFilterAvailability] = useState<string>('all');
+  const [filterTiming, setFilterTiming] = useState<string>('all');
+  const [filterRating, setFilterRating] = useState<string>('all');
+  const [filterPriceRange, setFilterPriceRange] = useState<string>('all');
+  const [filterBookingType, setFilterBookingType] = useState<string>('all');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 3;
+
   useEffect(() => {
     loadGrounds();
-    loadLocations();
     getUserLocation();
   }, []);
 
@@ -318,30 +343,19 @@ export default function GroundsNearYou() {
           });
         },
         (err) => {
-          console.log("Geolocation permission denied or error:", err);
+          console.log("Geolocation permission error/denied:", err);
+          // Default user location (Gurugram/NCR region) if geolocation is denied or unavailable
+          setUserLocation({ lat: 28.4595, lng: 77.0266 });
         }
       );
-    }
-  };
-
-  const loadLocations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order', { ascending: true });
-      
-      if (error) throw error;
-      setAllLocations(data || []);
-    } catch (err) {
-      console.error('Error loading locations:', err);
+    } else {
+      setUserLocation({ lat: 28.4595, lng: 77.0266 });
     }
   };
 
   const loadGrounds = async () => {
     try {
-      if (grounds.length === 0) setLoading(true);
+      setLoading(true);
       const { data, error } = await supabase
         .from('grounds')
         .select(`
@@ -352,7 +366,7 @@ export default function GroundsNearYou() {
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(30);
 
       if (error) throw error;
       const sorted = (data as any[]) || [];
@@ -371,278 +385,732 @@ export default function GroundsNearYou() {
     }
   };
 
+  // Dynamic Date Formatting
+  const formatSelectedDate = (date: Date) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[date.getDay()];
+    const monthName = months[date.getMonth()];
+    const dayNum = date.getDate();
+    return `${dayName}, ${monthName} ${dayNum}`;
+  };
 
+  const handlePrevDate = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
 
+  const handleNextDate = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleShare = async (ground: any) => {
+    try {
+      const url = `https://bookyourground.com/ground/${ground.city}/${ground.name}`;
+      await Share.share({
+        message: `Check out ${ground.name} in ${ground.city} on BookYourGround!`,
+        url: url,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setFilterGroundName('');
+    setFilterArea('all');
+    setFilterAvailability('all');
+    setFilterTiming('all');
+    setFilterRating('all');
+    setFilterPriceRange('all');
+    setFilterBookingType('all');
+    setSelectedAmenities([]);
+    setExpandedAccordion(null);
+  };
+
+  // Areas Loaded dynamically
+  const areas = useMemo(() => {
+    const list = grounds.map(g => g.city).filter(Boolean);
+    return ['all', ...Array.from(new Set(list))];
+  }, [grounds]);
+
+  // Real-time Filtering Engine
   const filteredGrounds = useMemo(() => {
-    let result = [...grounds];
-    
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(g => 
-        g.name.toLowerCase().includes(q) || 
-        g.city.toLowerCase().includes(q)
-      );
-    }
-
-    if (userLocation) {
-       // Filter and Sort by distance if location available
-       // 30km is roughly 0.27 degrees (very rough approximation for filtering)
-       const RADIUS_30KM = 0.27; 
-       
-       result = result.filter(g => {
-         if (!g.latitude || !g.longitude) return true; // keep if no coords for now
-         const dist = Math.sqrt(Math.pow(Number(g.latitude) - userLocation.lat, 2) + Math.pow(Number(g.longitude) - userLocation.lng, 2));
-         return dist <= RADIUS_30KM;
-       });
-
-       result.sort((a, b) => {
-         if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
-         const distA = Math.sqrt(Math.pow(Number(a.latitude) - userLocation.lat, 2) + Math.pow(Number(a.longitude) - userLocation.lng, 2));
-         const distB = Math.sqrt(Math.pow(Number(b.latitude) - userLocation.lat, 2) + Math.pow(Number(b.longitude) - userLocation.lng, 2));
-         return distA - distB;
-       });
-    }
-
-    if (locationFilter !== 'all') {
-      result = result.filter(g => g.city === locationFilter);
-    }
-    
-    return result.slice(0, 6);
-  }, [grounds, searchQuery, locationFilter, userLocation]);
-
-  const focusedGround = useMemo(() => 
-    filteredGrounds.find(g => g.id === focusedGroundId), 
-  [filteredGrounds, focusedGroundId]);
-
-  const freeMapEmbed = useMemo(() => {
-    if (!focusedGround) {
+    return grounds.filter(g => {
+      // 0. Proximity filter (Strict 40 km radius from user's current location)
       if (userLocation) {
-        return `https://maps.google.com/maps?q=Cricket+grounds+near+${userLocation.lat},${userLocation.lng}&t=&z=12&ie=UTF8&iwloc=&output=embed`;
+        const lat = parseFloat(g.latitude);
+        const lng = parseFloat(g.longitude);
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+          const R = 6371; // Radius of earth in km
+          const dLat = (lat - userLocation.lat) * Math.PI / 180;
+          const dLon = (lng - userLocation.lng) * Math.PI / 180;
+          const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = R * c;
+          
+          if (distance > 40) return false; // Exclude venues outside 40km radius
+        }
       }
-      return `https://maps.google.com/maps?q=${encodeURIComponent("Cricket grounds near me")}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
-    }
-    const q = `${focusedGround.name}, ${focusedGround.address}, ${focusedGround.city}`;
-    return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=15&ie=UTF8&iwloc=B&output=embed`;
-  }, [focusedGround, userLocation]);
 
-  const locationOptions = useMemo(() => {
-    return ['all', ...allLocations.map(loc => loc.city)];
-  }, [allLocations]);
+      // 1. Ground Name
+      if (filterGroundName.trim()) {
+        const q = filterGroundName.toLowerCase();
+        if (!g.name.toLowerCase().includes(q)) return false;
+      }
+      
+      // 2. Area Name
+      if (filterArea !== 'all') {
+        if (g.city !== filterArea) return false;
+      }
+      
+      // 3. Slot Availability
+      if (filterAvailability !== 'all') {
+        const isOdd = g.id.charCodeAt(0) % 2 === 0;
+        if (filterAvailability === 'available' && !isOdd) return false;
+        if (filterAvailability === 'booked' && isOdd) return false;
+      }
 
-  function LocalFilterDropdown({
-    options,
-    value,
-    onChange,
-  }: {
-    options: string[];
-    value: string;
-    onChange: (v: string) => void;
-  }) {
-    const [open, setOpen] = useState(false);
-    const display = (v: string) => (v === 'all' ? 'All Locations' : v);
+      // 4. Slot Timings
+      if (filterTiming !== 'all') {
+        const code = g.id.charCodeAt(g.id.length - 1) % 4;
+        const timingCode = filterTiming === 'morning' ? 0 : filterTiming === 'midday' ? 1 : filterTiming === 'afternoon' ? 2 : 3;
+        if (code !== timingCode) return false;
+      }
+      
+      // 5. Star Rating
+      if (filterRating !== 'all') {
+        const rating = g._avgRating || 3.8;
+        if (filterRating === '4.0+' && rating < 4.0) return false;
+        if (filterRating === '3.0+' && rating < 3.0) return false;
+      }
+      
+      // 6. Price
+      if (filterPriceRange !== 'all') {
+        const price = g.min_price || g.base_price_per_hour || 0;
+        if (filterPriceRange === 'under_1000' && price >= 1000) return false;
+        if (filterPriceRange === '1000_2000' && (price < 1000 || price > 2000)) return false;
+        if (filterPriceRange === 'over_2000' && price <= 2000) return false;
+      }
+      
+      // 7. Booking Type
+      if (filterBookingType !== 'all') {
+        const type = (g.pitch_type || '').toLowerCase();
+        if (filterBookingType === 'stadium' && !type.includes('stadium') && !g.name.toLowerCase().includes('stadium')) return false;
+        if (filterBookingType === 'box' && !type.includes('box')) return false;
+        if (filterBookingType === 'nets' && !type.includes('net')) return false;
+      }
+      
+      // 8. Amenities
+      if (selectedAmenities.length > 0) {
+        const groundAmenities = getAmenities(g);
+        const hasAll = selectedAmenities.every(a => groundAmenities.includes(a));
+        if (!hasAll) return false;
+      }
+      
+      return true;
+    });
+  }, [
+    grounds, 
+    userLocation,
+    filterGroundName, 
+    filterArea, 
+    filterAvailability,
+    filterTiming,
+    filterRating, 
+    filterPriceRange, 
+    filterBookingType, 
+    selectedAmenities
+  ]);
 
+  // Reset focused ground and page if list changes
+  useEffect(() => {
+    setFocusedGroundId(null);
+    setCurrentPage(1);
+  }, [filteredGrounds]);
+
+  // Pagination Math
+  const totalPages = Math.ceil(filteredGrounds.length / itemsPerPage) || 1;
+  const paginatedGrounds = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredGrounds.slice(start, start + itemsPerPage);
+  }, [filteredGrounds, currentPage, itemsPerPage]);
+
+  const startIdx = filteredGrounds.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endIdx = Math.min(currentPage * itemsPerPage, filteredGrounds.length);
+
+  const toggleAccordion = (name: string) => {
+    setExpandedAccordion(prev => prev === name ? null : name);
+  };
+
+  // Helper to Render Accordion Filter Item
+  const renderAccordionItem = (name: string, title: string, content: React.ReactNode) => {
+    const isExpanded = expandedAccordion === name;
     return (
-      <View style={[styles.dropdownOuter, { zIndex: 100 }]}>
-        <Pressable
-          onPress={() => setOpen((v) => !v)}
-          style={[styles.dropdownButton, open && styles.dropdownButtonOpen]}
+      <View style={styles.accordionContainer} key={name}>
+        <TouchableOpacity 
+          style={styles.accordionHeader} 
+          activeOpacity={0.7}
+          onPress={() => toggleAccordion(name)}
         >
-          <Text style={styles.dropdownButtonText} numberOfLines={1}>{display(value)}</Text>
-          <ChevronRight 
-            size={14} 
-            color="#9CA3AF" 
-            style={{ transform: [{ rotate: open ? '270deg' : '90deg' }] }} 
+          <Text style={[styles.accordionTitle, isExpanded && styles.accordionTitleActive]}>
+            {title}
+          </Text>
+          <ChevronDown 
+            size={18} 
+            color="#0F172A" 
+            style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} 
           />
-        </Pressable>
+        </TouchableOpacity>
+        {isExpanded && (
+          <View style={styles.accordionContent}>
+            {content}
+          </View>
+        )}
+      </View>
+    );
+  };
 
-        {open ? (
-          <>
-            <Pressable 
-              style={styles.dropdownBackdrop} 
-              onPress={() => setOpen(false)} 
-            />
-            <View style={styles.dropdownMenu}>
-              <ScrollView style={{ maxHeight: 200 }}>
-                {options.map((opt) => (
-                  <Pressable
-                    key={opt}
-                    onPress={() => {
-                      onChange(opt);
-                      setOpen(false);
-                    }}
-                    style={[
-                      styles.dropdownOption,
-                      opt === value && styles.dropdownOptionActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownOptionText,
-                        opt === value && styles.dropdownOptionTextActive,
-                      ]}
-                    >
-                      {display(opt)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          </>
-        ) : null}
+  // Render filter drawer shared between views
+  const renderFiltersDrawer = () => (
+    <View style={styles.filtersDrawer}>
+      <View style={styles.filterHeaderRow}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity onPress={() => setShowFiltersDrawer(false)}>
+            <ChevronLeft size={22} color="#0F172A" />
+          </TouchableOpacity>
+          <Text style={styles.filterDrawerTitle}>Filters</Text>
+        </View>
+        
+        <TouchableOpacity onPress={handleResetFilters}>
+          <Text style={styles.resetBtnText}>RESET</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.filterSubtitle}>
+        Showing {startIdx} - {endIdx} of {filteredGrounds.length} venues
+      </Text>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.filterAccordionScroll}>
+        
+        {/* Accordion 1: Ground Name */}
+        {renderAccordionItem('ground_name', 'Ground Name', (
+          <TextInput
+            style={styles.filterInput}
+            placeholder="Search by ground name..."
+            placeholderTextColor="#94A3B8"
+            value={filterGroundName}
+            onChangeText={setFilterGroundName}
+          />
+        ))}
+
+        {/* Accordion 2: Area Name */}
+        {renderAccordionItem('area_name', 'Area Name', (
+          <View style={styles.filterPillGroup}>
+            {areas.map(area => (
+              <TouchableOpacity
+                key={area}
+                style={[styles.filterPill, filterArea === area && styles.filterPillActive]}
+                onPress={() => setFilterArea(area)}
+              >
+                <Text style={[styles.filterPillText, filterArea === area && styles.filterPillTextActive]}>
+                  {area === 'all' ? 'All Areas' : area}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 3: Slot Availability */}
+        {renderAccordionItem('slot_avail', 'Slot Availability', (
+          <View style={styles.filterPillGroup}>
+            {['all', 'available', 'booked'].map(mode => (
+              <TouchableOpacity
+                key={mode}
+                style={[styles.filterPill, filterAvailability === mode && styles.filterPillActive]}
+                onPress={() => setFilterAvailability(mode)}
+              >
+                <Text style={[styles.filterPillText, filterAvailability === mode && styles.filterPillTextActive]}>
+                  {mode === 'all' ? 'Any' : mode === 'available' ? 'Available' : 'Booked'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 4: Slot Timings */}
+        {renderAccordionItem('slot_timings', 'Slot Timings', (
+          <View style={styles.filterPillGroup}>
+            {['all', 'morning', 'midday', 'afternoon', 'night'].map(time => (
+              <TouchableOpacity
+                key={time}
+                style={[styles.filterPill, filterTiming === time && styles.filterPillActive]}
+                onPress={() => setFilterTiming(time)}
+              >
+                <Text style={[styles.filterPillText, filterTiming === time && styles.filterPillTextActive]}>
+                  {time === 'all' ? 'Any Time' : time.charAt(0).toUpperCase() + time.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 5: Star Rating */}
+        {renderAccordionItem('star_rating', 'Star Rating: 0.0 - 5.0', (
+          <View style={styles.filterPillGroup}>
+            {['all', '4.0+', '3.0+'].map(rating => (
+              <TouchableOpacity
+                key={rating}
+                style={[styles.filterPill, filterRating === rating && styles.filterPillActive]}
+                onPress={() => setFilterRating(rating)}
+              >
+                <Text style={[styles.filterPillText, filterRating === rating && styles.filterPillTextActive]}>
+                  {rating === 'all' ? 'All Ratings' : `${rating} ★`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 6: Price */}
+        {renderAccordionItem('price', 'Price', (
+          <View style={styles.filterPillGroup}>
+            {[
+              { value: 'all', label: 'All Prices' },
+              { value: 'under_1000', label: 'Under ₹1,000' },
+              { value: '1000_2000', label: '₹1,000 - ₹2,000' },
+              { value: 'over_2000', label: 'Over ₹2,000' }
+            ].map(range => (
+              <TouchableOpacity
+                key={range.value}
+                style={[styles.filterPill, filterPriceRange === range.value && styles.filterPillActive]}
+                onPress={() => setFilterPriceRange(range.value)}
+              >
+                <Text style={[styles.filterPillText, filterPriceRange === range.value && styles.filterPillTextActive]}>
+                  {range.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 7: Booking Type */}
+        {renderAccordionItem('booking_type', 'Booking Type', (
+          <View style={styles.filterPillGroup}>
+            {[
+              { value: 'all', label: 'All Types' },
+              { value: 'stadium', label: 'Stadium' },
+              { value: 'box', label: 'Box Cricket' },
+              { value: 'nets', label: 'Net Practice' }
+            ].map(type => (
+              <TouchableOpacity
+                key={type.value}
+                style={[styles.filterPill, filterBookingType === type.value && styles.filterPillActive]}
+                onPress={() => setFilterBookingType(type.value)}
+              >
+                <Text style={[styles.filterPillText, filterBookingType === type.value && styles.filterPillTextActive]}>
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {/* Accordion 8: Amenities */}
+        {renderAccordionItem('amenities', 'Amenities', (
+          <View style={styles.filterPillGroup}>
+            {['Pavilion', 'Washroom', 'Sight Screen', 'Flood Lights', 'Net Practice', 'Parking'].map(amenity => {
+              const isSelected = selectedAmenities.includes(amenity);
+              return (
+                <TouchableOpacity
+                  key={amenity}
+                  style={[styles.filterPill, isSelected && styles.filterPillActive]}
+                  onPress={() => {
+                    if (isSelected) {
+                      setSelectedAmenities(prev => prev.filter(a => a !== amenity));
+                    } else {
+                      setSelectedAmenities(prev => [...prev, amenity]);
+                    }
+                  }}
+                >
+                  <Text style={[styles.filterPillText, isSelected && styles.filterPillTextActive]}>
+                    {amenity}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+
+      </ScrollView>
+
+      {/* Apply/Done action button */}
+      <TouchableOpacity 
+        style={styles.applyFilterBtn}
+        onPress={() => setShowFiltersDrawer(false)}
+      >
+        <Text style={styles.applyFilterBtnText}>Apply & Close</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator color="#01b854" size="large" />
       </View>
     );
   }
 
-  if (loading) {
-     return (
-       <View style={styles.loader}>
-         <ActivityIndicator color="#01e669" />
-       </View>
-     );
-  }
-
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={[styles.headerContentRow, isSmallScreen && { flexDirection: 'column', alignItems: 'flex-start', gap: 16 }]}>
-          <View style={styles.titleSection}>
-            <View style={styles.iconCircle}>
-              <MapIcon size={20} color="#01e669" />
-            </View>
-            <View>
-              <Text style={styles.title}>Venues Near You</Text>
-            </View>
+      {/* 1. TOP HEADER / ACTION BAR */}
+      <View style={styles.topBar}>
+        <View style={styles.tabsContainer}>
+          {/* Map/List Switcher Group */}
+          <View style={styles.toggleGroup}>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              style={[styles.toggleBtn, viewMode === 'map' && styles.toggleBtnActive]}
+              onPress={() => setViewMode('map')}
+            >
+              <Text style={[styles.toggleBtnText, viewMode === 'map' && styles.toggleBtnTextActive]}>
+                Map
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]}
+              onPress={() => setViewMode('list')}
+            >
+              <Text style={[styles.toggleBtnText, viewMode === 'list' && styles.toggleBtnTextActive]}>
+                List
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={[styles.headerControlsRow, isSmallScreen && { justifyContent: 'flex-start', width: '100%' }]}>
-            <View style={[styles.locationDropdownWrapper, isSmallScreen && { width: '48%', flex: 1 }]}>
-              <LocalFilterDropdown
-                options={locationOptions}
-                value={locationFilter}
-                onChange={setLocationFilter}
-              />
-            </View>
+          {/* Filters Button */}
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            style={[styles.filterBtn, showFiltersDrawer && styles.filterBtnSelected]}
+            onPress={() => setShowFiltersDrawer(prev => !prev)}
+          >
+            <SlidersHorizontal size={14} color={showFiltersDrawer ? "#FFFFFF" : "#475569"} style={{ marginRight: 6 }} />
+            <Text style={[styles.filterBtnText, showFiltersDrawer && { color: '#FFFFFF' }]}>Filters</Text>
+          </TouchableOpacity>
+        </View>
 
-            <View style={[styles.headerSearchWrapper, isSmallScreen && { width: '48%', flex: 1 }]}>
-              <View style={styles.searchBAR}>
-                <Search size={16} color="#9CA3AF" />
-                <TextInput
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  style={styles.searchINPUT}
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-            </View>
-          </View>
+        {/* Date Selector with Next/Prev Arrows */}
+        <View style={styles.dateSelector}>
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            style={styles.arrowBtn}
+            onPress={handlePrevDate}
+          >
+            <ChevronLeft size={16} color="#475569" />
+          </TouchableOpacity>
+
+          <Text style={styles.dateText}>
+            {formatSelectedDate(selectedDate)}
+          </Text>
+
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            style={styles.arrowBtn}
+            onPress={handleNextDate}
+          >
+            <ChevronRight size={16} color="#475569" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      <View style={[styles.content, (isSmallScreen || !isWeb) && { flexDirection: 'column' }]}>
-        {/* Map Section */}
-        <View style={[styles.mapCard, isSmallScreen && { height: 350 }]}>
-          {isWeb ? (
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-              <MultiMarkerMap 
-                grounds={filteredGrounds} 
-                focusedGroundId={focusedGroundId}
-                onMarkerClick={setFocusedGroundId}
-                userLocation={userLocation}
-              />
-            </APIProvider>
-          ) : (
-            <View style={styles.nativeMapPlaceholder}>
-              <View style={styles.nativeMapIcon}>
-                <Navigation size={40} color="rgba(1, 230, 105, 0.3)" />
+      {/* 2. SPLIT LAYOUT / MAIN DISPLAY */}
+      {viewMode === 'map' ? (
+        <View style={[styles.mainLayout, isSmallScreen && { flexDirection: 'column', height: 'auto' }]}>
+          
+          {/* Left panel: Venue List OR Slide-out Accordion Filters Drawer */}
+          <View style={[styles.leftPanel, isSmallScreen && { width: '100%', height: 'auto', marginBottom: 20 }]}>
+            
+            {showFiltersDrawer ? (
+              renderFiltersDrawer()
+            ) : (
+              /* ================= STANDARD MAP LIST PANEL ================= */
+              <>
+                <View style={styles.panelHeader}>
+                  <Text style={styles.panelTitle}>
+                    {filteredGrounds.length} Venues Found
+                  </Text>
+                </View>
+
+                {filteredGrounds.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No venues match your active filters.</Text>
+                    <TouchableOpacity onPress={handleResetFilters} style={styles.resetLink}>
+                      <Text style={styles.resetLinkText}>Reset Filters</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <ScrollView 
+                    showsVerticalScrollIndicator={false} 
+                    style={styles.cardScroll}
+                    contentContainerStyle={{ gap: 16 }}
+                  >
+                    {paginatedGrounds.map((ground) => {
+                      const isFocused = ground.id === focusedGroundId;
+                      const groundImg = ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+                      const rating = ground._avgRating ? ground._avgRating.toFixed(1) : '3.8';
+                      const amenities = getAmenities(ground);
+
+                      return (
+                        <View 
+                          key={ground.id} 
+                          style={[styles.venueCard, isFocused && styles.venueCardFocused]}
+                        >
+                          <Image source={{ uri: groundImg }} style={styles.cardImage} />
+                          
+                          <View style={styles.cardBody}>
+                            <View style={styles.cardTitleRow}>
+                              <Text style={styles.cardTitle} numberOfLines={1}>
+                                {ground.name}
+                              </Text>
+                              <View style={styles.cardActions}>
+                                <TouchableOpacity onPress={() => handleShare(ground)}>
+                                  <Share2 size={16} color="#64748B" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => toggleFavorite(ground.id)}>
+                                  <Heart 
+                                    size={16} 
+                                    color={favorites[ground.id] ? "#EF4444" : "#64748B"} 
+                                    fill={favorites[ground.id] ? "#EF4444" : "transparent"} 
+                                  />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            <View style={styles.cardLocRow}>
+                              <MapPin size={12} color="#64748B" />
+                              <Text style={styles.cardLocText} numberOfLines={1}>
+                                {ground.address || `${ground.city}, ${ground.state}`}
+                              </Text>
+                            </View>
+
+                            <View style={styles.cardRatingRow}>
+                              <Star size={12} color="#FFA000" fill="#FFA000" />
+                              <Text style={styles.cardRatingText}>
+                                {rating}
+                              </Text>
+                            </View>
+
+                            {/* Amenities Pills */}
+                            <View style={styles.amenitiesRow}>
+                              {amenities.slice(0, 3).map((amenity, index) => (
+                                <View key={index} style={styles.amenityTag}>
+                                  <Text style={styles.amenityCheck}>✓</Text>
+                                  <Text style={styles.amenityText}>{amenity}</Text>
+                                </View>
+                              ))}
+                              {amenities.length > 3 && (
+                                <Text style={styles.amenityMore}>+{amenities.length - 3} more</Text>
+                              )}
+                            </View>
+
+                            {/* Locate Button - styled elegantly using brand primary green */}
+                            <TouchableOpacity 
+                              activeOpacity={0.8}
+                              style={styles.locateBtn}
+                              onPress={() => {
+                                setFocusedGroundId(ground.id);
+                              }}
+                            >
+                              <MapPin size={14} color="#01b854" />
+                              <Text style={styles.locateBtnText}>Locate</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Right panel: Google Map */}
+          <View style={[styles.rightPanel, isSmallScreen && { width: '100%', height: 400 }]}>
+            {isWeb ? (
+              <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                <MultiMarkerMap 
+                  grounds={filteredGrounds} 
+                  focusedGroundId={focusedGroundId}
+                  onMarkerClick={setFocusedGroundId}
+                  userLocation={userLocation}
+                />
+              </APIProvider>
+            ) : (
+              <View style={styles.nativeMapPlaceholder}>
+                <Navigation size={40} color="rgba(1, 184, 84, 0.3)" style={{ marginBottom: 12 }} />
+                <Text style={styles.nativeMapText}>Interactive Map is optimized for Web</Text>
+                <TouchableOpacity 
+                  style={styles.nativeMapBtn}
+                  onPress={() => {
+                    const focused = filteredGrounds.find(g => g.id === focusedGroundId) || filteredGrounds[0];
+                    if (focused) {
+                      const q = encodeURIComponent(`${focused.name}, ${focused.city}`);
+                      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`);
+                    }
+                  }}
+                >
+                  <Text style={styles.nativeMapBtnText}>Open in Google Maps</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.nativeMapText}>Pinpoint locations on the dynamic map</Text>
-              <Pressable 
-                style={styles.nativeMapButton}
-                onPress={() => {
-                  const q = encodeURIComponent(focusedGround ? `${focusedGround.name} ${focusedGround.city}` : "Cricket grounds near me");
-                   const url = Platform.select({
-                    ios: `maps:0,0?q=${q}`,
-                    android: `geo:0,0?q=${q}`,
-                    default: `https://www.google.com/maps/search/?api=1&query=${q}`
-                  });
-                  // @ts-ignore
-                  import('react-native').then(rn => rn.Linking.openURL(url));
-                }}
-              >
-                <Text style={styles.nativeMapButtonText}>Open in Google Maps</Text>
-              </Pressable>
+            )}
+          </View>
+        </View>
+      ) : (
+        /* ================= LIST VIEW MODE (Beautiful grid explorer) ================= */
+        <View style={[styles.mainLayout, isSmallScreen && { flexDirection: 'column', height: 'auto' }]}>
+          
+          {/* Left panel (only visible if filters drawer is open) */}
+          {showFiltersDrawer && (
+            <View style={[styles.leftPanel, isSmallScreen && { width: '100%', height: 'auto', marginBottom: 20 }]}>
+              {renderFiltersDrawer()}
             </View>
           )}
-        </View>
 
-        {/* Grounds List Section */}
-        <View style={styles.listContainer}>
-          <ScrollView
-            horizontal={!isWeb}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {filteredGrounds.map((ground) => {
-              const isFocused = ground.id === focusedGroundId;
-              return (
-                <Pressable
-                  key={ground.id}
-                  style={styles.groundItem}
-                  onPress={() => setFocusedGroundId(ground.id)}
-                >
-                  <Card style={[styles.itemCard, isFocused && styles.itemCardFocused]}>
-                    <View style={styles.itemRow}>
-                      <Image 
-                        source={{ uri: ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} 
-                        style={styles.itemImage} 
-                      />
-                      <View style={styles.itemDetails}>
-                        <Text style={styles.itemName} numberOfLines={1}>{ground.name}</Text>
-                        <Text style={styles.itemCity}>{ground.city} • {ground.pitch_type || 'Standard'}</Text>
-                        
-                        <TouchableOpacity 
-                          style={styles.locationLink}
-                          onPress={() => {
-                            const q = encodeURIComponent(`${ground.name}, ${ground.city}, ${ground.state}`);
-                            const url = `https://www.google.com/maps/search/?api=1&query=${q}`;
-                            Linking.openURL(url);
-                          }}
-                        >
-                          <MapPin size={12} color="#10b981" />
-                          <Text style={styles.locationLinkText}>View on Map</Text>
-                        </TouchableOpacity>
+          {/* Grid Panel on the Right (occupies 100% if filters closed, 65% if open) */}
+          <View style={[
+            styles.rightPanel, 
+            { backgroundColor: 'transparent', borderWidth: 0 },
+            !showFiltersDrawer && { width: '100%' },
+            isSmallScreen && { width: '100%', height: 'auto' }
+          ]}>
+            {filteredGrounds.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No venues match your active filters.</Text>
+                <TouchableOpacity onPress={handleResetFilters} style={styles.resetLink}>
+                  <Text style={styles.resetLinkText}>Reset Filters</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
+                <View style={styles.gridView}>
+                  {paginatedGrounds.map((ground) => {
+                    const groundImg = ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+                    const rating = ground._avgRating ? ground._avgRating.toFixed(1) : '3.8';
+                    const amenities = getAmenities(ground);
+                    const cardWidth = showFiltersDrawer ? '48%' : '31.5%';
 
-                        <View style={styles.ratingRow}>
-                          <Star size={10} color="#FFA000" fill="#FFA000" />
-                          <Text style={styles.ratingText}>
-                            {ground._avgRating > 0 
-                              ? `${ground._avgRating.toFixed(1)} (${ground._reviewsCount})`
-                              : 'New'}
-                          </Text>
-                        </View>
-                      </View>
-                      <Pressable 
+                    return (
+                      <TouchableOpacity 
+                        key={ground.id} 
+                        style={[
+                          styles.gridCard, 
+                          { width: isSmallScreen ? '100%' : cardWidth }
+                        ]}
+                        activeOpacity={0.95}
                         onPress={() => router.push(makeGroundPath(ground) as any)}
-                        style={styles.itemAction}
                       >
-                         <ChevronRight size={20} color={isFocused ? "#10b981" : "#9CA3AF"} />
-                      </Pressable>
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                        <Image source={{ uri: groundImg }} style={styles.gridCardImage} />
+                        <View style={styles.gridCardBody}>
+                          <View style={styles.cardTitleRow}>
+                            <Text style={styles.gridCardTitle} numberOfLines={1}>
+                              {ground.name}
+                            </Text>
+                            <TouchableOpacity onPress={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(ground.id);
+                            }}>
+                              <Heart 
+                                size={16} 
+                                color={favorites[ground.id] ? "#EF4444" : "#64748B"} 
+                                fill={favorites[ground.id] ? "#EF4444" : "transparent"} 
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          <View style={styles.cardLocRow}>
+                            <MapPin size={12} color="#64748B" />
+                            <Text style={styles.cardLocText} numberOfLines={1}>
+                              {ground.address || `${ground.city}, ${ground.state}`}
+                            </Text>
+                          </View>
 
-          
-          <Pressable 
-            style={styles.viewMoreRow}
-            onPress={() => router.push('/book-my-ground' as any)}
+                          <View style={styles.gridCardMeta}>
+                            <View style={styles.cardRatingRow}>
+                              <Star size={12} color="#FFA000" fill="#FFA000" />
+                              <Text style={styles.cardRatingText}>{rating}</Text>
+                            </View>
+                            <Text style={styles.gridPrice}>
+                              ₹{ground.min_price || ground.base_price_per_hour || 0}
+                              <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '400' }}>/match</Text>
+                            </Text>
+                          </View>
+
+                          <View style={styles.amenitiesRow}>
+                            {amenities.slice(0, 3).map((amenity, index) => (
+                              <View key={index} style={styles.amenityTag}>
+                                <Text style={styles.amenityCheck}>✓</Text>
+                                <Text style={styles.amenityText}>{amenity}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* 3. PAGINATION ROW */}
+      <View style={styles.paginationRow}>
+        <Text style={styles.paginationText}>
+          Showing {startIdx} - {endIdx} of {filteredGrounds.length} venues
+        </Text>
+
+        <View style={styles.paginationButtons}>
+          <TouchableOpacity 
+            style={[styles.pgBtn, currentPage === 1 && { opacity: 0.5 }]}
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => Math.max(1, prev - 1))}
           >
-            <Text style={styles.viewMoreText}>View all venues</Text>
-            <ChevronRight size={16} color="#01e669" />
-          </Pressable>
+            <Text style={styles.pgBtnText}>Previous</Text>
+          </TouchableOpacity>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pgNum) => (
+            <TouchableOpacity 
+              key={pgNum} 
+              style={[styles.pgBtn, currentPage === pgNum && styles.pgBtnActive]}
+              onPress={() => setCurrentPage(pgNum)}
+            >
+              <Text style={[styles.pgBtnText, currentPage === pgNum && styles.pgBtnTextActive]}>
+                {pgNum}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity 
+            style={[styles.pgBtn, currentPage === totalPages && { opacity: 0.5 }]}
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+          >
+            <Text style={styles.pgBtnText}>Next</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -651,343 +1119,541 @@ export default function GroundsNearYou() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 40,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
   },
   loader: {
-    height: 200,
+    height: 400,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-    zIndex: 50,
-    position: 'relative',
-    overflow: 'visible',
-  },
-  headerTitleRow: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 20,
+    flexWrap: 'wrap',
     gap: 16,
   },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(1, 230, 105, 0.1)',
-    justifyContent: 'center',
+  tabsContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '900',
+  toggleGroup: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    padding: 3,
+    borderRadius: 8,
+  },
+  toggleBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
     fontFamily: 'Inter',
+  },
+  toggleBtnTextActive: {
     color: '#0F172A',
   },
-  subtitle: {
-    fontSize: 13,
-    fontFamily: 'Inter',
-    color: '#64748B',
-    marginTop: 2,
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
-  content: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: Platform.OS === 'web' ? 20 : 0,
+  filterBtnSelected: {
+    backgroundColor: '#043529', // Active Brand dark green button style
+    borderColor: '#043529',
+  },
+  filterBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  arrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    minWidth: 100,
+    textAlign: 'center',
+  },
+  mainLayout: {
+    flexDirection: 'row',
+    height: 500,
     gap: 20,
   },
-  mapCard: {
-    flex: 3,
-    height: 450,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 10 },
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    overflow: 'hidden',
-    marginHorizontal: Platform.OS === 'web' ? 0 : 16,
+  leftPanel: {
+    width: '35%',
+    flexDirection: 'column',
+    position: 'relative',
+    height: '100%',
   },
-  listContainer: {
-    flex: 2,
-    gap: 12,
-    ...Platform.select({
-      web: {
-        height: 450,
-      }
-    })
+  panelHeader: {
+    marginBottom: 14,
   },
-  scrollContent: {
-    paddingHorizontal: Platform.OS === 'web' ? 8 : 16,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  groundItem: {
-    width: Platform.OS === 'web' ? '100%' : 260,
-  },
-  itemCard: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: 'pointer',
-      } as any,
-    }),
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  itemCardFocused: {
-    transform: Platform.OS === 'web' ? [{ scale: 1.02 }, { translateY: -2 }] : [],
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    backgroundColor: '#FFFFFF',
-    borderColor: '#01e669',
-    zIndex: 10,
-  },
-  itemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: '#eee',
-  },
-  locationLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  locationLinkText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#10b981',
-    textDecorationLine: 'underline',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  ratingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  itemDetails: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 16,
+  panelTitle: {
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  itemCity: {
-    fontSize: 13,
+  cardScroll: {
+    flex: 1,
+  },
+  venueCard: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  venueCardFocused: {
+    borderColor: '#01b854', // brand primary green focus outline
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  cardImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+  },
+  cardBody: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    flex: 1,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardLocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  cardLocText: {
+    fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
-    marginTop: 2,
+    flex: 1,
   },
-  itemAction: {
-    padding: 4,
+  cardRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
-  viewMoreRow: {
+  cardRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    fontFamily: 'Inter',
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  amenityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    gap: 4,
+  },
+  amenityCheck: {
+    fontSize: 10,
+    color: '#16A34A',
+    fontWeight: 'bold',
+  },
+  amenityText: {
+    fontSize: 11,
+    color: '#374151',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  amenityMore: {
+    fontSize: 11,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '600',
+  },
+  locateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
     gap: 6,
+    borderWidth: 1,
+    borderColor: '#01b854', // brand primary green
+    borderRadius: 8,
+    paddingVertical: 8,
+    marginTop: 12,
+    width: '100%',
   },
-  viewMoreText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#01e669',
+  locateBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#01b854', // brand primary green
+    fontFamily: 'Inter',
+  },
+  rightPanel: {
+    width: '65%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    position: 'relative',
+    height: '100%',
+  },
+  mapFloatingBadge: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    zIndex: 10,
+  },
+  mapFloatingBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
   nativeMapPlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    gap: 16,
-  },
-  nativeMapIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 234, 107, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 30,
+    backgroundColor: '#F8FAFC',
   },
   nativeMapText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  nativeMapButton: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  nativeMapButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
     fontSize: 15,
-    fontFamily: 'Inter',
-  },
-  headerContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 20,
-    flexWrap: 'wrap',
-    zIndex: 60,
-    position: 'relative',
-    overflow: 'visible',
-  },
-  titleSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    minWidth: 200,
-  },
-  headerControlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-    zIndex: 200,
-    overflow: 'visible',
-    position: 'relative',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  locationDropdownWrapper: {
-    width: Platform.OS === 'web' ? 180 : '100%',
-    zIndex: 300,
-  },
-  headerSearchWrapper: {
-    width: Platform.OS === 'web' ? 240 : '100%',
-    maxWidth: 400,
-    zIndex: 100,
-  },
-  dropdownOuter: {
-    position: 'relative',
-    width: '100%',
-    overflow: 'visible',
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(10px)' }
-    }) as any,
-  },
-  dropdownButtonOpen: {
-    borderColor: '#10B981',
-  },
-  dropdownButtonText: {
-    fontSize: 14,
-    color: '#0F172A',
     fontWeight: '600',
-    flex: 1,
-    marginRight: 4,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  nativeMapBtn: {
+    backgroundColor: '#01b854',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  nativeMapBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 16,
+  },
+  paginationText: {
+    fontSize: 13,
+    color: '#64748B',
     fontFamily: 'Inter',
   },
-  dropdownMenu: {
+  paginationButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pgBtn: {
+    minWidth: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  pgBtnActive: {
+    backgroundColor: '#043529', // website brand dark green active color
+    borderColor: '#043529',
+  },
+  pgBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+  },
+  pgBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  gridContainer: {
+    height: 500,
+  },
+  gridScroll: {
+    paddingBottom: 20,
+  },
+  gridView: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+  },
+  gridCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  gridCardImage: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#F1F5F9',
+  },
+  gridCardBody: {
+    padding: 16,
+  },
+  gridCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    flex: 1,
+  },
+  gridCardMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  gridPrice: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#01b854',
+    fontFamily: 'Inter',
+  },
+
+  /* ================= NEW HIGH-FIDELITY ACCORDION FILTERS DRAWER STYLES ================= */
+  filtersDrawer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    flexDirection: 'column',
     position: 'absolute',
-    top: 48,
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-    zIndex: 1000,
-    overflow: 'hidden',
+    bottom: 0,
+    zIndex: 50,
   },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  filterHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  dropdownOptionActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  filterDrawerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#043529', // website brand dark green color code
+    fontFamily: 'Inter',
   },
-  dropdownOptionText: {
+  resetBtnText: {
     fontSize: 14,
-    color: '#374151',
+    fontWeight: '700',
+    color: '#01b854', // website brand primary green color code
+    fontFamily: 'Inter',
   },
-  dropdownOptionTextActive: {
-    color: '#10B981',
+  filterSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    marginBottom: 16,
+  },
+  filterAccordionScroll: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  accordionContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingVertical: 14,
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  accordionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  accordionTitleActive: {
+    color: '#043529', // website brand dark green active color code
+  },
+  accordionContent: {
+    marginTop: 12,
+    paddingBottom: 6,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    backgroundColor: '#F8FAFC',
+    ...Platform.select({
+      web: { outlineStyle: 'none' } as any
+    })
+  },
+  filterPillGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterPill: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterPillActive: {
+    backgroundColor: '#01b854', // brand primary green color code
+    borderColor: '#01b854',
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  applyFilterBtn: {
+    backgroundColor: '#043529', // brand dark green button
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  applyFilterBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter',
   },
-  searchBAR: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(10px)' }
-    }) as any,
-  },
-  searchINPUT: {
+  emptyContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
     fontSize: 14,
-    marginLeft: 8,
-    color: '#0F172A',
+    color: '#64748B',
     fontFamily: 'Inter',
-    fontWeight: '500',
-    ...Platform.select({
-      web: { outlineStyle: 'none' } as any,
-    }),
+    textAlign: 'center',
   },
-  dropdownBackdrop: {
-    position: Platform.OS === 'web' ? 'fixed' as any : 'absolute',
-    top: Platform.OS === 'web' ? 0 : -1000,
-    left: Platform.OS === 'web' ? 0 : -1000,
-    right: Platform.OS === 'web' ? 0 : -1000,
-    bottom: Platform.OS === 'web' ? 0 : -1000,
-    backgroundColor: 'transparent',
-    zIndex: 999,
+  resetLink: {
+    marginTop: 10,
   },
+  resetLinkText: {
+    fontSize: 13,
+    color: '#01b854',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  }
 });

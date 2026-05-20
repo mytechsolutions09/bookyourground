@@ -2321,7 +2321,7 @@ export default function OwnerEarningsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Earnings" titleColor="#01b854" lightBg />
+      <MobileAppNavbar title="Earnings" titleColor="#0F172A" lightBg />
       <OwnerEarningsScreenInner />
     </View>
   );

@@ -157,13 +157,13 @@ export default function BookMyGroundPage() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout hideHeader={width < 900}>
+      <WebLayout hideHeader={true}>
         {width < 900 && (
           <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
             <MobileAppNavbar
               title="Book a venue"
-              titleColor="#0F172A"
-              lightBg
+              titleColor="#00ea6b"
+              bgColor="#06392e"
             />
             <View style={styles.tabContainer}>
               <TouchableOpacity
@@ -214,7 +214,7 @@ export default function BookMyGroundPage() {
   return (
     <View style={styles.nativeRoot}>
       <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: '#FFFFFF' }, headerAnimatedStyle]}>
-        <MobileAppNavbar title="Book a venue" titleColor="#0F172A" lightBg />
+        <MobileAppNavbar title="Book a venue" titleColor="#00ea6b" bgColor="#06392e" />
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, styles.activeTab]}

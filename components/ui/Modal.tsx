@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '100%',
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     overflow: 'hidden',
@@ -91,5 +92,6 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: 20,
+    flexShrink: 1,
   },
 });

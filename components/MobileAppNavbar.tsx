@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 6,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     fontFamily: 'Inter',
     letterSpacing: 1,
     textTransform: 'uppercase',
