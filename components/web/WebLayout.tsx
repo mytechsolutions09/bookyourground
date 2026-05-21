@@ -785,7 +785,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             }}
                             style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
                           >
-                            <Search size={18} color="#dcc093" />
+                            <Search size={18} color="#00ea6b" />
                           </TouchableOpacity>
                         ) : (
                           <View style={[
@@ -793,11 +793,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             { width: 300 },
                             scrolled && { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.2)' } as any
                           ]}>
-                            <Search size={16} color="#dcc093" style={styles.headerSearchIcon} />
+                            <Search size={16} color="#00ea6b" style={styles.headerSearchIcon} />
                             <TextInput
                               ref={searchInputRef}
                               placeholder="Search city or venue..."
-                              placeholderTextColor="rgba(220, 192, 147, 0.6)"
+                              placeholderTextColor="rgba(0, 234, 107, 0.6)"
                               value={searchQuery}
                               onChangeText={setSearchQuery}
                               onFocus={() => setSearchFocused(true)}
@@ -819,7 +819,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                               returnKeyType="search"
                               style={[
                                 styles.headerSearchInput,
-                                scrolled && { color: '#dcc093' } as any,
+                                scrolled && { color: '#00ea6b' } as any,
                                 searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
                               ]}
                             />
@@ -902,7 +902,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                               <Text style={[
                                 styles.headerPrimaryButtonText,
                                 scrolled && styles.headerPrimaryButtonTextScrolled,
-                                { color: '#dcc093' }
+                                { color: '#00ea6b' }
                               ]}>
                                 VENUES
                               </Text>
@@ -912,7 +912,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                               <Text style={[
                                 styles.headerPrimaryButtonText,
                                 scrolled && styles.headerPrimaryButtonTextScrolled,
-                                { color: '#dcc093' }
+                                { color: '#00ea6b' }
                               ]}>
                                 SHOP
                               </Text>
@@ -928,6 +928,23 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           FIND AN OPPOSITION
                         </Text>
                       </TouchableOpacity>
+                    )}
+
+                    {cleanPath === '/find-an-opponent' && (
+                      <>
+                        {isAuthenticated && (
+                          <TouchableOpacity onPress={() => router.push('/cricket' as any)}>
+                            <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
+                              CRICKET
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                          <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
+                            VENUES
+                          </Text>
+                        </TouchableOpacity>
+                      </>
                     )}
 
                     {!isAuthenticated ? (
@@ -1590,7 +1607,7 @@ const styles = StyleSheet.create({
   headerSearchInput: {
     flex: 1,
     height: 32,
-    color: '#dcc093',
+    color: '#00ea6b',
     fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
@@ -1939,12 +1956,12 @@ const styles = StyleSheet.create({
   headerPrimaryButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#dcc093',
+    color: '#00ea6b',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
   },
   headerPrimaryButtonTextScrolled: {
-    color: '#dcc093',
+    color: '#00ea6b',
   },
   headerSecondaryButton: {
     paddingHorizontal: 14,

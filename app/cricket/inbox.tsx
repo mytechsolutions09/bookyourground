@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, MessageCircle } from 'lucide-react-native';
@@ -16,8 +16,9 @@ export default function InboxScreen() {
     if (user) {
       fetchChats();
       
+      const channelName = `inbox_direct_chats_${Math.random().toString(36).substring(7)}`;
       const subscription = supabase
-        .channel('public:direct_chats')
+        .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_chats' }, () => {
           fetchChats();
         })
@@ -28,6 +29,14 @@ export default function InboxScreen() {
       };
     }
   }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        fetchChats();
+      }
+    }, [user])
+  );
 
   const fetchChats = async () => {
     if (!user) return;
@@ -46,8 +55,47 @@ export default function InboxScreen() {
       .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
       .order('updated_at', { ascending: false });
 
-    if (data && !error) {
-      setChats(data);
+    if (data && !error && data.length > 0) {
+      const chatIds = data.map((c: any) => c.id);
+      
+      const lastMessagesPromises = chatIds.map((chatId: string) => 
+        supabase
+          .from('direct_messages')
+          .select('content, sender_id, is_read, created_at')
+          .eq('chat_id', chatId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+      );
+      
+      const unreadPromises = supabase
+        .from('direct_messages')
+        .select('chat_id')
+        .in('chat_id', chatIds)
+        .eq('is_read', false)
+        .neq('sender_id', user.id);
+        
+      const [lastMessagesResults, unreadRes] = await Promise.all([
+        Promise.all(lastMessagesPromises),
+        unreadPromises
+      ]);
+      
+      const unreadMap: Record<string, number> = {};
+      unreadRes.data?.forEach((msg: any) => {
+        unreadMap[msg.chat_id] = (unreadMap[msg.chat_id] || 0) + 1;
+      });
+      
+      const enhancedChats = data.map((chat: any, index: number) => {
+        return {
+          ...chat,
+          lastMessage: lastMessagesResults[index].data,
+          unreadCount: unreadMap[chat.id] || 0
+        };
+      });
+      
+      setChats(enhancedChats);
+    } else if (data && data.length === 0) {
+      setChats([]);
     }
     setLoading(false);
   };
@@ -64,6 +112,9 @@ export default function InboxScreen() {
     const name = otherParticipant?.full_name || 'Unknown User';
     const initials = name[0] || 'U';
 
+    const lastMessage = item.lastMessage;
+    const isMyLastMessage = lastMessage?.sender_id === user?.id;
+
     return (
       <TouchableOpacity 
         style={styles.chatItem}
@@ -74,13 +125,27 @@ export default function InboxScreen() {
         </View>
         <View style={styles.chatInfo}>
           <Text style={styles.chatName}>{name}</Text>
-          <Text style={styles.chatPreview} numberOfLines={1}>
-            Tap to view messages
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {isMyLastMessage && (
+              <Text style={{ fontSize: 11, color: lastMessage.is_read ? '#00ea6b' : '#94A3B8' }}>
+                {lastMessage.is_read ? '✓✓' : '✓'}
+              </Text>
+            )}
+            <Text style={styles.chatPreview} numberOfLines={1}>
+              {lastMessage ? lastMessage.content : 'Tap to view messages'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.timeText}>
-          {new Date(item.updated_at).toLocaleDateString()}
-        </Text>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <Text style={styles.timeText}>
+            {new Date(item.updated_at).toLocaleDateString()}
+          </Text>
+          {item.unreadCount > 0 && (
+            <View style={{ backgroundColor: '#00ea6b', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, minWidth: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#06392e', fontSize: 10, fontWeight: '700' }}>{item.unreadCount}</Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -88,7 +153,10 @@ export default function InboxScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity 
+          onPress={() => router.push('/cricket')} 
+          style={styles.backBtn}
+        >
           <ChevronLeft size={24} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Inbox</Text>

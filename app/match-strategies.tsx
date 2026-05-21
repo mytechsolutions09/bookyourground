@@ -19,7 +19,8 @@ import {
   Menu,
   Share2,
   Image as ImageIcon,
-  FileText
+  FileText,
+  ArrowLeft
 } from 'lucide-react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
@@ -28,6 +29,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { captureRef } from 'react-native-view-shot';
 import WebLayout from '@/components/web/WebLayout';
+import { router } from 'expo-router';
 
 
 // Constants
@@ -511,8 +513,14 @@ export default function MatchStrategiesScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.sidebarContent}
             >
-              <View style={styles.sidebarHeaderRow}>
+              <View style={[styles.sidebarHeaderRow, { justifyContent: 'flex-start', gap: 12 }]}>
+                {!isMobile && (
+                  <TouchableOpacity onPress={() => router.back()}>
+                    <ArrowLeft size={20} color="#111827" />
+                  </TouchableOpacity>
+                )}
                 <Text style={styles.sidebarHeader}>Strategies</Text>
+                <View style={{ flex: 1 }} />
                 {isMobile && (
                   <TouchableOpacity onPress={() => setShowMobileMenu(false)}>
                     <X size={20} color="#9CA3AF" />
@@ -619,7 +627,13 @@ export default function MatchStrategiesScreen() {
             >
             <View style={[styles.mainContent, isMobile && { padding: 12 }]}>
               {isMobile && (
-                <View style={styles.mobileActions}>
+                <View style={[styles.mobileActions, { justifyContent: 'flex-start', gap: 12 }]}>
+                  <TouchableOpacity 
+                    onPress={() => router.back()}
+                    style={styles.menuToggle}
+                  >
+                    <ArrowLeft size={20} color="#111827" />
+                  </TouchableOpacity>
                   <TouchableOpacity 
                     style={styles.menuToggle}
                     onPress={() => setShowMobileMenu(true)}
@@ -777,7 +791,7 @@ export default function MatchStrategiesScreen() {
   );
   
   if (Platform.OS === 'web') {
-    return <WebLayout noCard>{content}</WebLayout>;
+    return <WebLayout hideHeader isPublicNoSidebar noCard>{content}</WebLayout>;
   }
 
   return content;

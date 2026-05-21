@@ -18,23 +18,35 @@ import { ChevronLeft, Send, User as UserIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, prefill } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   
   const [messages, setMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState(prefill ? String(prefill) : '');
   const [loading, setLoading] = useState(true);
   const [otherUser, setOtherUser] = useState<any>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  const markAsRead = async () => {
+    if (!user || !id) return;
+    await supabase
+      .from('direct_messages')
+      .update({ is_read: true })
+      .eq('chat_id', id)
+      .neq('sender_id', user.id)
+      .eq('is_read', false);
+  };
 
   useEffect(() => {
     if (user && id) {
       fetchChatDetails();
       fetchMessages();
+      markAsRead();
 
+      const channelName = `chat_${id}_${Math.random().toString(36).substring(7)}`;
       const subscription = supabase
-        .channel(`chat_${id}`)
+        .channel(channelName)
         .on('postgres_changes', { 
           event: 'INSERT', 
           schema: 'public', 
@@ -42,6 +54,17 @@ export default function ChatScreen() {
           filter: `chat_id=eq.${id}`
         }, (payload) => {
           setMessages(prev => [payload.new, ...prev]);
+          if (payload.new.sender_id !== user.id) {
+            markAsRead();
+          }
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `chat_id=eq.${id}`
+        }, (payload) => {
+          setMessages(prev => prev.map(msg => msg.id === payload.new.id ? payload.new : msg));
         })
         .subscribe();
 
@@ -124,7 +147,16 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/cricket/inbox');
+            }
+          }} 
+          style={styles.backBtn}
+        >
           <ChevronLeft size={24} color="#0F172A" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>

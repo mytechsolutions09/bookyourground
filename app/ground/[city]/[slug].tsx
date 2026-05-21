@@ -16,7 +16,7 @@ import {
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves, SlidersHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves, SlidersHorizontal, ArrowUpDown, ChevronDown, Lightbulb, Car, Shirt, Home, Bath, Users, Circle, ClipboardList, Target } from 'lucide-react-native';
 import { 
   APIProvider, 
   Map, 
@@ -521,7 +521,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View style={styles.webInfoMain}>
                       <View style={styles.webInfoSectionFlat}>
                         <Text style={styles.webGroundNameLarge}>{ground.name}</Text>
-                        <View style={styles.webLocationRowLarge}>
+                        <View style={[styles.webLocationRowLarge, { marginTop: 8 }]}>
                           <MapPin size={16} color="#64748B" />
                           <Text style={styles.webLocationTextLarge}>
                             {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
@@ -1162,36 +1162,38 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 
 // ── Sub-components for cleaner structure ──
 function AmenitiesList({ ground }: { ground: GroundWithImages }) {
-  const items: string[] = [];
+  const items: { label: string, icon: React.ReactNode }[] = [];
   const isNets = ground.pitch_type?.toLowerCase() === 'nets';
 
+  const iconProps = { size: 16, color: "#01b854", strokeWidth: 2 };
+
   if (isNets) {
-    if (ground.cricket_pitch_surface) items.push(`Surface: ${ground.cricket_pitch_surface}`);
-    if (ground.has_bowling_machine) items.push('Bowling Machine');
-    items.push(ground.is_indoor ? 'Indoor' : 'Outdoor');
-    if ((ground as any).has_manual_throwdown) items.push('Manual Throwdown');
+    if (ground.cricket_pitch_surface) items.push({ label: `Surface: ${ground.cricket_pitch_surface}`, icon: <SlidersHorizontal {...iconProps} /> });
+    if (ground.has_bowling_machine) items.push({ label: 'Bowling Machine', icon: <Target {...iconProps} /> });
+    items.push({ label: ground.is_indoor ? 'Indoor' : 'Outdoor', icon: <Home {...iconProps} /> });
+    if ((ground as any).has_manual_throwdown) items.push({ label: 'Manual Throwdown', icon: <Users {...iconProps} /> });
   }
 
   // Common amenities should be visible for all, including nets
-  if (ground.has_floodlights) items.push('Floodlights');
-  if (ground.has_parking) items.push('Parking');
-  if (ground.has_changing_rooms) items.push('Changing Rooms');
-  if (ground.has_pavilion) items.push('Pavilion');
-  if (ground.has_washrooms) items.push('Washroom');
-  if ((ground as any).has_umpires) items.push('2 Umpires');
-  if ((ground as any).has_new_balls) items.push('2 New Balls');
-  if ((ground as any).has_scoring) items.push('Scoring');
-  if ((ground as any).has_practice_nets) items.push('Practice Nets');
-  if ((ground as any).has_swimming_pool) items.push('Swimming Pool');
+  if (ground.has_floodlights) items.push({ label: 'Floodlights', icon: <Lightbulb {...iconProps} /> });
+  if (ground.has_parking) items.push({ label: 'Parking', icon: <Car {...iconProps} /> });
+  if (ground.has_changing_rooms) items.push({ label: 'Changing Rooms', icon: <Shirt {...iconProps} /> });
+  if (ground.has_pavilion) items.push({ label: 'Pavilion', icon: <Home {...iconProps} /> });
+  if (ground.has_washrooms) items.push({ label: 'Washroom', icon: <Bath {...iconProps} /> });
+  if ((ground as any).has_umpires) items.push({ label: '2 Umpires', icon: <Users {...iconProps} /> });
+  if ((ground as any).has_new_balls) items.push({ label: '2 New Balls', icon: <Circle {...iconProps} /> });
+  if ((ground as any).has_scoring) items.push({ label: 'Scoring', icon: <ClipboardList {...iconProps} /> });
+  if ((ground as any).has_practice_nets) items.push({ label: 'Practice Nets', icon: <Target {...iconProps} /> });
+  if ((ground as any).has_swimming_pool) items.push({ label: 'Swimming Pool', icon: <Waves {...iconProps} /> });
 
   if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
 
   return (
     <View style={styles.amenitiesGrid}>
-      {items.map((label) => (
-        <View key={label} style={styles.amenityChip}>
-          <CheckCircle2 size={15} color="#01b854" strokeWidth={2.5} />
-          <Text style={styles.amenityText}>{label}</Text>
+      {items.map((item) => (
+        <View key={item.label} style={styles.amenityChip}>
+          {item.icon}
+          <Text style={styles.amenityText}>{item.label}</Text>
         </View>
       ))}
     </View>
@@ -1887,16 +1889,19 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   amenitiesGrid: {
-    flexDirection: 'column', // Changed to column for rows
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   amenityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
-    backgroundColor: 'transparent', // Removed background
-    borderWidth: 0, // Removed border
+    gap: 8,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    width: Platform.OS === 'web' ? '23%' : '45%',
+    minWidth: 140,
   },
   amenityText: {
     fontFamily: 'Inter',

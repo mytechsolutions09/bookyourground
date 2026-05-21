@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import { Search, User, Users, Shield, RefreshCw, Sliders, MapPin, ChevronRight, ClipboardList, MessageCircle, Plus, X, ChevronDown, Swords } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,8 +34,9 @@ export default function CricketHubScreen() {
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
+      const channelName = `cricket_index_messages_count_${Math.random().toString(36).substring(7)}`;
       const subscription = supabase
-        .channel('public:direct_messages_count')
+        .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => {
           fetchUnreadCount();
         })
@@ -46,6 +47,14 @@ export default function CricketHubScreen() {
       };
     }
   }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        fetchUnreadCount();
+      }
+    }, [user])
+  );
 
   const fetchUnreadCount = async () => {
     if (!user) return;
@@ -173,7 +182,7 @@ export default function CricketHubScreen() {
     setIsSubmitting(false);
   };
 
-  const handleMessagePress = async (creatorId: string) => {
+  const handleMessagePress = async (creatorId: string, postContext?: string) => {
     if (!user) {
       alert("Please log in to message users.");
       return;
@@ -186,6 +195,8 @@ export default function CricketHubScreen() {
     const p1 = user.id < creatorId ? user.id : creatorId;
     const p2 = user.id < creatorId ? creatorId : user.id;
 
+    let targetChatId = null;
+
     const { data, error } = await supabase
       .from('direct_chats')
       .select('id')
@@ -194,7 +205,7 @@ export default function CricketHubScreen() {
       .maybeSingle();
 
     if (data && !error) {
-      router.push(`/chat/${data.id}`);
+      targetChatId = data.id;
     } else {
       const { data: newChat, error: createError } = await supabase
         .from('direct_chats')
@@ -206,10 +217,19 @@ export default function CricketHubScreen() {
         .single();
 
       if (newChat && !createError) {
-        router.push(`/chat/${newChat.id}`);
+        targetChatId = newChat.id;
       } else {
         console.error("Error creating chat", createError);
         alert("Failed to start conversation.");
+        return;
+      }
+    }
+
+    if (targetChatId) {
+      if (postContext) {
+        router.push(`/chat/${targetChatId}?prefill=${encodeURIComponent(postContext)}`);
+      } else {
+        router.push(`/chat/${targetChatId}`);
       }
     }
   };
@@ -250,15 +270,20 @@ export default function CricketHubScreen() {
             </View>
           </View>
         </View>
-        <View style={styles.roleTag}>
-          <Text style={styles.roleTagText}>{isPlayerNeeded ? 'Looking for: ' : 'Specialization: '}{item.role}</Text>
+        <View style={styles.roleTagsContainer}>
+          {item.role.split(',').map((roleItem: string, index: number) => (
+            <View key={index} style={styles.roleTag}>
+              <Text style={styles.roleTagText}>{roleItem.trim()}</Text>
+            </View>
+          ))}
         </View>
         <Text style={styles.boardMessage}>{item.message}</Text>
         <TouchableOpacity 
           style={styles.contactBtn} 
           onPress={() => {
             if (item.creator_id) {
-              handleMessagePress(item.creator_id);
+              const postContext = `Hi, I am reaching out regarding your post for ${item.role} in ${item.city}.`;
+              handleMessagePress(item.creator_id, postContext);
             } else {
               alert("This post doesn't have a valid creator.");
             }
@@ -430,7 +455,7 @@ export default function CricketHubScreen() {
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity 
-                  style={[styles.createPostBtn, { paddingHorizontal: 14, paddingVertical: 10, height: '100%', minHeight: 40, justifyContent: 'center' }]} 
+                  style={styles.createPostBtn} 
                   onPress={() => setIsPostModalVisible(true)}
                 >
                   <Plus size={20} color="#64748B" />
@@ -868,7 +893,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    height: 44,
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
@@ -892,7 +917,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   tabTextActive: {
@@ -1199,12 +1224,16 @@ const styles = StyleSheet.create({
   },
   subTabGroup: {
     flexDirection: 'row',
+    height: 44,
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 4,
   },
   subTabBtn: {
-    paddingVertical: 8,
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     borderRadius: 8,
   },
@@ -1218,7 +1247,7 @@ const styles = StyleSheet.create({
   },
   subTabText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
   },
   subTabTextActive: {
@@ -1227,16 +1256,17 @@ const styles = StyleSheet.create({
   createPostBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 44,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
   createPostBtnText: {
     color: '#00ea6b',
-    fontWeight: '700',
+    fontWeight: '500',
     fontSize: 14,
   },
   boardCard: {
@@ -1262,13 +1292,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
   },
+  roleTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
   roleTag: {
-    alignSelf: 'flex-start',
     backgroundColor: '#06392e',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    marginBottom: 16,
   },
   roleTagText: {
     color: '#00ea6b',

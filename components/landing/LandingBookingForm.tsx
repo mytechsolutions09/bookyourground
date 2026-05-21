@@ -2752,7 +2752,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               onPress={() => router.push('/find-an-opponent' as any)}
               style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
             >
-              <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>Opposition</Text>
+              <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>OPPOSITION</Text>
             </Pressable>
 
             {user ? (
@@ -2942,7 +2942,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
                         Total
                       </Text>
-                      <Text style={[{ fontSize: 18, fontWeight: '800', color: '#00ea6b' }]}>
+                      <Text style={[{ fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
                         {formatCurrency(finalAmount)}
                       </Text>
                     </View>
