@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Animated, Platform } from 'react-native';
 import { landingScrollStyles } from '@/components/landing/landingScrollStyles';
+import HeroWeb from '@/components/landing/HeroWeb';
 
 function Bar({ width, height = 14, style }: { width: string | number; height?: number; style?: object }) {
   return (
@@ -47,30 +48,25 @@ export default function HomePageSkeleton() {
       showsVerticalScrollIndicator={false}
     >
       <Animated.View style={{ opacity: pulse }}>
-        {/* Hero */}
         <View style={styles.heroBlock}>
-          <Bar width="38%" height={12} style={styles.barHero} />
-          <Bar width="92%" height={28} style={[styles.barHero, { marginTop: 20 }]} />
-          <Bar width="78%" height={28} style={[styles.barHero, { marginTop: 10 }]} />
-          <Bar width="64%" height={28} style={[styles.barHero, { marginTop: 10 }]} />
-          <Bar width="88%" height={16} style={[styles.barHero, { marginTop: 24 }]} />
-          <Bar width="72%" height={16} style={[styles.barHero, { marginTop: 8 }]} />
+          <Bar width={320} height={40} style={[styles.barHero, { marginBottom: 40 }]} />
+          <Bar width={Platform.OS === 'web' ? 820 : '90%'} height={72} style={[styles.barHero, { borderRadius: 36 }]} />
+          
           <View style={styles.heroButtons}>
             <View style={[styles.btnSk, styles.btnPrimary]} />
             <View style={[styles.btnSk, styles.btnSecondary]} />
           </View>
+          
           <View style={styles.heroFootrow}>
+            <View style={styles.barHeroSm} />
             <View style={styles.barHeroSm} />
             <View style={styles.barHeroSm} />
           </View>
         </View>
-
         {/* Form / cards */}
         <View style={styles.section}>
           <Bar width="40%" height={18} style={styles.barDark} />
           <View style={styles.card}>
-            <Bar width="100%" height={48} style={styles.barDark} />
-            <Bar width="100%" height={48} style={[styles.barDark, { marginTop: 12 }]} />
             <View style={styles.row2}>
               <View style={styles.half} />
               <View style={styles.half} />
@@ -109,7 +105,7 @@ export default function HomePageSkeleton() {
 
 const styles = StyleSheet.create({
   heroBlock: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'web' ? 80 : 60,
     paddingBottom: 48,
     paddingHorizontal: 24,
@@ -120,13 +116,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.14)',
   },
   barHero: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: '#E5E7EB',
   },
   barHeroSm: {
     width: 120,
     height: 14,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#E5E7EB',
   },
   heroButtons: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
@@ -144,10 +140,10 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   btnPrimary: {
-    backgroundColor: 'rgba(220,141,60,0.35)',
+    backgroundColor: '#E5E7EB',
   },
   btnSecondary: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#F3F4F6',
   },
   heroFootrow: {
     flexDirection: 'row',

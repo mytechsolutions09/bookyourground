@@ -117,6 +117,16 @@ export default function OwnerSignupScreen() {
       return;
     }
 
+    // Check if phone number is already registered
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    const { data: resolvedEmail } = await supabase.rpc('get_email_by_phone', { p_phone: cleaned });
+    if (resolvedEmail) {
+      const msg = 'This mobile number is already registered with another account. Please sign in instead.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
     setSendingOtp(true);
     const newOtp = generateOTP();
     const res = await sendSMSOTP(phone, newOtp);
@@ -179,6 +189,8 @@ export default function OwnerSignupScreen() {
       let msg = error.message;
       if (msg.includes('confirmation email')) {
         msg = 'Error sending confirmation email. This usually means the email provider is not configured correctly in the backend or rate limits were exceeded. Please check your Supabase SMTP settings.';
+      } else if (msg.toLowerCase().includes('already registered')) {
+        msg = 'This email address is already registered with another account. Please sign in instead.';
       }
       if (Platform.OS === 'web') alert('Error: ' + msg);
       else Alert.alert('Error', msg);

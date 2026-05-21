@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useIsCompact } from '@/hooks/useIsCompact';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import {
   View,
   Text,
@@ -38,6 +39,8 @@ type LocationOption = {
 };
 export default function HeroWeb() {
   const isMobile = useIsCompact();
+  const hasMounted = useHasMounted();
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const { width, height } = useWindowDimensions();
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(true);
@@ -281,6 +284,7 @@ export default function HeroWeb() {
   return (
     <ImageBackground
       source={require('@/assets/hero.png')}
+      onLoad={() => setIsImageLoaded(true)}
       style={[
         styles.root, 
         { height: isMobile ? '100%' : 850, minHeight: isMobile ? 580 : 850, justifyContent: 'center' },
@@ -343,17 +347,19 @@ export default function HeroWeb() {
               StyleSheet.absoluteFill, 
               { overflow: 'hidden', borderRadius: (isMobile || !isMobile) ? 26 : 100 }
             ]}>
-              <Animated.View style={[
-                styles.animatedBorder,
-                { transform: [{ rotate: borderRotation }] }
-              ]}>
-                <LinearGradient
-                  colors={['transparent', '#01e669', 'transparent', '#01e669', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{ flex: 1 }}
-                />
-              </Animated.View>
+              {hasMounted && isImageLoaded && (
+                <Animated.View style={[
+                  styles.animatedBorder,
+                  { transform: [{ rotate: borderRotation }] }
+                ]}>
+                  <LinearGradient
+                    colors={['transparent', '#01e669', 'transparent', '#01e669', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ flex: 1 }}
+                  />
+                </Animated.View>
+              )}
             </View>
 
             <View style={[styles.searchFormContainer, (isMobile || !isMobile) && styles.searchFormContainerMobile]}>
@@ -636,6 +642,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: Platform.OS === 'web' ? 80 : 100,
     alignItems: 'center',
+    backgroundColor: '#032019',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

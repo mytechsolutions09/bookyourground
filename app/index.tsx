@@ -60,7 +60,7 @@ export default function IndexScreen() {
     }
   }, [user, profile, loading, welcomeChecked, os]);
 
-  if (!welcomeChecked || (loading && os !== 'web')) {
+  if (!welcomeChecked || loading) {
     return os === 'web' ? <HomePageSkeleton /> : <HomeScreenSkeleton />;
   }
 

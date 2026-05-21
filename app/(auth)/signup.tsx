@@ -133,6 +133,17 @@ export default function SignupScreen() {
       else Alert.alert('Error', msg);
       return;
     }
+    
+    // Check if phone number is already registered
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    const { data: resolvedEmail } = await supabase.rpc('get_email_by_phone', { p_phone: cleaned });
+    if (resolvedEmail) {
+      const msg = 'This mobile number is already registered with another account. Please sign in instead.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+    
     setSendingOtp(true);
     const newOtp = generateOTP();
     const res = await sendSMSOTP(phone, newOtp);
@@ -193,6 +204,17 @@ export default function SignupScreen() {
       }
 
       // Standard Email Sign Up
+      if (phone) {
+        const cleaned = phone.replace(/[^0-9]/g, '');
+        const { data: resolvedEmail } = await supabase.rpc('get_email_by_phone', { p_phone: cleaned });
+        if (resolvedEmail) {
+          const msg = 'This mobile number is already registered with another account. Please sign in instead.';
+          if (Platform.OS === 'web') alert(msg);
+          else Alert.alert('Error', msg);
+          return;
+        }
+      }
+
       setLoading(true);
       const { error } = await signUp(
         email,
@@ -214,6 +236,8 @@ export default function SignupScreen() {
         let msg = error.message;
         if (msg.includes('confirmation email')) {
           msg = 'Error sending confirmation email. Please check backend SMTP settings.';
+        } else if (msg.toLowerCase().includes('already registered')) {
+          msg = 'This email address is already registered with another account. Please sign in instead.';
         }
         if (Platform.OS === 'web') alert('Signup Failed: ' + msg);
         else Alert.alert('Signup Failed', msg);
@@ -321,6 +345,8 @@ export default function SignupScreen() {
       let msg = error.message;
       if (msg.includes('confirmation email')) {
         msg = 'Error sending confirmation email. This usually means the email provider is not configured correctly in the backend or rate limits were exceeded. Please check your Supabase SMTP settings.';
+      } else if (msg.toLowerCase().includes('already registered')) {
+        msg = 'This email address is already registered with another account. Please sign in instead.';
       }
       if (Platform.OS === 'web') alert('Signup Failed: ' + msg);
       else Alert.alert('Signup Failed', msg);
@@ -332,14 +358,22 @@ export default function SignupScreen() {
   const renderOtpModal = () => (
     <Modal visible={showOtpModal} transparent animationType="fade">
       <View style={modalStyles.overlay}>
-        <BlurView intensity={Platform.OS === 'web' ? 40 : 90} tint="light" style={[modalStyles.card, { maxWidth: 450, padding: 32 }]}>
-          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
-            <Smartphone size={36} color="#01b854" strokeWidth={2.5} />
+        <BlurView 
+          intensity={80} 
+          tint="dark" 
+          style={[
+            modalStyles.card, 
+            modalStyles.glassCardMobile,
+            { maxWidth: 450, padding: 32 }
+          ]}
+        >
+          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0, 234, 107, 0.15)' }]}>
+            <Smartphone size={36} color="#00ea6b" strokeWidth={2.5} />
           </View>
-          <Text style={modalStyles.title}>Verify Your Mobile</Text>
-          <Text style={[modalStyles.message, { marginBottom: 20 }]}>
+          <Text style={[modalStyles.title, { color: '#FFFFFF' }]}>Verify Your Mobile</Text>
+          <Text style={[modalStyles.message, { marginBottom: 20, color: 'rgba(255, 255, 255, 0.7)' }]}>
             We've sent a 6-digit verification code to the number ending in{' '}
-            <Text style={{ fontWeight: '700', color: '#1E293B' }}>
+            <Text style={{ fontWeight: '700', color: '#FFFFFF' }}>
               {phone ? phone.slice(-4) : 'XXXX'}
             </Text>
             . Enter it below to authenticate.
@@ -356,12 +390,12 @@ export default function SignupScreen() {
                   height: 48,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: val ? '#01b854' : 'rgba(15, 23, 42, 0.15)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderColor: val ? '#00ea6b' : 'rgba(255, 255, 255, 0.15)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   textAlign: 'center',
                   fontSize: 20,
                   fontWeight: '700',
-                  color: '#0F172A',
+                  color: '#FFFFFF',
                 }}
                 value={val}
                 keyboardType="number-pad"
@@ -394,14 +428,18 @@ export default function SignupScreen() {
 
           {/* Verification & Cancel Buttons */}
           <TouchableOpacity
-            style={[modalStyles.button, loading && { opacity: 0.7 }]}
+            style={[
+              modalStyles.button, 
+              { backgroundColor: '#00ea6b' },
+              loading && { opacity: 0.7 }
+            ]}
             onPress={handleVerifyAndSignup}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color="#06392e" />
             ) : (
-              <Text style={modalStyles.buttonText}>VERIFY & SIGN UP</Text>
+              <Text style={[modalStyles.buttonText, { color: '#06392e', fontWeight: '800' }]}>VERIFY & SIGN UP</Text>
             )}
           </TouchableOpacity>
 
@@ -410,7 +448,7 @@ export default function SignupScreen() {
               onPress={otpTimer === 0 && !sendingOtp ? handleResendOtp : undefined}
               style={{ opacity: otpTimer > 0 || sendingOtp ? 0.5 : 1 }}
             >
-              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 14 }}>
                 {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend OTP'}
               </Text>
             </TouchableOpacity>
@@ -421,7 +459,7 @@ export default function SignupScreen() {
                 setOtpError('');
               }}
             >
-              <Text style={{ color: '#64748B', fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14 }}>
                 Cancel
               </Text>
             </TouchableOpacity>

@@ -1390,7 +1390,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         <View style={[
           styles.main,
           (isLanding || isMarketing || isPublicNoSidebar) && { 
-            padding: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            paddingLeft: 0,
             maxHeight: 'none',
             overflow: 'visible',
             flex: 1

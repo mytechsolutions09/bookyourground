@@ -248,8 +248,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
+    let redirectUrl = 'https://bookyourground.com/reset-password';
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin && window.location.origin.startsWith('http')) {
+      redirectUrl = `${window.location.origin}/reset-password`;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: redirectUrl,
     });
     return { error };
   }, []);
