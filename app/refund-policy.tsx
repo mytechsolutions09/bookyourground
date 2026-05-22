@@ -50,7 +50,55 @@ export default function RefundPolicyScreen() {
             {"\n"}{"\u2022"} The venue owner or on-site staff have the final authority to decide if the venue is playable.
           </Text>
 
-          <Text style={styles.sectionTitle}>1.6. How refunds are processed</Text>
+          <Text style={styles.sectionTitle}>1.6. BYG Specific Cricket Rule (T20)</Text>
+          <Text style={styles.paragraph}>
+            For T20 (20 overs), the refund rules for rain are:
+          </Text>
+
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <View style={styles.tableCellLeft}>
+                <Text style={styles.tableHeaderText}>Situation</Text>
+              </View>
+              <View style={styles.tableCellCenter}>
+                <Text style={styles.tableHeaderText}>Refund %</Text>
+              </View>
+              <View style={styles.tableCellRight}>
+                <Text style={styles.tableHeaderText}>Example (₹10,000 Match)</Text>
+              </View>
+            </View>
+            <View style={styles.tableRow}>
+              <View style={styles.tableCellLeft}><Text style={styles.tableText}>No toss yet</Text></View>
+              <View style={styles.tableCellCenter}><Text style={styles.tableText}>100%</Text></View>
+              <View style={styles.tableCellRight}><Text style={styles.tableText}>₹10,000</Text></View>
+            </View>
+            <View style={styles.tableRow}>
+              <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings {'<'} 6 overs</Text></View>
+              <View style={styles.tableCellCenter}><Text style={styles.tableText}>75%</Text></View>
+              <View style={styles.tableCellRight}><Text style={styles.tableText}>₹7,500</Text></View>
+            </View>
+            <View style={styles.tableRow}>
+              <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings 6-20 overs</Text></View>
+              <View style={styles.tableCellCenter}><Text style={styles.tableText}>50%</Text></View>
+              <View style={styles.tableCellRight}><Text style={styles.tableText}>₹5,000</Text></View>
+            </View>
+            <View style={styles.tableRow}>
+              <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings complete, 2nd innings {'<'} 6 overs</Text></View>
+              <View style={styles.tableCellCenter}><Text style={styles.tableText}>25%</Text></View>
+              <View style={styles.tableCellRight}><Text style={styles.tableText}>₹2,500</Text></View>
+            </View>
+            <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.tableCellLeft}><Text style={styles.tableText}>2nd innings 6+ overs bowled</Text></View>
+              <View style={styles.tableCellCenter}><Text style={styles.tableText}>0% (match done)</Text></View>
+              <View style={styles.tableCellRight}><Text style={styles.tableText}>₹0</Text></View>
+            </View>
+          </View>
+
+          <Text style={[styles.paragraph, { fontStyle: 'italic', fontSize: 13, color: '#6B7280', marginTop: -4, marginBottom: 12 }]}>
+            *Note: Refunds are calculated on the base ground price. Platform and convenience fees are non-refundable once the match is booked.
+          </Text>
+
+          <Text style={styles.sectionTitle}>1.7. How refunds are processed</Text>
           <Text style={styles.paragraph}>
             Approved refunds are processed back to the original payment method where
             possible. Timelines may vary depending on your bank or payment provider, but
@@ -159,6 +207,50 @@ const styles = {
     marginBottom: 8,
   },
   boldText: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    marginVertical: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableHeader: {
+    backgroundColor: '#F9FAFB',
+  },
+  tableCellLeft: {
+    flex: 2,
+    padding: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    justifyContent: 'center',
+  },
+  tableCellCenter: {
+    flex: 1,
+    padding: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    justifyContent: 'center',
+  },
+  tableCellRight: {
+    flex: 1.5,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  tableText: {
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  tableHeaderText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#111827',
   },

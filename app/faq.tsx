@@ -30,10 +30,54 @@ export default function FAQScreen() {
           <View style={styles.faqSection}>
             <Text style={styles.question}>What happens if it rains?</Text>
             <Text style={styles.answer}>
-              Our rain policy is simple: 
-              {"\n"}{"\u2022"} If <Text style={{ fontWeight: '700', color: '#111827' }}>no ball is bowled</Text> during your slot due to wet venues or rain, you will receive a <Text style={{ fontWeight: '700', color: '#111827' }}>Full Refund</Text>.
-              {"\n"}{"\u2022"} If even a <Text style={{ fontWeight: '700', color: '#111827' }}>single ball is bowled</Text> and then it rains, the booking is considered utilized and <Text style={{ fontWeight: '700', color: '#111827' }}>no refund</Text> will be issued. 
-              {"\n\n"}The decision on whether a venue is playable rests with the venue owner or site staff.
+              For T20 (20 overs), the refund rules for rain are: 
+            </Text>
+
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <View style={styles.tableCellLeft}>
+                  <Text style={styles.tableHeaderText}>Situation</Text>
+                </View>
+                <View style={styles.tableCellCenter}>
+                  <Text style={styles.tableHeaderText}>Refund %</Text>
+                </View>
+                <View style={styles.tableCellRight}>
+                  <Text style={styles.tableHeaderText}>Example (₹10,000 Match)</Text>
+                </View>
+              </View>
+              <View style={styles.tableRow}>
+                <View style={styles.tableCellLeft}><Text style={styles.tableText}>No toss yet</Text></View>
+                <View style={styles.tableCellCenter}><Text style={styles.tableText}>100%</Text></View>
+                <View style={styles.tableCellRight}><Text style={styles.tableText}>₹10,000</Text></View>
+              </View>
+              <View style={styles.tableRow}>
+                <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings {'<'} 6 overs</Text></View>
+                <View style={styles.tableCellCenter}><Text style={styles.tableText}>75%</Text></View>
+                <View style={styles.tableCellRight}><Text style={styles.tableText}>₹7,500</Text></View>
+              </View>
+              <View style={styles.tableRow}>
+                <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings 6-20 overs</Text></View>
+                <View style={styles.tableCellCenter}><Text style={styles.tableText}>50%</Text></View>
+                <View style={styles.tableCellRight}><Text style={styles.tableText}>₹5,000</Text></View>
+              </View>
+              <View style={styles.tableRow}>
+                <View style={styles.tableCellLeft}><Text style={styles.tableText}>1st innings complete, 2nd innings {'<'} 6 overs</Text></View>
+                <View style={styles.tableCellCenter}><Text style={styles.tableText}>25%</Text></View>
+                <View style={styles.tableCellRight}><Text style={styles.tableText}>₹2,500</Text></View>
+              </View>
+              <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
+                <View style={styles.tableCellLeft}><Text style={styles.tableText}>2nd innings 6+ overs bowled</Text></View>
+                <View style={styles.tableCellCenter}><Text style={styles.tableText}>0% (match done)</Text></View>
+                <View style={styles.tableCellRight}><Text style={styles.tableText}>₹0</Text></View>
+              </View>
+            </View>
+
+            <Text style={[styles.answer, { fontStyle: 'italic', fontSize: 13, marginTop: -4, marginBottom: 8 }]}>
+              *Note: Refunds are calculated on the base ground price. Platform and convenience fees are non-refundable once the match is booked.
+            </Text>
+
+            <Text style={styles.answer}>
+              The decision on whether a venue is playable rests with the venue owner or site staff.
             </Text>
           </View>
 
@@ -128,5 +172,49 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#4B5563',
     lineHeight: 22,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    marginVertical: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableHeader: {
+    backgroundColor: '#F9FAFB',
+  },
+  tableCellLeft: {
+    flex: 2,
+    padding: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    justifyContent: 'center',
+  },
+  tableCellCenter: {
+    flex: 1,
+    padding: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    justifyContent: 'center',
+  },
+  tableCellRight: {
+    flex: 1.5,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  tableText: {
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  tableHeaderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
 });

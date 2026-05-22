@@ -1010,9 +1010,13 @@ export default function PlayerProfile() {
           style={StyleSheet.absoluteFill}
         />
         <View style={[styles.miniHeaderContent, Platform.OS === 'web' && { maxWidth: 'none', alignSelf: 'stretch' }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
-            <ChevronLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
+              <ChevronLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
 
           <Animated.View style={{ opacity: headerTitleOpacity, flex: 1, alignItems: 'center' }}>
             <Text style={styles.miniHeaderTitle}>{profile?.full_name}</Text>

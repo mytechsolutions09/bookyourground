@@ -89,13 +89,18 @@ export default function ShopScreen() {
   const { category } = useLocalSearchParams();
   const numColumns = useMemo(() => {
     if (width > 1600) return 5;
-    if (width > 1200) return 4;
+    if (width > 1024) return 4;
     if (width > 800) return 3;
     if (width < 600) return 1;
     return 2;
   }, [width]);
 
-  const cardWidth = useMemo(() => (width - 40 - (numColumns - 1) * 16) / numColumns, [width, numColumns]);
+  const cardWidth = useMemo(() => {
+    if (Platform.OS === 'web') {
+      return `calc(${100 / numColumns}% - ${((numColumns - 1) * 16) / numColumns}px)` as any;
+    }
+    return (width - 40 - (numColumns - 1) * 16) / numColumns;
+  }, [width, numColumns]);
 
   const ProductSkeleton = () => (
     <View style={[styles.productCard, { width: cardWidth }]}>

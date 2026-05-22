@@ -66,13 +66,21 @@ export default function FindOpposition() {
             animatedTextStyle,
             isMobile && { alignItems: 'center' }
           ]}>
-            <TouchableOpacity 
-              style={[styles.badge, isMobile && { alignSelf: 'center' }]}
-              onPress={() => router.push('/find-an-opponent' as any)}
-            >
-              <Users size={14} color="#01b854" strokeWidth={3} />
-              <Text style={styles.badgeText}>FIND AN OPPOSITION</Text>
-            </TouchableOpacity>
+            {/* Call To Action Button at the Top for Mobile */}
+            {isMobile && (
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.ctaButton,
+                  isMobile && { alignSelf: 'center' },
+                  pressed && { transform: [{ scale: 0.98 }], opacity: 0.95 },
+                  { marginBottom: 24 }
+                ]}
+                onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
+              >
+                <Text style={styles.ctaText}>Find a Match</Text>
+                <ArrowRight size={20} color="#043529" strokeWidth={2.5} style={{ marginLeft: 4 }} />
+              </Pressable>
+            )}
             
             <Text style={[styles.title, isMobile && { textAlign: 'center' }]}>
               Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text>
@@ -83,46 +91,20 @@ export default function FindOpposition() {
               Find the perfect opponents that match your skill level and play style.
             </Text>
 
-            {/* Feature Cards Grid */}
-            <View style={[styles.featuresRow, isMobile && { flexDirection: 'column', width: '100%' }]}>
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Target size={20} color="#01b854" strokeWidth={2.5} />
-                </View>
-                <View style={styles.featureTextContainer}>
-                  <Text style={styles.featureTitle}>Skill Matching</Text>
-                  <Text style={styles.featureDesc}>Get matches that fit your level</Text>
-                </View>
-              </View>
-              
-              <View style={styles.featureCard}>
-                <View style={styles.featureIconContainer}>
-                  <Trophy size={20} color="#01b854" strokeWidth={2.5} />
-                </View>
-                <View style={styles.featureTextContainer}>
-                  <Text style={styles.featureTitle}>Leaderboards</Text>
-                  <Text style={styles.featureDesc}>Compete & climb the rankings</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Call To Action Button */}
-            <Pressable 
-              style={({ pressed }) => [
-                styles.ctaButton,
-                isMobile && { alignSelf: 'center' },
-                pressed && { transform: [{ scale: 0.98 }], opacity: 0.95 }
-              ]}
-              onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
-            >
-              <View style={styles.ctaLeft}>
-                <Sword size={18} color="#01b854" strokeWidth={2.5} style={{ marginRight: 8, transform: [{ rotate: '45deg' }] }} />
+            {/* Call To Action Button at the Bottom for Desktop */}
+            {!isMobile && (
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.ctaButton,
+                  pressed && { transform: [{ scale: 0.98 }], opacity: 0.95 },
+                  { marginTop: 16, marginBottom: 32 }
+                ]}
+                onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
+              >
                 <Text style={styles.ctaText}>Find a Match</Text>
-              </View>
-              <View style={styles.ctaArrowCircle}>
-                <ArrowRight size={18} color="#043529" strokeWidth={3} />
-              </View>
-            </Pressable>
+                <ArrowRight size={20} color="#043529" strokeWidth={2.5} style={{ marginLeft: 4 }} />
+              </Pressable>
+            )}
 
             {/* Bottom Highlights Row */}
             <View style={[styles.bulletsRow, isMobile && { justifyContent: 'center', flexWrap: 'wrap', gap: 12 }]}>
@@ -369,38 +351,27 @@ const styles = StyleSheet.create({
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: 28,
-    paddingRight: 8,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 100,
     alignSelf: 'flex-start',
-    backgroundColor: '#043529',
-    shadowColor: '#043529',
+    backgroundColor: '#00ea6b',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
     elevation: 8,
     minWidth: 220,
-  },
-  ctaLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...(Platform.OS === 'web' && { transition: 'all 0.3s ease' }),
   },
   ctaText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#043529',
     fontFamily: 'Inter',
-    letterSpacing: -0.3,
-  },
-  ctaArrowCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00ea6b',
-    alignItems: 'center',
-    justifyContent: 'center',
+    letterSpacing: 0,
+    marginHorizontal: 4,
   },
   bulletsRow: {
     flexDirection: 'row',

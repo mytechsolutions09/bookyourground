@@ -442,7 +442,7 @@ export default function SearchScreen() {
   const renderDropdownOptions = (type: 'location' | 'type' | 'date' | 'time' | 'price') => {
     const isDate = type === 'date';
     return (
-      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, isCompact && styles.floatingDropdownMobile]}>
+      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, !isDate && { minWidth: 220 }, isCompact && styles.floatingDropdownMobile]}>
         {isDate ? (
           <View style={styles.dateDropdownContainer}>
             <View style={styles.dateQuickOptions}>
@@ -707,6 +707,115 @@ export default function SearchScreen() {
 
   const isAnyDropdownOpen = showTypeModal || showDateModal || showLocationModal || showPriceModal || showTimeModal;
 
+  const filterBarComponent = (
+      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }, !isCompact && { marginTop: 0, maxWidth: 900, alignSelf: 'center', width: '100%' }]}>
+        <View style={[styles.filterBar, isCompact && styles.filterBarMobile, !isCompact && { borderWidth: 0, shadowOpacity: 0, elevation: 0, paddingVertical: 0, justifyContent: 'center' }]}>
+          <View style={[isCompact ? { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 234, 107, 0.3)', marginBottom: 4 } : { flexDirection: 'row', alignItems: 'center', flex: 1.2 }]}>
+            <View style={[styles.filterItemSearch, isCompact && { flex: 1, minHeight: 44 }]}>
+              <Search size={16} color="#00ea6b" style={{ marginRight: 8 }} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Keywords..."
+                placeholderTextColor="rgba(0, 234, 107, 0.5)"
+                style={styles.filterSearchInput}
+              />
+            </View>
+            
+            {isCompact && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.mobileToggleFiltersBtn,
+                  isFiltersExpanded && styles.mobileToggleFiltersBtnActive,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
+              >
+                <SlidersHorizontal size={14} color={isFiltersExpanded ? '#FFFFFF' : '#01e669'} />
+                <Text style={[styles.mobileToggleFiltersText, isFiltersExpanded && { color: '#FFFFFF' }]}>
+                  Filters
+                </Text>
+              </Pressable>
+            )}
+          </View>
+          
+          {(isFiltersExpanded || !isCompact) && (
+            <>
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTypeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('type')}>
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>VENUE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {typeKey || 'All Types'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showTypeModal && renderDropdownOptions('type')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, { flex: 1.4 }, isCompact && styles.filterItemMobile, showDateModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('date')}>
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>DATE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showDateModal && renderDropdownOptions('date')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, { flex: 1.6 }, isCompact && styles.filterItemMobile, showLocationModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('location')}>
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>LOCATION</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showLocationModal && renderDropdownOptions('location')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showPriceModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('price')}>
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>PRICE</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {priceRange.label}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showPriceModal && renderDropdownOptions('price')}
+              </Pressable>
+
+              {!isCompact && <View style={styles.filterDivider} />}
+
+              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTimeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('time')}>
+                <View style={styles.filterTextContent}>
+                  <Text style={styles.filterItemLabel}>TIME</Text>
+                  <Text style={styles.filterItemValue} numberOfLines={1}>
+                    {timeKey || 'All Times'}
+                  </Text>
+                </View>
+                <ChevronDown size={14} color="#00ea6b" />
+                {showTimeModal && renderDropdownOptions('time')}
+              </Pressable>
+
+              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile, isCompact && styles.applyFiltersBtnMobileTheme]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
+                <SlidersHorizontal size={14} color="#00ea6b" style={{ marginRight: 6 }} />
+                <Text style={[styles.applyFiltersBtnText]}>Apply Filters</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </View>
+  );
+
   const content = (
     <ScrollView 
       style={styles.mainContainer}
@@ -763,117 +872,7 @@ export default function SearchScreen() {
       )}
 
       {/* 2. FLOATING FILTER BAR */}
-      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }]}>
-        <View style={[styles.filterBar, isCompact && styles.filterBarMobile]}>
-          <View style={[isCompact ? { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 234, 107, 0.3)', marginBottom: 4 } : { flexDirection: 'row', alignItems: 'center', flex: 1.2 }]}>
-            <View style={[styles.filterItemSearch, isCompact && { flex: 1, minHeight: 44 }]}>
-              <Search size={16} color="#00ea6b" style={{ marginRight: 8 }} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Keywords..."
-                placeholderTextColor="rgba(0, 234, 107, 0.5)"
-                style={styles.filterSearchInput}
-              />
-            </View>
-            
-            {isCompact && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.mobileToggleFiltersBtn,
-                  isFiltersExpanded && styles.mobileToggleFiltersBtnActive,
-                  pressed && { opacity: 0.8 }
-                ]}
-                onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
-              >
-                <SlidersHorizontal size={14} color={isFiltersExpanded ? '#FFFFFF' : '#01e669'} />
-                <Text style={[styles.mobileToggleFiltersText, isFiltersExpanded && { color: '#FFFFFF' }]}>
-                  Filters
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          
-          {(isFiltersExpanded || !isCompact) && (
-            <>
-              {!isCompact && <View style={styles.filterDivider} />}
-
-              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTypeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('type')}>
-                <Building2 size={16} color="#00ea6b" />
-                <View style={styles.filterTextContent}>
-                  <Text style={styles.filterItemLabel}>VENUE TYPE</Text>
-                  <Text style={styles.filterItemValue} numberOfLines={1}>
-                    {typeKey || 'All Types'}
-                  </Text>
-                </View>
-                <ChevronDown size={14} color="#00ea6b" />
-                {showTypeModal && renderDropdownOptions('type')}
-              </Pressable>
-
-              {!isCompact && <View style={styles.filterDivider} />}
-
-              <Pressable style={[styles.filterItem, { flex: 1.4 }, isCompact && styles.filterItemMobile, showDateModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('date')}>
-                <Calendar size={16} color="#00ea6b" />
-                <View style={styles.filterTextContent}>
-                  <Text style={styles.filterItemLabel}>DATE</Text>
-                  <Text style={styles.filterItemValue} numberOfLines={1}>
-                    {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </Text>
-                </View>
-                <ChevronDown size={14} color="#00ea6b" />
-                {showDateModal && renderDropdownOptions('date')}
-              </Pressable>
-
-              {!isCompact && <View style={styles.filterDivider} />}
-
-              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showLocationModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('location')}>
-                <MapPin size={16} color="#00ea6b" />
-                <View style={styles.filterTextContent}>
-                  <Text style={styles.filterItemLabel}>LOCATION</Text>
-                  <Text style={styles.filterItemValue} numberOfLines={1}>
-                    {locationKey ? locations.find(l => `${l.city}__${l.state}` === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
-                  </Text>
-                </View>
-                <ChevronDown size={14} color="#00ea6b" />
-                {showLocationModal && renderDropdownOptions('location')}
-              </Pressable>
-
-              {!isCompact && <View style={styles.filterDivider} />}
-
-              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showPriceModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('price')}>
-                <IndianRupee size={16} color="#00ea6b" />
-                <View style={styles.filterTextContent}>
-                  <Text style={styles.filterItemLabel}>PRICE</Text>
-                  <Text style={styles.filterItemValue} numberOfLines={1}>
-                    {priceRange.label}
-                  </Text>
-                </View>
-                <ChevronDown size={14} color="#00ea6b" />
-                {showPriceModal && renderDropdownOptions('price')}
-              </Pressable>
-
-              {!isCompact && <View style={styles.filterDivider} />}
-
-              <Pressable style={[styles.filterItem, isCompact && styles.filterItemMobile, showTimeModal && { zIndex: 999 }]} onPress={() => toggleFilterModal('time')}>
-                <Clock size={16} color="#00ea6b" />
-                <View style={styles.filterTextContent}>
-                  <Text style={styles.filterItemLabel}>TIME</Text>
-                  <Text style={styles.filterItemValue} numberOfLines={1}>
-                    {timeKey || 'All Times'}
-                  </Text>
-                </View>
-                <ChevronDown size={14} color="#00ea6b" />
-                {showTimeModal && renderDropdownOptions('time')}
-              </Pressable>
-
-              <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile, isCompact && styles.applyFiltersBtnMobileTheme]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
-                <SlidersHorizontal size={14} color={isCompact ? '#06392e' : '#FFFFFF'} style={{ marginRight: 6 }} />
-                <Text style={[styles.applyFiltersBtnText, isCompact && { color: '#06392e' }]}>Apply Filters</Text>
-              </Pressable>
-            </>
-          )}
-        </View>
-      </View>
+      {isCompact && filterBarComponent}
 
       {/* 3. SORTING AND VIEW TOGGLE */}
       <View style={[styles.sortRowContainer, showSortModal && { zIndex: 999, position: 'relative' }]}>
@@ -1021,7 +1020,7 @@ export default function SearchScreen() {
   );
 
   if (isWeb) {
-    return <WebLayout hideHeader={isCompact}>{content}</WebLayout>;
+    return <WebLayout hideHeader={isCompact} headerContent={!isCompact ? filterBarComponent : undefined}>{content}</WebLayout>;
   }
 
   return (
@@ -1350,13 +1349,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   filterItemLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
     color: 'rgba(0, 234, 107, 0.7)',
     letterSpacing: 1,
   },
   filterItemValue: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     color: '#00ea6b',
     fontFamily: 'Inter',
@@ -1433,7 +1432,7 @@ const styles = StyleSheet.create({
   applyFiltersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: 'transparent',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 16,
@@ -1563,7 +1562,7 @@ const styles = StyleSheet.create({
   applyFiltersBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#00ea6b',
     fontFamily: 'Inter',
   },
   sortRowContainer: {

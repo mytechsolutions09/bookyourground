@@ -122,13 +122,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    // Supabase auto-refresh timer sometimes throws unhandled promise rejections on web
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && typeof event.reason.message === 'string' && event.reason.message.includes('Refresh Token')) {
+        console.warn('Silencing Supabase invalid refresh token error to prevent crash');
+        event.preventDefault();
+        supabase.auth.signOut().catch(() => {});
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    }
+
     const checkInitialSession = async () => {
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         if (error) {
           console.warn('AuthContext: Initial session check error:', error.message);
-          if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
-            await supabase.auth.signOut();
+          if (error.message.includes('Refresh Token') || error.message.includes('invalid_grant')) {
+            await supabase.auth.signOut().catch(() => {});
           }
         }
         if (isMounted) {
@@ -248,8 +261,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
+    let redirectUrl = 'https://bookyourground.com/reset-password';
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin && window.location.origin.startsWith('http')) {
+      redirectUrl = `${window.location.origin}/reset-password`;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: redirectUrl,
     });
     return { error };
   }, []);

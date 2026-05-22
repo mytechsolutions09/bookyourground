@@ -99,7 +99,7 @@ export default function LoginScreen() {
       }
     });
 
-  const { signIn, profile, user, resetPassword } = useAuth();
+  const { signIn, profile, user, resetPassword, signOut } = useAuth();
   const os = Platform.OS as string;
   const { width } = useWindowDimensions();
   const showHeroImage = os === 'web' && width >= 900;
@@ -365,21 +365,21 @@ export default function LoginScreen() {
     <Modal visible={showOtpModal} transparent animationType="fade">
       <View style={modalStyles.overlay}>
         <BlurView 
-          intensity={Platform.OS === 'web' ? 40 : 80} 
-          tint={Platform.OS === 'web' ? 'light' : 'dark'} 
+          intensity={80} 
+          tint="dark" 
           style={[
             modalStyles.card, 
-            Platform.OS !== 'web' && modalStyles.glassCardMobile,
+            modalStyles.glassCardMobile,
             { maxWidth: 450, padding: 32 }
           ]}
         >
-          <View style={[modalStyles.iconBg, { backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.1)' : 'rgba(0, 234, 107, 0.15)' }]}>
-            <Smartphone size={36} color={Platform.OS === 'web' ? '#01b854' : '#00ea6b'} strokeWidth={2.5} />
+          <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0, 234, 107, 0.15)' }]}>
+            <Smartphone size={36} color="#00ea6b" strokeWidth={2.5} />
           </View>
-          <Text style={[modalStyles.title, Platform.OS !== 'web' && { color: '#FFFFFF' }]}>Verify Your Mobile</Text>
-          <Text style={[modalStyles.message, { marginBottom: 20 }, Platform.OS !== 'web' && { color: 'rgba(255, 255, 255, 0.7)' }]}>
+          <Text style={[modalStyles.title, { color: '#FFFFFF' }]}>Verify Your Mobile</Text>
+          <Text style={[modalStyles.message, { marginBottom: 20, color: 'rgba(255, 255, 255, 0.7)' }]}>
             We've sent a 6-digit verification code to the number ending in{' '}
-            <Text style={{ fontWeight: '700', color: Platform.OS === 'web' ? '#1E293B' : '#00ea6b' }}>
+            <Text style={{ fontWeight: '700', color: '#00ea6b' }}>
               {profile && profile.phone ? profile.phone.slice(-4) : 'XXXX'}
             </Text>
             . Enter it below to authenticate.
@@ -396,12 +396,12 @@ export default function LoginScreen() {
                   height: 48,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: val ? '#00ea6b' : (Platform.OS === 'web' ? 'rgba(15, 23, 42, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
-                  backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: val ? '#00ea6b' : 'rgba(255, 255, 255, 0.15)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   textAlign: 'center',
                   fontSize: 20,
                   fontWeight: '700',
-                  color: Platform.OS === 'web' ? '#0F172A' : '#FFFFFF',
+                  color: '#FFFFFF',
                 }}
                 value={val}
                 keyboardType="number-pad"
@@ -432,20 +432,19 @@ export default function LoginScreen() {
             </Text>
           ) : null}
 
-          {/* Verification & Cancel Buttons */}
           <TouchableOpacity
             style={[
               modalStyles.button, 
-              Platform.OS !== 'web' && { backgroundColor: '#00ea6b' },
+              { backgroundColor: '#00ea6b' },
               loading && { opacity: 0.7 }
             ]}
             onPress={handleVerifyOtp}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={Platform.OS === 'web' ? '#FFF' : '#06392e'} />
+              <ActivityIndicator color="#06392e" />
             ) : (
-              <Text style={[modalStyles.buttonText, Platform.OS !== 'web' && { color: '#06392e', fontWeight: '800' }]}>VERIFY & SIGN IN</Text>
+              <Text style={[modalStyles.buttonText, { color: '#06392e', fontWeight: '800' }]}>VERIFY & SIGN IN</Text>
             )}
           </TouchableOpacity>
 
@@ -460,7 +459,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleCancelOtp}>
-              <Text style={{ color: Platform.OS === 'web' ? '#64748B' : 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14 }}>
                 Cancel
               </Text>
             </TouchableOpacity>

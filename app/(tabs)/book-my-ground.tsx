@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 96 : 0,
+    paddingTop: Platform.OS === 'web' ? 24 : 0,
     maxWidth: 1400,
     width: '100%',
     alignSelf: 'center',

@@ -2471,7 +2471,27 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             {!timeSlots.length ? (
               <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
             ) : loadingSlots ? (
-              <ActivityIndicator color="#00ea6b" />
+              isWeb ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <View
+                    key={`skel-${i}`}
+                    style={[
+                      styles.timeSlotChip,
+                      isCompact && styles.timeSlotChipCompact,
+                      isBoxCricket && styles.timeSlotChipDense,
+                      { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0', opacity: 0.6 }
+                    ]}
+                  >
+                    <Text style={[
+                      styles.timeSlotText,
+                      isBoxCricket && styles.timeSlotTextDense,
+                      { color: 'transparent' }
+                    ]}>00:00</Text>
+                  </View>
+                ))
+              ) : (
+                <ActivityIndicator color="#00ea6b" />
+              )
             ) : bookingDate && !availableTimeSlots.length ? (
               <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
             ) : (
@@ -2654,12 +2674,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     <>
       {useLandingSearchFlow && isWeb && windowWidth >= 900 && (
         <View style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, height: 72,
-          backgroundColor: '#06392e', // user requested color
+          position: 'sticky' as any,
+          top: 0, 
+          width: '100vw' as any,
+          marginLeft: 'calc(50% - 50vw)' as any,
+          height: 72,
+          marginTop: -24, // offset styles.page paddingTop
+          backgroundColor: '#06392e',
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           paddingHorizontal: 24, zIndex: 9999,
-          borderBottomWidth: 1, borderBottomColor: '#00ea6b' // user requested color
+          borderBottomWidth: 1, borderBottomColor: '#00ea6b'
         }}>
           {/* LOGO */}
           <Pressable onPress={() => router.push('/')}>
@@ -2668,77 +2692,78 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
           {/* FILTER PILL */}
           <View style={{
-            flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 999,
-            alignItems: 'center', paddingLeft: 12, paddingRight: 6, paddingVertical: 4,
-            height: 52, flex: 1, maxWidth: 650, marginHorizontal: 24,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12,
+            flexDirection: 'row', backgroundColor: '#06392e', borderRadius: 24,
+            borderWidth: 1, borderColor: 'rgba(0, 234, 107, 0.3)',
+            alignItems: 'center', paddingLeft: 8, paddingRight: 8, paddingVertical: 4,
+            height: 48, flex: 1, maxWidth: 900, marginHorizontal: 24,
+            shadowColor: '#00ea6b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12,
+            elevation: 8,
           }}>
             {/* Where */}
-            <Pressable onPress={() => setOpenSelectMenu('location')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <MapPin size={14} color="#0F172A" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Where</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
-                  {locationOptions.find(o => o.key === locationKey)?.label || 'Location'}
-                </Text>
-                <ChevronDown size={12} color="#64748B" />
+            <Pressable onPress={() => setOpenSelectMenu('location')} style={{ flex: 1.6, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: 'rgba(0, 234, 107, 0.3)', height: 32, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: 'rgba(0, 234, 107, 0.7)', letterSpacing: 1, marginBottom: 2, fontFamily: 'Inter' }}>LOCATION</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#00ea6b', fontFamily: 'Inter' }} numberOfLines={1}>
+                    {locationKey ? locationOptions.find(l => l.key === locationKey)?.label || locationKey.split('__')[0] : 'All Locations'}
+                  </Text>
+                  <ChevronDown size={14} color="#00ea6b" />
+                </View>
               </View>
             </Pressable>
 
             {/* Sport */}
-            <Pressable onPress={() => setOpenSelectMenu('type')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Activity size={14} color="#0F172A" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Sport</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
-                  {typeOptions.find(o => o.key === typeKey)?.label || 'Venue Type'}
-                </Text>
-                <ChevronDown size={12} color="#64748B" />
+            <Pressable onPress={() => setOpenSelectMenu('type')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: 'rgba(0, 234, 107, 0.3)', height: 32, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: 'rgba(0, 234, 107, 0.7)', letterSpacing: 1, marginBottom: 2, fontFamily: 'Inter' }}>VENUE</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#00ea6b', fontFamily: 'Inter' }} numberOfLines={1}>
+                    {typeKey || 'All Types'}
+                  </Text>
+                  <ChevronDown size={14} color="#00ea6b" />
+                </View>
               </View>
             </Pressable>
 
             {/* Date */}
-            <Pressable onPress={() => setOpenSelectMenu('date')} style={{ flex: 1, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: '#E2E8F0', height: 40, justifyContent: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Calendar size={14} color="#0F172A" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Date</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>
-                  {bookingDate ? formatDateButtonLabel(bookingDate) : 'Date'}
-                </Text>
-                <ChevronDown size={12} color="#64748B" />
+            <Pressable onPress={() => setOpenSelectMenu('date')} style={{ flex: 1.4, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: 'rgba(0, 234, 107, 0.3)', height: 32, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: 'rgba(0, 234, 107, 0.7)', letterSpacing: 1, marginBottom: 2, fontFamily: 'Inter' }}>DATE</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#00ea6b', fontFamily: 'Inter' }} numberOfLines={1}>
+                    {bookingDate ? new Date(bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Date'}
+                  </Text>
+                  <ChevronDown size={14} color="#00ea6b" />
+                </View>
               </View>
             </Pressable>
+
             {/* Teams */}
-            <Pressable onPress={() => setOpenSelectMenu('teams' as any)} style={{ flex: 1, paddingHorizontal: 12, height: 40, justifyContent: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Users size={14} color="#0F172A" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Teams</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ fontSize: 13, color: '#64748B' }}>
-                  {teamType === 'one' ? '1 Team' : 'Both Teams'}
-                </Text>
-                <ChevronDown size={12} color="#64748B" />
-              </View>
-            </Pressable>
+            {typeKey === 'Cricket Ground' && (
+              <Pressable onPress={() => setOpenSelectMenu('teams' as any)} style={{ flex: 1, paddingHorizontal: 12, height: 32, justifyContent: 'center', borderRightWidth: 1, borderRightColor: 'rgba(0, 234, 107, 0.3)' }}>
+                <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 8, fontWeight: '800', color: 'rgba(0, 234, 107, 0.7)', letterSpacing: 1, marginBottom: 2, fontFamily: 'Inter' }}>TEAMS</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#00ea6b', fontFamily: 'Inter' }} numberOfLines={1}>
+                      {teamType === 'one' ? '1 Team' : 'Both'}
+                    </Text>
+                    <ChevronDown size={14} color="#00ea6b" />
+                  </View>
+                </View>
+              </Pressable>
+            )}
 
             {/* Search Button */}
             <Pressable
               onPress={() => handleSearch(0)}
               style={({ pressed }) => [{
-                backgroundColor: '#00ea6b', // user requested color
-                width: 44, height: 44, borderRadius: 22,
-                alignItems: 'center', justifyContent: 'center',
+                flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent',
+                paddingHorizontal: 16, paddingVertical: 0,
                 marginLeft: 4
               }, pressed && { opacity: 0.8 }]}
             >
-              {searching ? <ActivityIndicator color="#06392e" size="small" /> : <Search size={18} color="#06392e" />}
+              {searching ? <ActivityIndicator color="#00ea6b" size="small" style={{ marginRight: 6 }} /> : <Search size={14} color="#00ea6b" style={{ marginRight: 6 }} />}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#00ea6b', fontFamily: 'Inter' }}>{searching ? 'Searching' : 'Search'}</Text>
             </Pressable>
           </View>
 
@@ -2749,7 +2774,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               onPress={() => router.push('/find-an-opponent' as any)}
               style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
             >
-              <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>Opposition</Text>
+              <Text style={{ color: '#00ea6b', fontWeight: '600', fontSize: 14 }}>OPPOSITION</Text>
             </Pressable>
 
             {user ? (
@@ -2939,7 +2964,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
                         Total
                       </Text>
-                      <Text style={[{ fontSize: 18, fontWeight: '800', color: '#00ea6b' }]}>
+                      <Text style={[{ fontSize: 16, fontWeight: '700', color: '#0F172A' }]}>
                         {formatCurrency(finalAmount)}
                       </Text>
                     </View>

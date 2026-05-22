@@ -13,8 +13,9 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Lock, Eye, EyeOff } from 'lucide-react-native';
 
 export default function ResetPasswordScreen() {
@@ -23,7 +24,21 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const { code } = useLocalSearchParams();
   const { changePassword } = useAuth();
+
+  React.useEffect(() => {
+    if (code) {
+      supabase.auth.exchangeCodeForSession(String(code)).then(({ error }) => {
+        if (error) {
+          const msg = 'Invalid or expired reset link. Please request a new one.';
+          if (Platform.OS === 'web') alert(msg);
+          else Alert.alert('Error', msg);
+        }
+      });
+    }
+  }, [code]);
+
   const { width } = useWindowDimensions();
   const showHeroImage = Platform.OS === 'web' && width >= 900;
 

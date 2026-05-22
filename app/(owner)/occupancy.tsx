@@ -25,6 +25,8 @@ export default function OccupancyDashboard() {
   const [grounds, setGrounds] = useState<any[]>([]);
   const [selectedGroundId, setSelectedGroundId] = useState<string>('all');
   const [overallOccupancy, setOverallOccupancy] = useState<number>(0);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [allTimeSlots, setAllTimeSlots] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchOccupancy() {
@@ -49,7 +51,6 @@ export default function OccupancyDashboard() {
           .rpc('get_owner_occupancy_rate', { target_owner_id: user.id });
         if (overallErr) throw overallErr;
 
-        // Merge ground name with occupancy percentage
         const groundsWithOccupancy = (groundsData || []).map(g => {
           const occItem = (occupancyData || []).find((o: any) => o.ground_id === g.id);
           return {
@@ -67,6 +68,28 @@ export default function OccupancyDashboard() {
         setGrounds(groundsWithOccupancy);
         setOverallOccupancy(overallPct);
         setRealOccupancy(overallPct);
+
+        // Fetch real historical data for charts
+        const groundIds = groundsWithOccupancy.map(g => g.id);
+        if (groundIds.length > 0) {
+          const { data: slots } = await supabase
+            .from('time_slots')
+            .select('ground_id')
+            .in('ground_id', groundIds);
+            
+          const fiveYearsAgo = new Date();
+          fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 4);
+          
+          const { data: bks } = await supabase
+            .from('bookings')
+            .select('booking_date, ground_id')
+            .in('ground_id', groundIds)
+            .eq('status', 'confirmed')
+            .gte('booking_date', fiveYearsAgo.toISOString().split('T')[0]);
+            
+          setAllTimeSlots(slots || []);
+          setAllBookings(bks || []);
+        }
       } catch (err) {
         console.error('Error fetching occupancy:', err);
       } finally {
@@ -80,45 +103,85 @@ export default function OccupancyDashboard() {
     ? (realOccupancy !== null ? realOccupancy : 75)
     : (grounds.find(g => g.id === selectedGroundId)?.occupancy ?? 75);
 
-  const occupancyData = {
-    day: [
-      { label: "1 Jun", value: 72 },
-      { label: "2 Jun", value: 78 },
-      { label: "3 Jun", value: 81 },
-      { label: "4 Jun", value: 69 },
-      { label: "5 Jun", value: 88 },
-      { label: "6 Jun", value: 92 },
-      { label: "7 Jun", value: displayOccupancy },
-    ],
+  const computedOccupancyData = React.useMemo(() => {
+    let weeklySlots = 0;
+    if (selectedGroundId === 'all') {
+      weeklySlots = allTimeSlots.length;
+    } else {
+      weeklySlots = allTimeSlots.filter(s => s.ground_id === selectedGroundId).length;
+    }
+    
+    const fallbackCapacity = weeklySlots === 0;
 
-    month: [
-      { label: "Jan", value: 62 },
-      { label: "Feb", value: 70 },
-      { label: "Mar", value: 75 },
-      { label: "Apr", value: 80 },
-      { label: "May", value: 86 },
-      { label: "Jun", value: 78 },
-      { label: "Jul", value: 83 },
-      { label: "Aug", value: 89 },
-      { label: "Sep", value: 73 },
-      { label: "Oct", value: 77 },
-      { label: "Nov", value: 84 },
-      { label: "Dec", value: displayOccupancy },
-    ],
+    const relevantBookings = selectedGroundId === 'all' 
+      ? allBookings 
+      : allBookings.filter(b => b.ground_id === selectedGroundId);
 
-    year: [
-      { label: "2022", value: 58 },
-      { label: "2023", value: 66 },
-      { label: "2024", value: 74 },
-      { label: "2025", value: 82 },
-      { label: "2026", value: displayOccupancy },
-    ],
-  };
+    const now = new Date();
+    
+    // DAY data: last 7 days
+    const dayData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const count = relevantBookings.filter(b => b.booking_date.startsWith(dateStr)).length;
+      
+      const capacity = Math.max(1, Math.round(weeklySlots / 7));
+      const val = fallbackCapacity ? 0 : Math.min(100, Math.round((count / capacity) * 100));
+      
+      dayData.push({
+        label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        value: i === 0 ? displayOccupancy : val
+      });
+    }
+
+    // MONTH data: Jan-Dec of CURRENT year
+    const monthData = [];
+    const currentYear = now.getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    for (let i = 0; i < 12; i++) {
+      const count = relevantBookings.filter(b => {
+        if (!b.booking_date) return false;
+        const bd = new Date(b.booking_date);
+        return bd.getFullYear() === currentYear && bd.getMonth() === i;
+      }).length;
+      
+      const capacity = Math.max(1, Math.round(weeklySlots * 4.33));
+      const val = fallbackCapacity ? 0 : Math.min(100, Math.round((count / capacity) * 100));
+      
+      monthData.push({
+        label: monthNames[i],
+        value: i === now.getMonth() ? displayOccupancy : val
+      });
+    }
+
+    // YEAR data: last 5 years
+    const yearData = [];
+    for (let i = 4; i >= 0; i--) {
+      const y = currentYear - i;
+      const count = relevantBookings.filter(b => {
+        if (!b.booking_date) return false;
+        const bd = new Date(b.booking_date);
+        return bd.getFullYear() === y;
+      }).length;
+      
+      const capacity = Math.max(1, Math.round(weeklySlots * 52));
+      const val = fallbackCapacity ? 0 : Math.min(100, Math.round((count / capacity) * 100));
+      
+      yearData.push({
+        label: y.toString(),
+        value: i === 0 ? displayOccupancy : val
+      });
+    }
+
+    return { day: dayData, month: monthData, year: yearData };
+  }, [allBookings, allTimeSlots, selectedGroundId, displayOccupancy]);
 
   const [filter, setFilter] = useState<"day" | "month" | "year">("month");
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
-  const currentData = occupancyData[filter];
+  const currentData = computedOccupancyData[filter];
   const maxValue = Math.max(...currentData.map((item) => item.value));
 
   const average = Math.round(
@@ -205,7 +268,7 @@ export default function OccupancyDashboard() {
                   fontWeight: '700',
                   fontSize: 13,
                 }}>
-                  🌐 All Venues ({overallOccupancy}%)
+                  All Venues ({overallOccupancy}%)
                 </Text>
               </TouchableOpacity>
 
@@ -232,7 +295,7 @@ export default function OccupancyDashboard() {
                     fontWeight: '700',
                     fontSize: 13,
                   }}>
-                    🏟️ {g.name} ({g.occupancy}%)
+                    {g.name} ({g.occupancy}%)
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -309,8 +372,8 @@ export default function OccupancyDashboard() {
                           dataKey="value"
                           stroke="#01e669"
                           strokeWidth={4}
-                          dot={{ r: 6, fill: "#06392e", stroke: "#01e669", strokeWidth: 3 }}
-                          activeDot={{ r: 8 }}
+                          dot={{ r: 5, fill: "#01e669", stroke: "#01e669", strokeWidth: 2 }}
+                          activeDot={{ r: 8, fill: "#06392e", stroke: "#01e669", strokeWidth: 3 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>

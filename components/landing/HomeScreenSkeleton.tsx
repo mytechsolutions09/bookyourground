@@ -15,6 +15,8 @@ const SkeletonBar = ({ width, height = 14, style }: { width: string | number; he
   />
 );
 
+import Hero from '@/components/landing/Hero';
+
 export default function HomeScreenSkeleton() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -42,47 +44,9 @@ export default function HomeScreenSkeleton() {
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Render actual Hero so the hero section doesn't look like a skeleton and content doesn't shift up */}
+        <Hero />
         <Animated.View style={{ opacity: pulse }}>
-          {/* ── Premium Hero Skeleton ─────────────────────────── */}
-          <View style={[styles.premiumHero, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.heroPadding}>
-              <View style={[styles.heroHeaderRow, { justifyContent: 'flex-end' }]}>
-                <View style={styles.profileButtonSk} />
-              </View>
-
-              <SkeletonBar width="70%" height={34} style={styles.heroBar} />
-              <SkeletonBar width="50%" height={34} style={[styles.heroBar, { marginTop: 8 }]} />
-
-              <View style={{ marginTop: 16 }}>
-                <SkeletonBar width="90%" height={15} style={styles.heroBarSub} />
-                <SkeletonBar width="60%" height={15} style={[styles.heroBarSub, { marginTop: 6 }]} />
-              </View>
-
-              <View style={styles.heroStatsContainer}>
-                {[1, 2, 3].map((i) => (
-                  <React.Fragment key={i}>
-                    <View style={styles.heroStatBox}>
-                      <SkeletonBar width="60%" height={18} style={styles.heroBar} />
-                      <SkeletonBar width="80%" height={10} style={[styles.heroBarSub, { marginTop: 4 }]} />
-                    </View>
-                    {i < 3 && <View style={styles.heroStatDivider} />}
-                  </React.Fragment>
-                ))}
-              </View>
-
-              <View style={styles.floatingSearchContainer}>
-                <View style={styles.searchIconSk} />
-                <SkeletonBar width="60%" height={15} style={styles.searchBarSk} />
-              </View>
-
-              <View style={styles.heroCategories}>
-                {[1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.heroCatChipSk} />
-                ))}
-              </View>
-            </View>
-          </View>
-
           {/* ── Quick Actions Skeleton ───────────────────────── */}
           <View style={styles.quickActionsSection}>
             <View style={styles.findGroundBtnSk}>
@@ -238,7 +202,7 @@ const styles = StyleSheet.create({
   // ── Quick Actions ─────────────────────────────
   quickActionsSection: {
     paddingHorizontal: 24,
-    marginTop: -32,
+    marginTop: 20,
     marginBottom: 12,
     zIndex: 200,
   },
