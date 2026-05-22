@@ -348,15 +348,10 @@ export default function LoginScreen() {
     }
 
     // Role-based defaults if no redirect path
-    if (profile.role === 'super_admin') {
-      if (Platform.OS === 'web') {
-        router.replace('/(admin)/dashboard');
-      } else {
-        router.replace('/(tabs)/profile');
-      }
+    if (Platform.OS === 'web' && profile.role === 'super_admin') {
+      router.replace('/(admin)/dashboard');
     } else {
-      // For both players and ground owners, land on the home discovery screen
-      // This ensures a consistent entry point as requested
+      // On mobile, everyone (including admins) lands on the home discovery screen
       router.replace('/(tabs)/home_tab');
     }
   }, [user, profile, redirect, date, time, teams, loginOtpVerified, otpSent, sendingOtp]);
@@ -1037,15 +1032,17 @@ export default function LoginScreen() {
               <Text style={styles.signInBtnText}>SIGN IN</Text>
             </Pressable>
   
-            <Pressable
-              style={({ pressed }) => [
-                styles.outlineBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => router.push('/(auth)/signup')}
-            >
-              <Text style={styles.outlineBtnText}>SIGN UP</Text>
-            </Pressable>
+            {loginMethod !== 'phone' && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.outlineBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => router.push('/(auth)/signup')}
+              >
+                <Text style={styles.outlineBtnText}>SIGN UP</Text>
+              </Pressable>
+            )}
           </View>
         </BlurView>
       </ScrollView>
@@ -1248,23 +1245,23 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#06392e',
     borderColor: '#00ea6b',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 10,
     height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
   },
   signInBtnText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#06392e',
+    color: '#00ea6b',
     letterSpacing: -0.3,
     fontFamily: 'Inter',
   },
@@ -1343,16 +1340,16 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: '#01b854', 
+    backgroundColor: '#06392e', 
     borderColor: '#00ea6b',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 10, 
     height: 48, 
     alignItems: 'center', 
     justifyContent: 'center',
     shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
     ...Platform.select({
       web: { backdropFilter: 'blur(12px)' }
@@ -1361,7 +1358,7 @@ const webStyles = StyleSheet.create({
   buttonText: { 
     fontSize: 15, 
     fontWeight: '800', 
-    color: '#FFFFFF', 
+    color: '#00ea6b', 
     letterSpacing: -0.3,
     fontFamily: 'Inter',
   },

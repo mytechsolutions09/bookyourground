@@ -38,6 +38,7 @@ export default function CricketInsights() {
   const [profile, setProfile] = useState<any>(null);
   const [battingStats, setBattingStats] = useState<any[]>([]);
   const [bowlingStats, setBowlingStats] = useState<any[]>([]);
+  const [leaderboardStats, setLeaderboardStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,6 +76,14 @@ export default function CricketInsights() {
         .limit(5);
       setBowlingStats(boStats || []);
 
+      // 4. Fetch Overall Leaderboard Stats
+      const { data: lbData } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('member_id', user?.id)
+        .maybeSingle();
+      setLeaderboardStats(lbData);
+
     } catch (error) {
       console.error('Error loading insights:', error);
     } finally {
@@ -83,22 +92,45 @@ export default function CricketInsights() {
   };
 
   const calculateBattingInsights = () => {
-    if (battingStats.length === 0) return { totalRuns: 0, caughtOut: 0, notOuts: 0, avg: '0.00', sr: '0.00' };
+    if (leaderboardStats) {
+      const outs = leaderboardStats.innings_batted - (leaderboardStats.not_outs || 0);
+      const avg = outs > 0 ? (leaderboardStats.total_runs / outs).toFixed(2) : (leaderboardStats.total_runs || 0).toFixed(2);
+      return { 
+        totalRuns: leaderboardStats.total_runs || 0, 
+        fifties: leaderboardStats.fifties || 0, 
+        notOuts: leaderboardStats.not_outs || 0, 
+        avg: avg, 
+        sr: leaderboardStats.strike_rate || '0.00',
+        innings: leaderboardStats.innings_batted || 0
+      };
+    }
+    
+    if (battingStats.length === 0) return { totalRuns: 0, fifties: 0, notOuts: 0, avg: '0.00', sr: '0.00', innings: 0 };
     
     const totalRuns = battingStats.reduce((sum, s) => sum + (s.runs || 0), 0);
     const totalBalls = battingStats.reduce((sum, s) => sum + (s.balls || 0), 0);
     const outs = battingStats.filter(s => s.is_out).length;
-    const caughtOut = battingStats.filter(s => s.dismissal_type === 'caught').length;
+    const fifties = battingStats.filter(s => s.runs >= 50 && s.runs < 100).length;
     const notOuts = battingStats.length - outs;
     
     const avg = outs > 0 ? (totalRuns / outs).toFixed(2) : totalRuns.toFixed(2);
     const sr = totalBalls > 0 ? ((totalRuns / totalBalls) * 100).toFixed(2) : '0.00';
 
-    return { totalRuns, caughtOut, notOuts, avg, sr };
+    return { totalRuns, fifties, notOuts, avg, sr, innings: battingStats.length };
   };
 
   const calculateBowlingInsights = () => {
-    if (bowlingStats.length === 0) return { totalWickets: 0, bestBowling: '-', avg: '0.00', econ: '0.00' };
+    if (leaderboardStats) {
+      return { 
+        totalWickets: leaderboardStats.total_wickets || 0, 
+        bestBowling: `${leaderboardStats.best_bowling_wickets || 0}/${leaderboardStats.best_bowling_runs || 0}`, 
+        avg: leaderboardStats.total_wickets > 0 ? (leaderboardStats.best_bowling_runs / leaderboardStats.total_wickets).toFixed(2) : '0.00', 
+        econ: leaderboardStats.economy_rate || '0.00',
+        innings: leaderboardStats.innings_bowled || 0
+      };
+    }
+
+    if (bowlingStats.length === 0) return { totalWickets: 0, bestBowling: '-', avg: '0.00', econ: '0.00', innings: 0 };
     
     const totalWickets = bowlingStats.reduce((sum, s) => sum + (s.wickets || 0), 0);
     const totalRuns = bowlingStats.reduce((sum, s) => sum + (s.runs_conceded || 0), 0);
@@ -113,7 +145,7 @@ export default function CricketInsights() {
     const econ = totalBalls > 0 ? ((totalRuns / (totalBalls / 6))).toFixed(2) : '0.00';
     const avg = totalWickets > 0 ? (totalRuns / totalWickets).toFixed(2) : '0.00';
 
-    return { totalWickets, bestBowling, avg, econ };
+    return { totalWickets, bestBowling, avg, econ, innings: bowlingStats.length };
   };
 
   const battingInsights = calculateBattingInsights();
@@ -141,10 +173,10 @@ export default function CricketInsights() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{formatName(profile?.full_name)}</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerIconBtn}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.push('/search' as any)}>
             <Search size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.push('/profile/notifications' as any)}>
             <View style={styles.notifWrapper}>
               <Bell size={24} color="#000" />
               <View style={styles.notifBadge}><Text style={styles.notifText}>0</Text></View>
@@ -301,21 +333,21 @@ export default function CricketInsights() {
                   <View style={styles.summaryValueBox}>
                      <Text style={styles.summaryValueText}>{battingInsights.totalRuns}</Text>
                   </View>
-                  <Text style={styles.summaryLabelText}>Total runs in last {battingStats.length} Innings</Text>
+                  <Text style={styles.summaryLabelText}>Total runs {leaderboardStats ? '(All Time)' : `in last ${battingInsights.innings} Innings`}</Text>
                </View>
 
                <View style={styles.summaryCard}>
                   <View style={styles.summaryValueBox}>
-                     <Text style={styles.summaryValueTextGreen}>{battingInsights.caughtOut}</Text>
+                     <Text style={styles.summaryValueTextGreen}>{battingInsights.fifties}</Text>
                   </View>
-                  <Text style={styles.summaryLabelText}>Caught out in last {battingStats.length} Innings</Text>
+                  <Text style={styles.summaryLabelText}>Fifties {leaderboardStats ? '(All Time)' : `in last ${battingInsights.innings} Innings`}</Text>
                </View>
 
                <View style={styles.summaryCard}>
                   <View style={styles.summaryValueBox}>
                      <Text style={styles.summaryValueTextGreen}>{battingInsights.notOuts}</Text>
                   </View>
-                  <Text style={styles.summaryLabelText}>Not out in last {battingStats.length} Innings</Text>
+                  <Text style={styles.summaryLabelText}>Not out {leaderboardStats ? '(All Time)' : `in last ${battingInsights.innings} Innings`}</Text>
                </View>
 
                <View style={styles.statsGrid}>
@@ -335,14 +367,14 @@ export default function CricketInsights() {
                   <View style={styles.summaryValueBox}>
                      <Text style={styles.summaryValueText}>{bowlingInsights.totalWickets}</Text>
                   </View>
-                  <Text style={styles.summaryLabelText}>Total wickets in last {bowlingStats.length} Innings</Text>
+                  <Text style={styles.summaryLabelText}>Total wickets {leaderboardStats ? '(All Time)' : `in last ${bowlingInsights.innings} Innings`}</Text>
                </View>
 
                <View style={styles.summaryCard}>
                   <View style={styles.summaryValueBox}>
                      <Text style={styles.summaryValueTextGreen}>{bowlingInsights.bestBowling}</Text>
                   </View>
-                  <Text style={styles.summaryLabelText}>Best performance in last {bowlingStats.length} Innings</Text>
+                  <Text style={styles.summaryLabelText}>Best performance {leaderboardStats ? '(All Time)' : `in last ${bowlingInsights.innings} Innings`}</Text>
                </View>
 
                <View style={styles.statsGrid}>
@@ -459,7 +491,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     color: '#000',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   profileDecorative: {
     position: 'absolute',

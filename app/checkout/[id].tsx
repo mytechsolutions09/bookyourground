@@ -1799,7 +1799,6 @@ export default function CheckoutScreen() {
                             disabled={processing}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' }}>
-                                <ShieldCheck size={20} color="#1E293B" />
                                 <RNText style={styles.confirmBtnTextNew}>
                                     Confirm
                                 </RNText>
@@ -2395,21 +2394,20 @@ export default function CheckoutScreen() {
                     style={{
                         height: 52,
                         borderRadius: 12,
-                        backgroundColor: '#00ea6b',
+                        backgroundColor: '#0F172A',
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 10,
-                        shadowColor: '#00ea6b',
+                        shadowColor: '#0F172A',
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.15,
                         shadowRadius: 8,
                         elevation: 3,
                     }}
                 >
-                    <ShieldCheck size={20} color="#FFFFFF" />
                     <RNText style={{ fontSize: 16, fontWeight: '600', color: '#FFFFFF', fontFamily: 'Inter' }}>
-                        Confirm & Pay {formatCurrency(totalPayable)}
+                        Confirm
                     </RNText>
                 </TouchableOpacity>
 
@@ -3062,13 +3060,13 @@ const styles = StyleSheet.create({
     confirmBtnNew: {
         height: 56,
         borderRadius: 16,
-        backgroundColor: '#00ea6b',
+        backgroundColor: '#0F172A',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
         marginBottom: 24,
-        shadowColor: '#00ea6b',
+        shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.2,
         shadowRadius: 16,
@@ -3077,7 +3075,7 @@ const styles = StyleSheet.create({
     confirmBtnTextNew: {
         fontSize: 18,
         fontWeight: Platform.OS === 'web' ? '600' : '500',
-        color: '#1E293B',
+        color: '#FFFFFF',
         fontFamily: 'Inter',
     },
     securityFooterNew: {
@@ -3563,8 +3561,8 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     compactPriceText: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '500',
         color: '#0F172A',
         fontFamily: 'Inter',
     },

@@ -22,6 +22,11 @@ function UserSettingsInner() {
   const [teamName, setTeamName] = useState(profile?.team_name || '');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const hasChanges = 
     fullName.trim() !== (profile?.full_name || '') ||
@@ -105,6 +110,37 @@ function UserSettingsInner() {
       Alert.alert('Error', error.message || 'Failed to update profile.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    
+    try {
+      setPasswordUpdating(true);
+      setPasswordError('');
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      setShowPasswordModal(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert('Success', 'Your password has been updated successfully.');
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to update password');
+    } finally {
+      setPasswordUpdating(false);
     }
   };
 
@@ -192,9 +228,15 @@ function UserSettingsInner() {
             Manage your password and security settings.
           </Text>
           
-          <Text style={styles.infoMuted}>
-            Password change and two-factor authentication features are coming soon.
-          </Text>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
+            onPress={() => setShowPasswordModal(true)}
+          >
+            <View>
+              <Text style={styles.menuItemTitle}>Change Password</Text>
+              <Text style={styles.menuItemSubtitle}>Update your account password</Text>
+            </View>
+          </TouchableOpacity>
         </Card>
 
         <Card style={[styles.panel, { marginTop: 16 }]}>
@@ -270,6 +312,80 @@ function UserSettingsInner() {
             >
               <Text style={modalStyles.buttonText}>CONTINUE</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={modalStyles.overlay}>
+          <View style={[modalStyles.card, isUltraNarrow && { padding: 20, maxWidth: '95%' }]}>
+            <Text style={modalStyles.title}>Change Password</Text>
+            
+            <View style={{ width: '100%', marginBottom: 16, marginTop: 16 }}>
+              <Text style={styles.label}>New Password</Text>
+              <TextInput
+                style={[styles.input, { width: '100%' }]}
+                placeholder="Enter new password"
+                value={newPassword}
+                onChangeText={(text) => {
+                  setNewPassword(text);
+                  setPasswordError('');
+                }}
+                secureTextEntry
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={{ width: '100%', marginBottom: 16 }}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={[styles.input, { width: '100%' }]}
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  setPasswordError('');
+                }}
+                secureTextEntry
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            {passwordError ? (
+              <Text style={{ color: '#EF4444', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>
+                {passwordError}
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+              <TouchableOpacity
+                style={[modalStyles.button, { flex: 1, backgroundColor: '#F1F5F9' }]}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setPasswordError('');
+                }}
+                disabled={passwordUpdating}
+              >
+                <Text style={[modalStyles.buttonText, { color: '#475569' }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[modalStyles.button, { flex: 1, opacity: passwordUpdating ? 0.7 : 1 }]}
+                onPress={handleUpdatePassword}
+                disabled={passwordUpdating}
+              >
+                {passwordUpdating ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={modalStyles.buttonText}>UPDATE</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

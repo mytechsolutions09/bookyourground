@@ -392,6 +392,46 @@ export default function CricketHubScreen() {
         <View style={[styles.mainCard, isMobile && styles.mainCardMobile]}>
           {/* Tabs row */}
           <View style={[styles.tabBar, isMobile && styles.tabBarMobile]}>
+            {isWeb && (
+              <View style={styles.leftTabs}>
+                <TouchableOpacity
+                  style={[
+                    styles.tabButton,
+                    activeTab === 'profile' && styles.tabButtonActive,
+                  ]}
+                  onPress={() => setActiveTab('profile')}
+                >
+                  <Shield size={16} color={activeTab === 'profile' ? '#00ea6b' : '#64748B'} style={styles.tabIcon} />
+                  <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]} numberOfLines={1}>
+                    Player Profile
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.tabButton}
+                  onPress={() => router.push('/find-an-opponent')}
+                >
+                  <Swords size={16} color="#64748B" style={styles.tabIcon} />
+                  <Text style={styles.tabText} numberOfLines={1}>
+                    Find Opposition
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.tabButton}
+                  onPress={() => router.push('/cricket/inbox')}
+                >
+                  <View>
+                    <MessageCircle size={20} color="#64748B" />
+                    {unreadCount > 0 && (
+                      <View style={styles.badgeContainer}>
+                        <Text style={styles.badgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {activeTab === 'board' && (
               <View style={[styles.rightActions, isMobile && { width: '100%', flexWrap: 'nowrap', gap: 8 }]}>

@@ -33,6 +33,8 @@ export function MobileTabBarHost() {
     root === 'ground' ||
     root === 'owner-contract' ||
     root === 'bookings' ||
+    root === 'cricket-tournament' ||
+    (root === 'cricket' && (sub === 'insights' || sub === 'rank')) ||
     (root === 'shop' && sub && sub !== 'cart') // Hide on shop detail pages, but show on cart/home
   ) {
     return null;

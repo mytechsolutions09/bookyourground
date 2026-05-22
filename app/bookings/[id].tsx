@@ -486,7 +486,6 @@ export default function BookingDetailsScreen() {
               </Text>
               
               <View style={[styles.groundSport, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0', marginTop: 8 }]}>
-                <Globe size={12} color="#7A8575" />
                 <Text style={[styles.sportText, { color: '#7A8575' }]}>{booking.ground?.pitch_type || 'Cricket'}</Text>
               </View>
             </View>
@@ -507,7 +506,6 @@ export default function BookingDetailsScreen() {
                   </View>
                 </View>
                 <View style={[styles.groundSport, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0', marginTop: 6 }]}>
-                  <Globe size={12} color="#7A8575" />
                   <Text style={[styles.sportText, { color: '#7A8575' }]}>{booking.ground?.pitch_type || 'Cricket'}</Text>
                 </View>
               </View>
