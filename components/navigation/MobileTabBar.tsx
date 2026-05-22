@@ -26,7 +26,7 @@ const INACTIVE = '#9ca3af';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'stats' | 'shop' | 'inventory' | 'find' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'cricket' | 'shop' | 'inventory' | 'find' {
   const root = segments[0];
   if (root === 'inventory') return 'inventory';
   if (root === 'select-sport' || root === 'search') return 'find';
@@ -34,7 +34,7 @@ function getActiveTab(
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
   }
-  if (root === 'cricket') return 'stats';
+  if (root === 'cricket') return 'cricket';
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
   if (root === 'shop') return 'shop';
@@ -52,7 +52,7 @@ function getActiveTab(
   const tab = segments[1] ?? 'index';
   if (tab === 'index' || tab === 'home_tab') return 'home';
   if (tab === 'grounds' || tab === 'book-my-ground') return 'grounds';
-  if (tab === 'cricket') return 'stats';
+  if (tab === 'cricket') return 'cricket';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
   if (tab === 'find-an-opponent' || tab === 'search') return 'find-opponent';
@@ -155,7 +155,7 @@ export default function MobileTabBar() {
   const showInventoryTab = isOwner || isSuperAdmin;
   const showOwnerBookings = isOwner || isSuperAdmin;
   
-  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', isSuperAdmin ? 'profile' : 'stats'];
+  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', isSuperAdmin ? 'profile' : 'cricket'];
 
   const go = (href: string, tabName: string) => {
     const currentIndex = TAB_ORDER.indexOf(activeTab);
@@ -262,10 +262,10 @@ export default function MobileTabBar() {
       ) : (
         <Pressable
           style={styles.item}
-          onPress={() => go('/(tabs)/cricket/stats', 'stats')}
+          onPress={() => go('/(tabs)/cricket', 'cricket')}
         >
-          <BarChart2 size={size} color={activeTab === 'stats' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
-          <Text style={[styles.label, { color: activeTab === 'stats' ? ACTIVE : INACTIVE }]}>Stats</Text>
+          <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
+          <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Cricket</Text>
         </Pressable>
       )}
     </Animated.View>

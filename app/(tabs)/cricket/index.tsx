@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function CricketHubScreen() {
   const router = useRouter();
@@ -299,9 +300,10 @@ export default function CricketHubScreen() {
 
   const content = (
     <View style={styles.page}>
+      {!isWeb && <MobileAppNavbar title="CRICKET HUB" titleColor="#0F172A" smallerTitle lightBg />}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* ── HERO BANNER ───────────────────────────────────────────── */}
-        {!isWeb && (
+        {!isWeb && !isMobile && (
           <View style={[styles.heroBanner, isMobile && styles.heroBannerMobile]}>
             <View style={styles.heroLeft}>
               <View style={styles.titleRow}>
@@ -481,9 +483,8 @@ export default function CricketHubScreen() {
 
             return (
             <View style={styles.boardContainer}>
-              <View style={[styles.searchFilterContainer, { flexDirection: 'row', gap: 8, zIndex: 10, width: '100%' }]}>
-                <View style={[styles.searchBar, { flex: 1.5, marginBottom: 0, minHeight: 44 }]}>
-                  <Search size={16} color="#94A3B8" style={{ marginRight: 6 }} />
+              <View style={[styles.searchFilterContainer, { flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 10, width: '100%' }]}>
+                <View style={[styles.searchBar, { flex: 1, marginBottom: 0, height: 40, borderRadius: 8, paddingHorizontal: 12 }]}>
                   <TextInput
                     style={[styles.searchInput, { outlineStyle: 'none' } as any]}
                     placeholder="Search posts..."
@@ -492,22 +493,18 @@ export default function CricketHubScreen() {
                   />
                 </View>
                 
-                <View style={[styles.filtersRow, { flex: 1, gap: 8 }]}>
+                <View style={[styles.filtersRow, { flexDirection: 'row', gap: 8 }]}>
                   {/* Location Filter Dropdown */}
-                  <View style={styles.filterDropdownContainer}>
+                  <View style={[styles.filterDropdownContainer, { flex: 0 }]}>
                     <TouchableOpacity
-                      style={[styles.modalInput, styles.dropdownInput, { marginBottom: 0, minHeight: 44, paddingHorizontal: 8, paddingVertical: 8 }]}
+                      style={[styles.modalInput, styles.dropdownInput, { justifyContent: 'center', alignItems: 'center', marginBottom: 0, height: 40, width: 40, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 8 }]}
                       activeOpacity={0.7}
                       onPress={() => {
                         setIsFilterCityOpen(!isFilterCityOpen);
                         setIsFilterRoleOpen(false);
                       }}
                     >
-                      <MapPin size={14} color="#64748B" style={{ marginRight: 4 }} />
-                      <Text style={[filterCity ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder, { flex: 1, fontSize: 12 }]}>
-                        {filterCity || 'All Cities'}
-                      </Text>
-                      <ChevronDown size={14} color="#64748B" />
+                      <MapPin size={16} color={filterCity ? "#00ea6b" : "#64748B"} />
                     </TouchableOpacity>
                     {isFilterCityOpen && (
                       <View style={[styles.dropdownList, styles.filterDropdownList, { right: 0, minWidth: 160 }]}>
@@ -532,20 +529,16 @@ export default function CricketHubScreen() {
                   </View>
 
                   {/* Role Filter Dropdown */}
-                  <View style={styles.filterDropdownContainer}>
+                  <View style={[styles.filterDropdownContainer, { flex: 0 }]}>
                     <TouchableOpacity
-                      style={[styles.modalInput, styles.dropdownInput, { marginBottom: 0, minHeight: 44, paddingHorizontal: 8, paddingVertical: 8 }]}
+                      style={[styles.modalInput, styles.dropdownInput, { justifyContent: 'center', alignItems: 'center', marginBottom: 0, height: 40, width: 40, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 8 }]}
                       activeOpacity={0.7}
                       onPress={() => {
                         setIsFilterRoleOpen(!isFilterRoleOpen);
                         setIsFilterCityOpen(false);
                       }}
                     >
-                      <User size={14} color="#64748B" style={{ marginRight: 4 }} />
-                      <Text style={[filterRole ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder, { flex: 1, fontSize: 12 }]}>
-                        {filterRole || 'All Roles'}
-                      </Text>
-                      <ChevronDown size={14} color="#64748B" />
+                      <User size={16} color={filterRole ? "#00ea6b" : "#64748B"} />
                     </TouchableOpacity>
                     {isFilterRoleOpen && (
                       <View style={[styles.dropdownList, styles.filterDropdownList, { right: 0, minWidth: 160 }]}>
@@ -1238,7 +1231,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   subTabBtnActive: {
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   subTabText: {
     fontSize: 13,
@@ -1246,7 +1244,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   subTabTextActive: {
-    color: '#00ea6b',
+    color: '#0F172A',
+    fontWeight: '600',
   },
   createPostBtn: {
     flexDirection: 'row',
@@ -1294,15 +1293,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   roleTag: {
-    backgroundColor: '#06392e',
+    backgroundColor: '#F1F5F9',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
   roleTagText: {
-    color: '#00ea6b',
+    color: '#475569',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
   boardMessage: {
