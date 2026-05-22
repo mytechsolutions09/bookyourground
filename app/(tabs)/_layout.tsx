@@ -141,7 +141,7 @@ export default function TabLayout() {
           <Stack.Screen name="profile/order-details" />
           <Stack.Screen name="support" />
           <Stack.Screen name="logout" />
-          <Stack.Screen name="cricket" />
+          <Stack.Screen name="cricket" options={{ gestureEnabled: false }} />
           <Stack.Screen name="book-my-ground" />
           <Stack.Screen name="find-an-opponent" />
           <Stack.Screen name="dashboard" />

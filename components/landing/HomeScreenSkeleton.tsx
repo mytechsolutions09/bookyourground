@@ -15,7 +15,7 @@ const SkeletonBar = ({ width, height = 14, style }: { width: string | number; he
   />
 );
 
-import Hero from '@/components/landing/Hero';
+
 
 export default function HomeScreenSkeleton() {
   const { width } = useWindowDimensions();
@@ -44,8 +44,24 @@ export default function HomeScreenSkeleton() {
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Render actual Hero so the hero section doesn't look like a skeleton and content doesn't shift up */}
-        <Hero />
+        {/* Mobile Hero Skeleton */}
+        <Animated.View style={{ backgroundColor: '#134d40', paddingTop: 50, paddingBottom: 10, paddingHorizontal: 20, opacity: pulse }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+            <SkeletonBar width={120} height={20} style={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <SkeletonBar width={40} height={40} style={{ borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+              <SkeletonBar width={40} height={40} style={{ borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+            </View>
+          </View>
+          <SkeletonBar width={100} height={14} style={{ backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 8 }} />
+          <SkeletonBar width={200} height={24} style={{ backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 16 }} />
+          <SkeletonBar width={250} height={14} style={{ backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 24 }} />
+          
+          <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 24, height: 50, paddingHorizontal: 16, alignItems: 'center' }}>
+            <SkeletonBar width={20} height={20} style={{ borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <SkeletonBar width={150} height={14} style={{ backgroundColor: 'rgba(255,255,255,0.2)', marginLeft: 12 }} />
+          </View>
+        </Animated.View>
         <Animated.View style={{ opacity: pulse }}>
           {/* ── Quick Actions Skeleton ───────────────────────── */}
           <View style={styles.quickActionsSection}>

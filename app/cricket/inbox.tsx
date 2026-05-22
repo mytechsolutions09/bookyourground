@@ -1,10 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, ScrollView } from 'react-native';
+import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, MessageCircle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SkeletonChatItem = () => (
+  <View style={styles.chatItem}>
+    <View style={[styles.avatar, { backgroundColor: '#F1F5F9' }]} />
+    <View style={styles.chatInfo}>
+      <View style={{ width: '60%', height: 16, backgroundColor: '#F1F5F9', borderRadius: 4, marginBottom: 8 }} />
+      <View style={{ width: '80%', height: 12, backgroundColor: '#F1F5F9', borderRadius: 4 }} />
+    </View>
+    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+      <View style={{ width: 40, height: 10, backgroundColor: '#F1F5F9', borderRadius: 4 }} />
+    </View>
+  </View>
+);
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -151,10 +164,11 @@ export default function InboxScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
       <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => router.push('/cricket')} 
+          onPress={() => router.back()} 
           style={styles.backBtn}
         >
           <ChevronLeft size={24} color="#0F172A" />
@@ -164,9 +178,9 @@ export default function InboxScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#00ea6b" />
-        </View>
+        <ScrollView contentContainerStyle={styles.listContainer}>
+          {[1, 2, 3, 4, 5].map(i => <SkeletonChatItem key={i} />)}
+        </ScrollView>
       ) : chats.length === 0 ? (
         <View style={styles.center}>
           <MessageCircle size={48} color="#CBD5E1" style={{ marginBottom: 16 }} />
@@ -181,7 +195,7 @@ export default function InboxScreen() {
           contentContainerStyle={styles.listContainer}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -195,7 +209,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'web' ? 12 : 44,
+    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',

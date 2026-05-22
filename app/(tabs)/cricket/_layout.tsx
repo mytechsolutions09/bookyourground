@@ -899,7 +899,7 @@ export default function CricketLayout() {
               if (Platform.OS === 'web') {
                 window.location.href = '/cricket';
               } else {
-                router.replace('/cricket');
+                router.back();
               }
             }} 
             style={styles.actionCircleBtn}

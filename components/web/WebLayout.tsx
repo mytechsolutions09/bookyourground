@@ -1968,17 +1968,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(220,192,147,0.4)',
+    borderColor: 'rgba(0,234,107,0.5)',
   },
   headerSecondaryButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#dcc093',
+    color: '#00ea6b',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
   },
   headerSecondaryButtonTextScrolled: {
-    color: '#dcc093',
+    color: '#00ea6b',
   },
   profileChip: {
     flexDirection: 'row',
