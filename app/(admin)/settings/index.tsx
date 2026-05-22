@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
-import { Bell, Database, Shield } from 'lucide-react-native';
+import { Bell, Database, Shield, Mail } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
@@ -22,6 +22,22 @@ export default function AdminSettingsIndex() {
             <Text style={styles.cardTitle}>Notifications</Text>
             <Text style={styles.cardText}>
               Email and in-app alerts (configure in a future update)
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.row}>
+          <Mail size={18} color="#6B7280" />
+          <View style={styles.textContainer}>
+            <Text style={styles.cardTitle}>Emails</Text>
+            <Text style={styles.cardText}>
+              Automated emails are actively being sent to users for:
+              {'\n'}• Booking confirmations and reminders
+              {'\n'}• Cancellation notices and refunds
+              {'\n'}• Account password resets
+              {'\n'}• Mobile OTP verifications
             </Text>
           </View>
         </View>

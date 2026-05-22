@@ -442,7 +442,7 @@ export default function SearchScreen() {
   const renderDropdownOptions = (type: 'location' | 'type' | 'date' | 'time' | 'price') => {
     const isDate = type === 'date';
     return (
-      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, isCompact && styles.floatingDropdownMobile]}>
+      <View style={[styles.floatingDropdown, isDate && styles.dateDropdown, !isDate && { minWidth: 220 }, isCompact && styles.floatingDropdownMobile]}>
         {isDate ? (
           <View style={styles.dateDropdownContainer}>
             <View style={styles.dateQuickOptions}>
@@ -708,8 +708,8 @@ export default function SearchScreen() {
   const isAnyDropdownOpen = showTypeModal || showDateModal || showLocationModal || showPriceModal || showTimeModal;
 
   const filterBarComponent = (
-      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }, !isCompact && { marginTop: 0, position: 'relative', top: 0, paddingHorizontal: 0, maxWidth: 900 }]}>
-        <View style={[styles.filterBar, isCompact && styles.filterBarMobile, !isCompact && { borderWidth: 0, shadowOpacity: 0, elevation: 0, paddingVertical: 0 }]}>
+      <View style={[styles.filterBarContainer, isAnyDropdownOpen && { zIndex: 1000 }, !isCompact && { marginTop: 0, maxWidth: 900, alignSelf: 'center', width: '100%' }]}>
+        <View style={[styles.filterBar, isCompact && styles.filterBarMobile, !isCompact && { borderWidth: 0, shadowOpacity: 0, elevation: 0, paddingVertical: 0, justifyContent: 'center' }]}>
           <View style={[isCompact ? { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 234, 107, 0.3)', marginBottom: 4 } : { flexDirection: 'row', alignItems: 'center', flex: 1.2 }]}>
             <View style={[styles.filterItemSearch, isCompact && { flex: 1, minHeight: 44 }]}>
               <Search size={16} color="#00ea6b" style={{ marginRight: 8 }} />
@@ -807,8 +807,8 @@ export default function SearchScreen() {
               </Pressable>
 
               <Pressable style={[styles.applyFiltersBtn, isCompact && styles.applyFiltersBtnMobile, isCompact && styles.applyFiltersBtnMobileTheme]} onPress={() => performSearch(query, locationKey, typeKey, dateKey, timeKey, priceRange)}>
-                <SlidersHorizontal size={14} color={isCompact ? '#06392e' : '#FFFFFF'} style={{ marginRight: 6 }} />
-                <Text style={[styles.applyFiltersBtnText, isCompact && { color: '#06392e' }]}>Apply Filters</Text>
+                <SlidersHorizontal size={14} color="#00ea6b" style={{ marginRight: 6 }} />
+                <Text style={[styles.applyFiltersBtnText]}>Apply Filters</Text>
               </Pressable>
             </>
           )}
@@ -1432,7 +1432,7 @@ const styles = StyleSheet.create({
   applyFiltersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: 'transparent',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 16,
@@ -1562,7 +1562,7 @@ const styles = StyleSheet.create({
   applyFiltersBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#00ea6b',
     fontFamily: 'Inter',
   },
   sortRowContainer: {

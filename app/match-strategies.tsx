@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Platform, StyleSheet, TouchableOpacity, useWindowDimensions, Dimensions, Image, Share } from 'react-native';
+import { View, Text, ScrollView, Platform, StyleSheet, TouchableOpacity, Pressable, useWindowDimensions, Dimensions, Image, Share } from 'react-native';
 import { 
   Shield, 
   Target, 
@@ -30,8 +30,8 @@ import * as Print from 'expo-print';
 import { captureRef } from 'react-native-view-shot';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
-
-
+import Modal from '@/components/ui/Modal';
+import { ChevronDown } from 'lucide-react-native';
 // Constants
 const FIELD_WIDTH = 600;
 const FIELD_HEIGHT = 700;
@@ -46,6 +46,16 @@ const isOutsideInnerCircle = (x: number, y: number) => {
   const normX = (x - CIRCLE_CX) / CIRCLE_RX;
   const normY = (y - CIRCLE_CY) / CIRCLE_RY;
   return (normX * normX + normY * normY) > 1;
+};
+
+const getBowlerFullName = (b: string) => {
+  switch(b) {
+    case 'RA_Fast': return 'Right Arm Fast';
+    case 'LA_Fast': return 'Left Arm Fast';
+    case 'RA_Spin': return 'Right Arm Spin';
+    case 'LA_Spin': return 'Left Arm Spin';
+    default: return b.replace('_', ' ');
+  }
 };
 
 // Type Definitions
@@ -304,6 +314,53 @@ export default function MatchStrategiesScreen() {
   const [batsman, setBatsman] = useState<BatsmanType>('LH');
   const [bowler, setBowler] = useState<BowlerType>('LA_Fast');
   const [overs, setOvers] = useState<OversType>('1-6');
+  const [openSelectMenu, setOpenSelectMenu] = useState<'batsman' | 'bowler' | 'overs' | null>(null);
+
+  function ModalSelector({
+    visible,
+    onClose,
+    title,
+    value,
+    options,
+    onChange
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    title: string;
+    value: string;
+    options: { key: string; label: string }[];
+    onChange: (k: string) => void;
+  }) {
+    return (
+      <Modal visible={visible} onClose={onClose} title={title}>
+        <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
+          {options.map((opt) => (
+            <Pressable
+              key={opt.key}
+              onPress={() => {
+                onChange(opt.key);
+                onClose();
+              }}
+              style={[
+                { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#F8F9FA', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+                opt.key === value && { backgroundColor: 'rgba(1, 184, 84, 0.1)', borderWidth: 1, borderColor: '#01b854' },
+              ]}
+            >
+              <Text
+                style={[
+                  { fontSize: 15, fontWeight: '500', color: '#4B5563' },
+                  opt.key === value && { color: '#01b854', fontWeight: '700' },
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {opt.key === value && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#01b854' }} />}
+            </Pressable>
+          ))}
+        </ScrollView>
+      </Modal>
+    );
+  }
 
   // Ground Presets
   const getInitialField = useCallback((): Fielder[] => {
@@ -399,7 +456,7 @@ export default function MatchStrategiesScreen() {
         return `${f.name} (${side})`;
       }).join('\n- ');
 
-      const message = `🏏 Cricket Field Strategy\n\nScenario: vs ${batsman} | ${bowler.replace('_', ' ')} | Phase: ${overs}\n\nFielding Setup:\n- ${fieldData}\n\nPlanned with BookYourGround Field Designer`;
+      const message = `🏏 Cricket Field Strategy\n\nScenario: vs ${batsman} | ${getBowlerFullName(bowler)} | Phase: ${overs}\n\nFielding Setup:\n- ${fieldData}\n\nPlanned with BookYourGround Field Designer`;
 
       await Share.share({
         message,
@@ -451,7 +508,7 @@ export default function MatchStrategiesScreen() {
             <h1>Cricket Tactical Strategy</h1>
             <div class="scenario">
               <p><strong>Batsman Stance:</strong> ${batsman}</p>
-              <p><strong>Bowler Style:</strong> ${bowler.replace('_', ' ')}</p>
+              <p><strong>Bowler Style:</strong> ${getBowlerFullName(bowler)}</p>
               <p><strong>Game Phase:</strong> ${overs}</p>
             </div>
             <h2>Fielding Placements</h2>
@@ -544,72 +601,6 @@ export default function MatchStrategiesScreen() {
                 );
               })}
 
-              {activeSection === 'fielding' && (
-                <View style={styles.filterSection}>
-                  <View style={styles.filterHeader}>
-                    <Filter size={14} color="#9CA3AF" />
-                    <Text style={styles.filterGroupTitle}>Scenario Filters</Text>
-                  </View>
-
-                  {/* Batsman Filter */}
-                  <Text style={styles.filterLabel}>Batsman</Text>
-                  <View style={styles.filterButtons}>
-                    <TouchableOpacity 
-                      style={[styles.filterBtn, batsman === 'RH' && styles.filterBtnActive]}
-                      onPress={() => setBatsman('RH')}
-                    >
-                      <Text style={[styles.filterBtnText, batsman === 'RH' && styles.filterBtnActiveText]}>Right Hand</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.filterBtn, batsman === 'LH' && styles.filterBtnActive]}
-                      onPress={() => setBatsman('LH')}
-                    >
-                      <Text style={[styles.filterBtnText, batsman === 'LH' && styles.filterBtnActiveText]}>Left Hand</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Bowler Filter */}
-                  <Text style={styles.filterLabel}>Bowler</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-                    {['RA_Fast', 'LA_Fast', 'RA_Spin', 'LA_Spin'].map((b) => (
-                      <TouchableOpacity 
-                        key={b}
-                        style={[styles.filterBtn, bowler === b && styles.filterBtnActive, { marginRight: 8 }]}
-                        onPress={() => setBowler(b as BowlerType)}
-                      >
-                        <Text style={[styles.filterBtnText, bowler === b && styles.filterBtnActiveText]}>
-                          {b.replace('_', ' ')}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  {/* Overs Filter */}
-                  <Text style={styles.filterLabel}>Game Phase</Text>
-                  <View style={styles.filterButtons}>
-                    <TouchableOpacity 
-                      style={[styles.filterBtn, overs === '1-6' && styles.filterBtnActive]}
-                      onPress={() => setOvers('1-6')}
-                    >
-                      <Text style={[styles.filterBtnText, overs === '1-6' && styles.filterBtnActiveText]}>Powerplay (1-6)</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.filterBtn, overs === 'After-6' && styles.filterBtnActive]}
-                      onPress={() => setOvers('After-6')}
-                    >
-                      <Text style={[styles.filterBtnText, overs === 'After-6' && styles.filterBtnActiveText]}>Post Powerplay</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity 
-                    style={styles.resetBtn}
-                    onPress={() => setFielders(getInitialField())}
-                  >
-                    <RotateCcw size={14} color="#043529" />
-                    <Text style={styles.resetBtnText}>Reset Preset</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
               
               <View style={styles.sidebarPromo}>
                 <Users size={20} color="#FFFFFF" />
@@ -644,7 +635,7 @@ export default function MatchStrategiesScreen() {
                 </View>
               )}
 
-              {activeSection !== 'fielding' && (
+              {activeSection === 'opening' && (
                 <View style={styles.header}>
                   <Text style={styles.title}>Match Strategies</Text>
                   <Text style={styles.subtitle}>Master the game with expert tactics and insights.</Text>
@@ -652,8 +643,71 @@ export default function MatchStrategiesScreen() {
               )}
 
               {activeSection === 'fielding' ? (
-                <View style={[styles.designerCard, isMobile && { padding: 12, borderRadius: 16 }]}>
-                  {/* Field Visualizer */}
+                <View style={{ flexDirection: 'column', gap: 16 }}>
+                  {/* Scenario Filters Bar (Moved to Top) */}
+                  <View style={{ 
+                    flexDirection: isMobile ? 'column' : 'row', 
+                    alignItems: isMobile ? 'stretch' : 'center', 
+                    gap: 12, 
+                    backgroundColor: '#FFFFFF', 
+                    padding: 12, 
+                    borderRadius: 12, 
+                    borderWidth: 1, 
+                    borderColor: '#E5E7EB',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    elevation: 2
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 8 }}>
+                      <Filter size={16} color="#01b854" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827', textTransform: 'uppercase', letterSpacing: 0.5 }}>Filters</Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+                      <TouchableOpacity 
+                        style={[styles.dropdownTrigger, { marginBottom: 0, flex: 1, minWidth: 120 }]}
+                        onPress={() => setOpenSelectMenu('batsman')}
+                      >
+                        <Text style={[styles.dropdownTriggerText, { fontSize: 12 }]}>
+                          {batsman === 'RH' ? 'Right Hand' : 'Left Hand'}
+                        </Text>
+                        <ChevronDown size={14} color="#6B7280" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.dropdownTrigger, { marginBottom: 0, flex: 1, minWidth: 120 }]}
+                        onPress={() => setOpenSelectMenu('bowler')}
+                      >
+                        <Text style={[styles.dropdownTriggerText, { fontSize: 12 }]}>
+                          {getBowlerFullName(bowler)}
+                        </Text>
+                        <ChevronDown size={14} color="#6B7280" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={[styles.dropdownTrigger, { marginBottom: 0, flex: 1, minWidth: 130 }]}
+                        onPress={() => setOpenSelectMenu('overs')}
+                      >
+                        <Text style={[styles.dropdownTriggerText, { fontSize: 12 }]}>
+                          {overs === '1-6' ? 'Powerplay (1-6)' : 'Post Powerplay'}
+                        </Text>
+                        <ChevronDown size={14} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.resetBtn, { marginTop: 0, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8, height: 38, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' }]}
+                      onPress={() => setFielders(getInitialField())}
+                    >
+                      <RotateCcw size={14} color="#EF4444" />
+                      <Text style={[styles.resetBtnText, { color: '#EF4444', fontSize: 12, fontWeight: '700' }]}>Reset</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={[styles.designerCard, isMobile && { padding: 12, borderRadius: 16 }]}>
+                    {/* Field Visualizer */}
                   <View 
                     ref={fieldRef}
                     style={[
@@ -777,6 +831,47 @@ export default function MatchStrategiesScreen() {
                     {/* Scenario and Action Buttons removed as requested */}
                   </View>
                 </View>
+              </View>
+              ) : activeSection === 'opening' ? (
+                <View style={{ gap: 20 }}>
+                  <View style={[styles.designerCard, { flexDirection: isMobile ? 'column' : 'row', gap: 20 }]}>
+                    <View style={{ flex: 1, backgroundColor: '#F8F9FA', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                      <Shield size={28} color="#01b854" style={{ marginBottom: 16 }} />
+                      <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827', marginBottom: 8 }}>See Off the New Ball</Text>
+                      <Text style={{ fontSize: 15, color: '#4B5563', lineHeight: 24 }}>Play with soft hands and let the ball come to you. Leave deliveries outside off-stump to blunt the initial swing and tire the fast bowlers.</Text>
+                    </View>
+                    
+                    <View style={{ flex: 1, backgroundColor: '#F8F9FA', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                      <Target size={28} color="#EF4444" style={{ marginBottom: 16 }} />
+                      <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827', marginBottom: 8 }}>Punish Loose Deliveries</Text>
+                      <Text style={{ fontSize: 15, color: '#4B5563', lineHeight: 24 }}>While caution is key, any delivery straying onto the pads should be put away to keep the scoreboard ticking and relieve pressure on your partner.</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.card}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 }}>Key Opening Tactics</Text>
+                    <View style={{ gap: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(1, 184, 84, 0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#01b854', fontWeight: '700' }}>1</Text>
+                        </View>
+                        <Text style={{ fontSize: 15, color: '#4B5563', flex: 1 }}>Rotate the strike early to unsettle the bowler's rhythm.</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(1, 184, 84, 0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#01b854', fontWeight: '700' }}>2</Text>
+                        </View>
+                        <Text style={{ fontSize: 15, color: '#4B5563', flex: 1 }}>Communicate constantly with your partner regarding pitch bounce and swing.</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(1, 184, 84, 0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#01b854', fontWeight: '700' }}>3</Text>
+                        </View>
+                        <Text style={{ fontSize: 15, color: '#4B5563', flex: 1 }}>Capitalize on the powerplay field restrictions with calculated lofted shots over the infield.</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
               ) : (
                 <View style={styles.card}>
                   <Text style={styles.placeholderText}>Select a strategy from the sidebar to view detailed tactics.</Text>
@@ -787,6 +882,44 @@ export default function MatchStrategiesScreen() {
           </ScrollView>
         </View>
       </View>
+
+      <ModalSelector
+        visible={openSelectMenu === 'batsman'}
+        onClose={() => setOpenSelectMenu(null)}
+        title="Select Batsman"
+        value={batsman}
+        options={[
+          { key: 'RH', label: 'Right Hand' },
+          { key: 'LH', label: 'Left Hand' },
+        ]}
+        onChange={(k) => setBatsman(k as BatsmanType)}
+      />
+
+      <ModalSelector
+        visible={openSelectMenu === 'bowler'}
+        onClose={() => setOpenSelectMenu(null)}
+        title="Select Bowler"
+        value={bowler}
+        options={[
+          { key: 'RA_Fast', label: 'Right Arm Fast' },
+          { key: 'LA_Fast', label: 'Left Arm Fast' },
+          { key: 'RA_Spin', label: 'Right Arm Spin' },
+          { key: 'LA_Spin', label: 'Left Arm Spin' },
+        ]}
+        onChange={(k) => setBowler(k as BowlerType)}
+      />
+
+      <ModalSelector
+        visible={openSelectMenu === 'overs'}
+        onClose={() => setOpenSelectMenu(null)}
+        title="Select Game Phase"
+        value={overs}
+        options={[
+          { key: '1-6', label: 'Powerplay (1-6)' },
+          { key: 'After-6', label: 'Post Powerplay' },
+        ]}
+        onChange={(k) => setOvers(k as OversType)}
+      />
     </View>
   );
   
@@ -966,6 +1099,23 @@ const styles = StyleSheet.create({
   filterBtnActiveText: {
     color: '#01b854',
     fontWeight: '700',
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  dropdownTriggerText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '500',
   },
   resetBtn: {
     flexDirection: 'row',

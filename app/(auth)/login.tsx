@@ -99,7 +99,7 @@ export default function LoginScreen() {
       }
     });
 
-  const { signIn, profile, user, resetPassword } = useAuth();
+  const { signIn, profile, user, resetPassword, signOut } = useAuth();
   const os = Platform.OS as string;
   const { width } = useWindowDimensions();
   const showHeroImage = os === 'web' && width >= 900;

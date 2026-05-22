@@ -1239,11 +1239,6 @@ const styles = StyleSheet.create({
   },
   subTabBtnActive: {
     backgroundColor: '#06392e',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   subTabText: {
     fontSize: 13,
