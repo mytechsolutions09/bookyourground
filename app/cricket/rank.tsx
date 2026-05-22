@@ -9,7 +9,9 @@ import {
   FlatList,
   Dimensions,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Share,
+  Modal
 } from 'react-native';
 import { 
   Filter, 
@@ -19,7 +21,8 @@ import {
   Search,
   Star,
   MapPin,
-  Trophy
+  Trophy,
+  X
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,9 +42,25 @@ export default function CricketRank() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filter States
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [filterCity, setFilterCity] = useState('All Cities');
+  const [filterMetric, setFilterMetric] = useState('Rank');
+
   React.useEffect(() => {
     fetchLeaderboard();
-  }, [activeCategory, activeType]);
+  }, [activeCategory, activeType, filterCity, filterMetric]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: 'Check out the top players on BookYourGround! Can you beat their ranks?',
+        title: 'Player Leaderboard'
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     setLoading(true);
@@ -62,48 +81,69 @@ export default function CricketRank() {
       if (error) throw error;
 
       if (lbData) {
-        const formatted = lbData.map(item => {
-          let rank = '000';
+        let formatted = lbData.map(item => {
           let displayStats = [];
 
           if (activeType === 'Batting') {
-            rank = String(item.batting_rank).padStart(3, '0');
+            const avg = item.innings_batted - (item.not_outs || 0) > 0 ? (item.total_runs / (item.innings_batted - (item.not_outs || 0))).toFixed(2) : (item.total_runs || 0).toFixed(2);
             displayStats = [
-              { label: 'Inn', value: item.inn },
-              { label: 'Runs', value: item.runs },
-              { label: 'Avg', value: item.avg },
-              { label: 'SR', value: item.sr }
+              { label: 'Inn', value: item.innings_batted || 0 },
+              { label: 'Runs', value: item.total_runs || 0 },
+              { label: 'Avg', value: avg },
+              { label: 'SR', value: item.strike_rate || 0 }
             ];
           } else if (activeType === 'Bowling') {
-            rank = String(item.bowling_rank).padStart(3, '0');
-            const economy = item.best_bowling_runs > 0 ? (item.best_bowling_runs / 6).toFixed(2) : '0.00'; // Simplified eco for now
             displayStats = [
-              { label: 'Wkts', value: item.wickets },
-              { label: 'BBI', value: `${item.best_bowling_wickets}/${item.best_bowling_runs}` },
-              { label: 'Eco', value: economy }
+              { label: 'Wkts', value: item.total_wickets || 0 },
+              { label: 'BBI', value: `${item.best_bowling_wickets || 0}/${item.best_bowling_runs || 0}` },
+              { label: 'Eco', value: item.economy_rate || 0 }
             ];
           } else {
-            rank = String(item.fielding_rank).padStart(3, '0');
             displayStats = [
-              { label: 'Catches', value: item.catches },
-              { label: 'Run Outs', value: item.run_outs },
-              { label: 'Stumpings', value: item.stumpings }
+              { label: 'Catches', value: item.total_catches || 0 },
+              { label: 'Run Outs', value: item.run_outs || 0 },
+              { label: 'Stumpings', value: item.stumpings || 0 }
             ];
           }
 
           return {
-            id: item.profile_id,
-            name: item.full_name,
-            city: item.city,
-            rank,
-            isPro: false, // Default to false for now
+            id: item.member_id || item.profile_id || item.id || Math.random().toString(),
+            name: item.full_name || 'Player',
+            city: item.city || 'Unknown',
+            rank: '000', // Will be calculated after sorting
+            isPro: false,
             avatar: item.avatar_url,
             displayStats
           };
         });
 
-        // Sort by rank number
-        formatted.sort((a, b) => parseInt(a.rank) - parseInt(b.rank));
+        // Filter by city first
+        if (filterCity !== 'All Cities') {
+          formatted = formatted.filter(item => item.city?.toLowerCase() === filterCity.toLowerCase());
+        }
+
+        // Sort locally based on filterMetric
+        formatted.sort((a, b) => {
+          if (filterMetric === 'Runs' || (filterMetric === 'Rank' && activeType === 'Batting')) {
+            return (b.displayStats.find((s: any) => s.label === 'Runs')?.value || 0) - (a.displayStats.find((s: any) => s.label === 'Runs')?.value || 0);
+          } else if (filterMetric === 'Avg') {
+            return parseFloat(b.displayStats.find((s: any) => s.label === 'Avg')?.value || 0) - parseFloat(a.displayStats.find((s: any) => s.label === 'Avg')?.value || 0);
+          } else if (filterMetric === 'SR') {
+            return parseFloat(b.displayStats.find((s: any) => s.label === 'SR')?.value || 0) - parseFloat(a.displayStats.find((s: any) => s.label === 'SR')?.value || 0);
+          } else if (filterMetric === 'Wickets' || (filterMetric === 'Rank' && activeType === 'Bowling')) {
+            return (b.displayStats.find((s: any) => s.label === 'Wkts')?.value || 0) - (a.displayStats.find((s: any) => s.label === 'Wkts')?.value || 0);
+          } else if (filterMetric === 'Catches' || (filterMetric === 'Rank' && activeType === 'Fielding')) {
+            return (b.displayStats.find((s: any) => s.label === 'Catches')?.value || 0) - (a.displayStats.find((s: any) => s.label === 'Catches')?.value || 0);
+          }
+          return 0; // Fallback
+        });
+
+        // Assign ranks based on sorted position
+        formatted = formatted.map((item, index) => ({
+          ...item,
+          rank: String(index + 1).padStart(3, '0')
+        }));
+
         setData(formatted);
       }
     } catch (err) {
@@ -166,10 +206,10 @@ export default function CricketRank() {
           <TouchableOpacity style={styles.headerIconBtn}>
             <HelpCircle size={22} color="#64748B" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setIsFilterVisible(true)}>
             <Filter size={22} color="#0F172A" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={handleShare}>
             <Share2 size={22} color="#0F172A" />
           </TouchableOpacity>
         </View>
@@ -210,7 +250,7 @@ export default function CricketRank() {
       {/* Filter Summary */}
       <View style={styles.filterSummary}>
         <Text style={styles.filterText}>
-          <Text style={styles.filterHighlight}>Most Runs</Text> in <Text style={styles.filterHighlight}>Delhi (All Time, All Overs)</Text>
+          <Text style={styles.filterHighlight}>{filterMetric === 'Rank' ? 'Top Ranked' : `Most ${filterMetric}`}</Text> in <Text style={styles.filterHighlight}>{filterCity}</Text> (All Time, All Overs)
         </Text>
       </View>
 
@@ -224,7 +264,7 @@ export default function CricketRank() {
         <FlatList
           data={data}
           renderItem={renderRankItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => item.id ? String(item.id) : String(index)}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
@@ -264,11 +304,145 @@ export default function CricketRank() {
         }
         />
       )}
+
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsFilterVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Leaderboard</Text>
+              <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
+                <X size={24} color="#0F172A" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.filterSectionTitle}>City</Text>
+              <View style={styles.filterOptions}>
+                {['All Cities', 'Delhi', 'Gurugram', 'Noida'].map(city => (
+                  <TouchableOpacity 
+                    key={city}
+                    style={[styles.filterOptionBtn, filterCity === city && styles.filterOptionBtnActive]}
+                    onPress={() => setFilterCity(city)}
+                  >
+                    <Text style={[styles.filterOptionText, filterCity === city && styles.filterOptionTextActive]}>{city}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.filterSectionTitle}>Metric (Sort By)</Text>
+              <View style={styles.filterOptions}>
+                {['Rank', 'Runs', 'Avg', 'SR', 'Wickets', 'Catches'].map(metric => {
+                  if (activeType === 'Batting' && ['Wickets', 'Catches'].includes(metric)) return null;
+                  if (activeType === 'Bowling' && ['Runs', 'Avg', 'SR', 'Catches'].includes(metric)) return null;
+                  if (activeType === 'Fielding' && ['Runs', 'Avg', 'SR', 'Wickets'].includes(metric)) return null;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={metric}
+                      style={[styles.filterOptionBtn, filterMetric === metric && styles.filterOptionBtnActive]}
+                      onPress={() => setFilterMetric(metric)}
+                    >
+                      <Text style={[styles.filterOptionText, filterMetric === metric && styles.filterOptionTextActive]}>{metric}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.applyBtn} onPress={() => setIsFilterVisible(false)}>
+                <Text style={styles.applyBtnText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  filterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 12,
+    marginTop: 10,
+    fontFamily: 'Inter',
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  filterOptionBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterOptionBtnActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#22C55E',
+  },
+  filterOptionText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  filterOptionTextActive: {
+    color: '#16A34A',
+  },
+  modalFooter: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  applyBtn: {
+    backgroundColor: '#121212',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

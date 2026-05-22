@@ -8,7 +8,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   RefreshControl,
-  useWindowDimensions 
+  useWindowDimensions,
+  Animated
 } from 'react-native';
 import { router } from 'expo-router';
 import { 
@@ -31,6 +32,39 @@ import Button from '@/components/ui/Button';
 import { useUI } from '@/contexts/UIContext';
 
 const IS_WEB = Platform.OS === 'web';
+
+const NotificationsSkeleton = () => {
+  const pulse = React.useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.8, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <View style={styles.list}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Animated.View key={i} style={[styles.reminderCard, { opacity: pulse }]}>
+          <View style={[styles.iconWrap, { backgroundColor: '#E2E8F0' }]} />
+          <View style={styles.reminderContent}>
+            <View style={styles.reminderHeader}>
+              <View style={{ width: '50%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 6 }} />
+            </View>
+            <View style={{ width: '90%', height: 12, backgroundColor: '#F1F5F9', borderRadius: 6, marginTop: 8 }} />
+            <View style={{ width: '70%', height: 12, backgroundColor: '#F1F5F9', borderRadius: 6, marginTop: 4 }} />
+            <View style={{ width: '25%', height: 10, backgroundColor: '#E2E8F0', borderRadius: 6, marginTop: 12 }} />
+          </View>
+        </Animated.View>
+      ))}
+    </View>
+  );
+};
 
 function NotificationsInner() {
   const { user, profile } = useAuth();
@@ -97,7 +131,7 @@ function NotificationsInner() {
       const mappedBookings = (bookings || []).map(b => ({
         id: `booking-${b.id}`,
         title: 'Upcoming Booking',
-        body: `${b.ground?.name || 'Ground Booking'} at ${b.start_time.slice(0, 5)}`,
+        body: `${b.ground?.name || 'Ground Booking'}`,
         created_at: `${b.booking_date}T${b.start_time}`,
         read: true, // Bookings are always "read" or don't have status
         booking_id: b.id,
@@ -179,13 +213,16 @@ function NotificationsInner() {
           </View>
           
           <Text style={styles.alertText}>{item.body}</Text>
-          
-          <Text style={styles.timeAgo}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
         </View>
         
-        <ChevronRight size={18} color="#D1D5DB" />
+        <View style={{ alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 2 }}>
+          <Text style={styles.timeAgo}>
+            {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </Text>
+          <Text style={[styles.timeAgo, { marginTop: 4, fontSize: 10 }]}>
+            {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -211,9 +248,7 @@ function NotificationsInner() {
 
       <View style={styles.inner}>
         {loading ? (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#00ea6b" />
-          </View>
+          <NotificationsSkeleton />
         ) : reminders.length === 0 ? (
           <View style={styles.emptyWrap}>
              <View style={styles.emptyIconCircle}>

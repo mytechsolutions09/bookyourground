@@ -77,6 +77,7 @@ export default function PlayerProfile() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const isCompact = useIsCompact();
 
+  const [profileNotFound, setProfileNotFound] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>({
     overall: { matches: 0, batting: {}, bowling: {}, fielding: {}, captain: {} },
@@ -164,6 +165,13 @@ export default function PlayerProfile() {
   const loadPlayerData = async () => {
     try {
       setLoading(true);
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!id || !uuidRegex.test(id)) {
+        setProfileNotFound(true);
+        setLoading(false);
+        return;
+      }
 
       // 1. Fetch Profile
       const { data: profileData, error: profileError } = await supabase
@@ -456,7 +464,7 @@ export default function PlayerProfile() {
           .select('id')
           .eq('follower_id', user.id)
           .eq('following_id', id)
-          .single();
+          .maybeSingle();
         setIsFollowing(!!currentFollow);
       }
 
@@ -998,6 +1006,28 @@ export default function PlayerProfile() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
+
+  if (profileNotFound) {
+    const notFoundContent = (
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, alignSelf: 'flex-start' }}>
+            <ChevronLeft color="#0F172A" size={28} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Users size={64} color="#E2E8F0" />
+          <Text style={{ fontSize: 18, color: '#64748B', fontFamily: 'Inter', textAlign: 'center', marginTop: 16 }}>
+            This player has not linked a profile yet.
+          </Text>
+        </View>
+      </View>
+    );
+    if (Platform.OS === 'web') {
+      return <WebLayout hideHeader={true} noCard={true}>{notFoundContent}</WebLayout>;
+    }
+    return notFoundContent;
+  }
 
   const content = (
     <View style={styles.container}>
@@ -1686,13 +1716,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   playerAvatarWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
-    overflow: 'hidden',
     marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stickyPillsContainer: {
     backgroundColor: '#FFFFFF',
@@ -1719,8 +1745,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playerAvatar: {
-    width: '100%',
-    height: '100%',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   avatarPlaceholder: {
     width: '100%',

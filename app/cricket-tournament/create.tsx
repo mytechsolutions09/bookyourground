@@ -13,14 +13,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
-  ChevronLeft, 
+  ChevronLeft,
   Trophy, 
   Calendar as CalendarIcon, 
-  MapPin, 
-  FileText, 
-  DollarSign,
+  MapPin,
+  FileText,
   Image as ImageIcon,
-  Check,
   Users
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -177,7 +175,6 @@ export default function CreateTournament() {
               value={formData.entry_fee} 
               onChangeText={(text: string) => setFormData({...formData, entry_fee: text})}
               placeholder="e.g. 5000"
-              icon={DollarSign}
               keyboardType="numeric"
             />
           </View>
@@ -228,10 +225,7 @@ export default function CreateTournament() {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <>
-              <Check size={20} color="#FFFFFF" strokeWidth={3} />
-              <Text style={styles.submitBtnText}>Create Tournament</Text>
-            </>
+            <Text style={styles.submitBtnText}>Create Tournament</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -329,7 +323,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   submitBtn: {
-    backgroundColor: '#01b854',
+    backgroundColor: '#121212',
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
@@ -338,7 +332,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 8,
     elevation: 4,
-    shadowColor: '#01b854',
+    shadowColor: '#121212',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

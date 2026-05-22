@@ -553,32 +553,6 @@ export default function CricketLayout() {
               </View>
               <Text style={styles.actionLabel}>Book Ground</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.actionItem} 
-              onPress={() => {
-                setIsActionModalVisible(false);
-                alert('Streaming service coming soon!');
-              }}
-            >
-              <View style={[styles.actionIconBox, { backgroundColor: '#FEF2F2' }]}>
-                <Radio size={28} color="#EF4444" />
-              </View>
-              <Text style={styles.actionLabel}>Go Live</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.actionItem} 
-              onPress={() => {
-                setIsActionModalVisible(false);
-                alert('Support channel opening...');
-              }}
-            >
-              <View style={[styles.actionIconBox, { backgroundColor: '#F0FDFA' }]}>
-                <HelpCircle size={28} color="#0D9488" />
-              </View>
-              <Text style={styles.actionLabel}>Get Help</Text>
-            </TouchableOpacity>
           </View>
 
           <TouchableOpacity 
@@ -803,6 +777,7 @@ export default function CricketLayout() {
                 <Image 
                   source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../../assets/avatar.png')} 
                   style={styles.headerAvatar} 
+                  resizeMode="cover"
                 />
               ) : (
                 <View style={styles.skeletonAvatar} />
@@ -1217,8 +1192,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   headerAvatar: {
-    width: '100%',
-    height: '100%',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    resizeMode: 'cover',
   },
   avatarPlaceholder: {
     width: '100%',
@@ -1228,11 +1205,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    borderColor: '#FFFFFF30',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
     position: 'relative',
   },

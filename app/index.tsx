@@ -49,11 +49,8 @@ export default function IndexScreen() {
     // skip marketing homepage on mobile: go to app tabs immediately.
     if (!loading && welcomeChecked && os !== 'web') {
       if (user) {
-        if (profile?.role === 'super_admin') {
-          router.replace('/(tabs)/profile');
-        } else {
-          router.replace('/(tabs)/home_tab');
-        }
+        // Everyone goes to home_tab on mobile, including admins and owners
+        router.replace('/(tabs)/home_tab');
       } else {
         router.replace('/(auth)/login');
       }

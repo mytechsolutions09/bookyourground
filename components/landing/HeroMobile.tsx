@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Image, Platform, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Image, Platform, TouchableOpacity, Animated } from 'react-native';
 import { Search, MapPin, Bell, ChevronDown, Sunrise, Sun, Sunset, Moon, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
 
@@ -37,6 +37,21 @@ export default function HeroMobile({
   unreadCount = 0,
 }: HeroMobileProps) {
   const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    if (!cityName) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 0.8, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+  }, [cityName, pulse]);
+
   return (
     <View style={styles.container}>
       {/* Background Image/Overlay */}
@@ -46,9 +61,13 @@ export default function HeroMobile({
       <View style={styles.headerRow}>
         <Pressable style={styles.locationPillHeader} onPress={refreshLocation}>
           <MapPin size={14} color="#00EA6B" fill="rgba(0, 234, 107, 0.2)" />
-          <Text style={styles.locationText}>
-            {cityName || 'Nangloi, Delhi'}
-          </Text>
+          {cityName ? (
+            <Text style={styles.locationText}>
+              {cityName}
+            </Text>
+          ) : (
+            <Animated.View style={{ width: 80, height: 14, backgroundColor: 'rgba(0, 234, 107, 0.3)', borderRadius: 4, opacity: pulse }} />
+          )}
         </Pressable>
         
         <View style={styles.headerActions}>
