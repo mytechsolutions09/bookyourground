@@ -39,7 +39,8 @@ import {
   Search
 } from 'lucide-react-native';
 import { 
-  useFocusEffect 
+  useFocusEffect,
+  Stack
 } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { getPlayerTags } from '@/lib/stats-logic';
@@ -284,6 +285,7 @@ const PlayerProfileView = ({ activeTab = 'Overview' }: { activeTab?: 'Overview' 
 
   const content = (
     <View style={{ flex: 1 }}>
+      <Stack.Screen options={{ animation: 'none', gestureEnabled: false }} />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       <View style={[styles.responsiveContent, isTablet && { maxWidth: '90%' }]}>
       <View style={[styles.section, isUltraNarrow && { paddingHorizontal: 12 }]}>

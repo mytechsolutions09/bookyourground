@@ -9,13 +9,25 @@ import {
   Platform,
   FlatList,
   ActivityIndicator,
-  Keyboard
+  Keyboard,
+  ScrollView
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, Send, User as UserIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SkeletonMessageBubble = ({ isMe }: { isMe: boolean }) => (
+  <View style={[
+    styles.messageBubble, 
+    isMe ? styles.messageMe : styles.messageThem,
+    { backgroundColor: isMe ? '#E2E8F0' : '#F1F5F9', elevation: 0, shadowOpacity: 0 }
+  ]}>
+    <View style={{ width: isMe ? 120 : 160, height: 16, backgroundColor: isMe ? '#CBD5E1' : '#E2E8F0', borderRadius: 4, marginBottom: 8 }} />
+    <View style={{ width: isMe ? 80 : 100, height: 12, backgroundColor: isMe ? '#CBD5E1' : '#E2E8F0', borderRadius: 4 }} />
+  </View>
+);
 
 export default function ChatScreen() {
   const { id, prefill } = useLocalSearchParams();
@@ -138,14 +150,15 @@ export default function ChatScreen() {
           {item.content}
         </Text>
         <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextThem]}>
-          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen options={{ headerShown: false, animation: 'none', gestureEnabled: false }} />
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => {
@@ -173,9 +186,13 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#00ea6b" />
-          </View>
+          <ScrollView contentContainerStyle={[styles.messageList, { justifyContent: 'flex-end', flexGrow: 1 }]}>
+            <SkeletonMessageBubble isMe={false} />
+            <SkeletonMessageBubble isMe={true} />
+            <SkeletonMessageBubble isMe={false} />
+            <SkeletonMessageBubble isMe={false} />
+            <SkeletonMessageBubble isMe={true} />
+          </ScrollView>
         ) : (
           <FlatList
             ref={flatListRef}
@@ -223,7 +240,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'web' ? 12 : 44,
+    paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',

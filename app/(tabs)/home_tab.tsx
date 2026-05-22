@@ -937,9 +937,7 @@ export default function HomeScreen() {
                               ? `₹${Math.min(...g.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
                               : 'See Slots')}
                         </Text>
-                        <View style={styles.bookLinkContainerSmall}>
-                          <Text style={styles.bookLinkTextSmall}>Book Now</Text>
-                        </View>
+                        
                       </View>
                     )}
                   </TouchableOpacity>
@@ -1730,11 +1728,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   groundFooter: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
     marginHorizontal: -10,
     marginBottom: -10,
-    marginTop: 2,
-    paddingVertical: 2,
+    marginTop: 8,
+    paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1786,7 +1786,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   bookLinkTextSmall: {
-    color: '#01b854',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter',
@@ -1842,7 +1842,7 @@ const styles = StyleSheet.create({
   },
   listRowType: {
     fontSize: 11,
-    color: '#01b854',
+    color: '#64748B',
     fontWeight: '600',
     textTransform: 'capitalize',
     fontFamily: 'Inter',

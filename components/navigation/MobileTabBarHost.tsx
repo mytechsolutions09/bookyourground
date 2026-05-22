@@ -31,7 +31,6 @@ export function MobileTabBarHost() {
     root === 'live' ||
     root === 'search' ||
     root === 'ground' ||
-    root === 'cricket' ||
     root === 'owner-contract' ||
     root === 'bookings' ||
     (root === 'shop' && sub && sub !== 'cart') // Hide on shop detail pages, but show on cart/home

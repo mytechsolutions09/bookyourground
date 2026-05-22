@@ -151,6 +151,7 @@ function RootLayoutInner() {
           <Stack.Screen name="(admin)" />
           <Stack.Screen name="select-sport" />
           <Stack.Screen name="shop/cart" />
+          <Stack.Screen name="chat/[id]" options={{ animation: 'none', gestureEnabled: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
       </View>

@@ -158,7 +158,7 @@ export default function HeroMobile({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#06392e', // Dark green background
+    backgroundColor: '#134d40', // Dark green background
     paddingTop: 50,
     paddingBottom: 10,
     paddingHorizontal: 20,

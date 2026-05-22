@@ -12,9 +12,10 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { Search, User, Users, Shield, RefreshCw, Sliders, MapPin, ChevronRight, ClipboardList, MessageCircle, Plus, X, ChevronDown, Swords } from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -300,7 +301,8 @@ export default function CricketHubScreen() {
 
   const content = (
     <View style={styles.page}>
-      {!isWeb && <MobileAppNavbar title="CRICKET HUB" titleColor="#0F172A" smallerTitle lightBg />}
+      <Stack.Screen options={{ gestureEnabled: false }} />
+      {!isWeb && <MobileAppNavbar title="CRICKET" titleColor="#0F172A" smallerTitle lightBg />}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* ── HERO BANNER ───────────────────────────────────────────── */}
         {!isWeb && !isMobile && (
@@ -387,54 +389,9 @@ export default function CricketHubScreen() {
         )}
 
         {/* ── MAIN CONTENT CARD ──────────────────────────────────────── */}
-        <View style={styles.mainCard}>
+        <View style={[styles.mainCard, isMobile && styles.mainCardMobile]}>
           {/* Tabs row */}
           <View style={[styles.tabBar, isMobile && styles.tabBarMobile]}>
-            <View style={[styles.leftTabs, isMobile && { flexDirection: 'row', width: '100%', gap: 8 }]}>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  activeTab === 'profile' && styles.tabButtonActive,
-                  isMobile && { flex: 1, paddingHorizontal: 8 },
-                ]}
-                onPress={() => setActiveTab('profile')}
-              >
-                <Shield size={16} color={activeTab === 'profile' ? '#00ea6b' : '#64748B'} style={styles.tabIcon} />
-                <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive, isMobile && { fontSize: 13 }]} numberOfLines={1}>
-                  Player Profile
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  isMobile && { flex: 1, paddingHorizontal: 8 },
-                ]}
-                onPress={() => router.push('/find-an-opponent')}
-              >
-                <Swords size={16} color="#64748B" style={styles.tabIcon} />
-                <Text style={[styles.tabText, isMobile && { fontSize: 13 }]} numberOfLines={1}>
-                  Find Opposition
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  isMobile && { width: 44, paddingHorizontal: 0, justifyContent: 'center' },
-                ]}
-                onPress={() => router.push('/cricket/inbox')}
-              >
-                <View>
-                  <MessageCircle size={20} color="#64748B" />
-                  {unreadCount > 0 && (
-                    <View style={styles.badgeContainer}>
-                      <Text style={styles.badgeText}>
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            </View>
 
             {activeTab === 'board' && (
               <View style={[styles.rightActions, isMobile && { width: '100%', flexWrap: 'nowrap', gap: 8 }]}>
@@ -493,11 +450,11 @@ export default function CricketHubScreen() {
                   />
                 </View>
                 
-                <View style={[styles.filtersRow, { flexDirection: 'row', gap: 8 }]}>
+                <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
                   {/* Location Filter Dropdown */}
-                  <View style={[styles.filterDropdownContainer, { flex: 0 }]}>
+                  <View style={{ position: 'relative', flexShrink: 0 }}>
                     <TouchableOpacity
-                      style={[styles.modalInput, styles.dropdownInput, { justifyContent: 'center', alignItems: 'center', marginBottom: 0, height: 40, width: 40, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 8 }]}
+                      style={styles.filterIconButton}
                       activeOpacity={0.7}
                       onPress={() => {
                         setIsFilterCityOpen(!isFilterCityOpen);
@@ -529,9 +486,9 @@ export default function CricketHubScreen() {
                   </View>
 
                   {/* Role Filter Dropdown */}
-                  <View style={[styles.filterDropdownContainer, { flex: 0 }]}>
+                  <View style={{ position: 'relative', flexShrink: 0 }}>
                     <TouchableOpacity
-                      style={[styles.modalInput, styles.dropdownInput, { justifyContent: 'center', alignItems: 'center', marginBottom: 0, height: 40, width: 40, paddingHorizontal: 0, paddingVertical: 0, borderRadius: 8 }]}
+                      style={styles.filterIconButton}
                       activeOpacity={0.7}
                       onPress={() => {
                         setIsFilterRoleOpen(!isFilterRoleOpen);
@@ -706,7 +663,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingTop: Platform.OS === 'web' ? 24 : 64,
+    paddingTop: Platform.OS === 'web' ? 24 : 16,
     paddingBottom: 40,
     alignItems: 'center',
     width: '100%',
@@ -849,6 +806,12 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     width: '100%',
     marginBottom: 32,
+  },
+  mainCardMobile: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    borderRadius: 0,
   },
   tabBar: {
     flexDirection: 'row',
@@ -1401,6 +1364,18 @@ const styles = StyleSheet.create({
   roleChipTextActive: {
     color: '#00ea6b',
     fontWeight: '800',
+  },
+  filterIconButton: {
+    width: 40,
+    minWidth: 40,
+    height: 40,
+    flexShrink: 0,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalInput: {
     backgroundColor: '#F8FAFC',
