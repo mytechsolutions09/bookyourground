@@ -79,7 +79,10 @@ export default function CricketHubScreen() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [postCity, setPostCity] = useState('');
   const [postMessage, setPostMessage] = useState('');
+  const [postValidUntil, setPostValidUntil] = useState('');
+  const [selectedDateLabel, setSelectedDateLabel] = useState('');
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +97,15 @@ export default function CricketHubScreen() {
   const ALL_ROUNDER = ['All-rounder'];
   const CRICKET_ROLES = [...BATSMAN, ...WK, ...BOWLER, ...ALL_ROUNDER];
   const CITIES = ['Gurugram', 'New Delhi', 'Noida', 'Faridabad', 'Ghaziabad', 'Other'];
+
+  const VALID_UNTIL_OPTIONS = [
+    { label: 'Today', days: 0 },
+    { label: 'Tomorrow', days: 1 },
+    { label: 'In 3 Days', days: 3 },
+    { label: 'In 1 Week', days: 7 },
+    { label: 'In 2 Weeks', days: 14 },
+    { label: 'In 1 Month', days: 30 },
+  ];
 
   const handleRoleToggle = (role: string) => {
     let newRoles = [...selectedRoles];
@@ -136,14 +148,29 @@ export default function CricketHubScreen() {
       .order('created_at', { ascending: false });
 
     if (data && !error) {
-      setPlayerRequests(data.filter(p => p.post_type === 'players_needed'));
-      setTeamRequests(data.filter(p => p.post_type === 'teams_needed'));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const activePosts = data.filter(p => {
+        if (!p.valid_until) return true;
+        const validDate = new Date(p.valid_until);
+        return validDate >= today;
+      });
+
+      setPlayerRequests(activePosts.filter(p => p.post_type === 'players_needed'));
+      setTeamRequests(activePosts.filter(p => p.post_type === 'teams_needed'));
     }
   };
 
   const handleCreatePost = async () => {
-    if (!postName || !postRole || !postCity || !postMessage) {
-      alert('Please fill in all fields to create your post.');
+    if (!postName || !postRole || !postCity || !postMessage || !postValidUntil) {
+      alert('Please fill in all fields (including Valid Until date) to create your post.');
+      return;
+    }
+    
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(postValidUntil)) {
+      alert('Please enter a valid date in YYYY-MM-DD format (e.g. 2026-12-31).');
       return;
     }
     
@@ -157,6 +184,7 @@ export default function CricketHubScreen() {
       role: postRole,
       city: postCity,
       message: postMessage,
+      valid_until: postValidUntil,
     };
 
     const { data, error } = await supabase
@@ -177,6 +205,8 @@ export default function CricketHubScreen() {
       setSelectedRoles([]);
       setPostCity('');
       setPostMessage('');
+      setPostValidUntil('');
+      setSelectedDateLabel('');
     } else {
       console.error('Error creating post', error);
       alert('Error creating post. Make sure you are logged in.');
@@ -639,7 +669,10 @@ export default function CricketHubScreen() {
               <TouchableOpacity
                 style={[styles.modalInput, styles.dropdownInput]}
                 activeOpacity={0.7}
-                onPress={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
+                onPress={() => {
+                  setIsLocationDropdownOpen(!isLocationDropdownOpen);
+                  setIsDateDropdownOpen(false);
+                }}
               >
                 <Text style={postCity ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
                   {postCity || 'Select a city...'}
@@ -660,6 +693,44 @@ export default function CricketHubScreen() {
                     >
                       <Text style={[styles.dropdownItemText, postCity === city && styles.dropdownItemTextActive]}>
                         {city}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <Text style={styles.inputLabel}>Valid Until Date</Text>
+              <TouchableOpacity
+                style={[styles.modalInput, styles.dropdownInput]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setIsDateDropdownOpen(!isDateDropdownOpen);
+                  setIsLocationDropdownOpen(false);
+                }}
+              >
+                <Text style={postValidUntil ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {selectedDateLabel || 'Select when post expires...'}
+                </Text>
+                <ChevronDown size={18} color="#64748B" />
+              </TouchableOpacity>
+
+              {isDateDropdownOpen && (
+                <View style={styles.dropdownList}>
+                  {VALID_UNTIL_OPTIONS.map(option => (
+                    <TouchableOpacity
+                      key={option.label}
+                      style={[styles.dropdownItem, selectedDateLabel === option.label && styles.dropdownItemActive]}
+                      onPress={() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + option.days);
+                        const dateStr = d.toISOString().split('T')[0];
+                        setPostValidUntil(dateStr);
+                        setSelectedDateLabel(option.label);
+                        setIsDateDropdownOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, selectedDateLabel === option.label && styles.dropdownItemTextActive]}>
+                        {option.label}
                       </Text>
                     </TouchableOpacity>
                   ))}

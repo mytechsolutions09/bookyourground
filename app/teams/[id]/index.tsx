@@ -395,7 +395,7 @@ export default function TeamDetailsPage() {
         if (Platform.OS === 'web') alert(error.message);
         else Alert.alert('Error', error.message);
       } else {
-        router.push('/cricket/teams' as any);
+        router.push('/cricket' as any);
       }
     };
     if (Platform.OS === 'web') {
@@ -565,7 +565,16 @@ export default function TeamDetailsPage() {
     <View style={styles.container}>
       <View style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.navigate('/cricket/teams' as any)}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.navigate('/cricket' as any);
+              }
+            }}
+          >
             <ArrowLeft size={24} color="#1E293B" strokeWidth={2.5} />
           </TouchableOpacity>
           <RNText style={styles.headerTitle} numberOfLines={1}>{team.name}</RNText>

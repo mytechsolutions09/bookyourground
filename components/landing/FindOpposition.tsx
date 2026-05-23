@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions, TouchableOpacity } from 'react-native';
-import { Users, Sword, Trophy, ArrowRight, Star, Shield, Crown, BarChart2, Check, Target } from 'lucide-react-native';
+import { Users, Swords, Trophy, ArrowRight, Star, Shield, Crown, BarChart2, Check, Target } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Animated, { 
   useSharedValue, 
@@ -155,7 +155,7 @@ export default function FindOpposition() {
             <Animated.View style={[styles.teamCard1, card1Style, isMobile && styles.teamCardMobile]}>
               <View style={styles.logoAndName}>
                 <View style={styles.logoContainer}>
-                  <Sword size={18} color="#dcc093" strokeWidth={2.5} style={{ transform: [{ rotate: '45deg' }] }} />
+                  <Swords size={20} color="#dcc093" strokeWidth={2.5} />
                 </View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.teamName}>Strikers FC</Text>
@@ -184,10 +184,6 @@ export default function FindOpposition() {
                   <Text style={styles.statVal}>92%</Text>
                   <Text style={styles.statLabel}>Win Rate</Text>
                 </View>
-              </View>
-
-              <View style={styles.cardVsBadge}>
-                <Text style={styles.cardVsText}>VS</Text>
               </View>
             </Animated.View>
 

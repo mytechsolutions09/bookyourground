@@ -95,7 +95,7 @@ const TABS = [
 export default function CricketLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const insets = useSafeAreaInsets();
   const isCompact = useIsCompact();
   const { setTabBarVisible: setGlobalTabBarVisible } = useUI();
@@ -106,6 +106,20 @@ export default function CricketLayout() {
       return () => setGlobalTabBarVisible(true);
     }
   }, []);
+
+  // Web-only auth guard: redirect unauthenticated users to login,
+  // preserving the current path so they return here after signing in.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (authLoading) return; // wait until auth state is resolved
+    if (!user) {
+      // Determine which player-profile sub-path they were trying to reach
+      const returnPath = pathname.includes('player-profile')
+        ? pathname
+        : '/(tabs)/cricket/player-profile';
+      router.replace(`/(auth)/login?redirect=${encodeURIComponent(returnPath)}` as any);
+    }
+  }, [authLoading, user, pathname]);
   const [profile, setProfile] = useState<any>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);

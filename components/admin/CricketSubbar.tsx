@@ -9,7 +9,8 @@ import {
   TrendingUp, 
   UserSquare2, 
   Activity,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from 'lucide-react-native';
 
 const BASE = '/(admin)/cricketdata';
@@ -24,6 +25,7 @@ export default function CricketSubbar({ children }: { children: React.ReactNode 
   const isLeaderboard = pathname.includes('/cricketdata/leaderboard');
   const isStats = pathname.includes('/cricketdata/stats');
   const isPlayers = pathname.includes('/cricketdata/players');
+  const isImportProfile = pathname.includes('/cricketdata/import-profile');
 
   const getPageInfo = () => {
     if (isMatches) return { title: 'Matches', subtitle: 'Manage matches', icon: Swords };
@@ -32,6 +34,7 @@ export default function CricketSubbar({ children }: { children: React.ReactNode 
     if (isLeaderboard) return { title: 'Stats', subtitle: 'Leaderboard', icon: BarChart2 };
     if (isStats) return { title: 'System Stats', subtitle: 'Analytics', icon: TrendingUp };
     if (isPlayers) return { title: 'Players', subtitle: 'Manage players', icon: UserSquare2 };
+    if (isImportProfile) return { title: 'Import Profile', subtitle: 'AI Stats Parser', icon: Sparkles };
     return { title: 'Overview', subtitle: 'Overview', icon: Activity };
   };
 
@@ -97,6 +100,12 @@ export default function CricketSubbar({ children }: { children: React.ReactNode 
               isActive={isPlayers}
               icon={UserSquare2}
               label="Players"
+            />
+            <NavButton 
+              onPress={() => router.push((BASE + '/import-profile') as any)}
+              isActive={isImportProfile}
+              icon={Sparkles}
+              label="Import Profile"
             />
           </ScrollView>
         </View>

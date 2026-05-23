@@ -213,7 +213,7 @@ export default function PlayerProfile() {
         matches: 0,
         batting: { innings: 0, runs: 0, highest: 0, average: 0, sr: 0, fifties: 0, hundreds: 0, fours: 0, sixes: 0, not_outs: 0, ducks: 0, won: 0, lost: 0 },
         bowling: { innings: 0, wickets: 0, best: '-', economy: 0, sr: 0, runs_conceded: 0, overs: 0, five_w: 0 },
-        fielding: { catches: 0, stumpings: 0, runouts: 0 },
+        fielding: { catches: 0, stumpings: 0, runouts: 0, caught_and_bowled: 0, assisted_run_outs: 0, byes_conceded: 0, dr_hits: 0 },
         captain: { matches: 0, wins: 0, losses: 0, win_pc: '0' }
       });
       setStats({
@@ -339,11 +339,10 @@ export default function PlayerProfile() {
         other: createEmptyDiscipline()
       };
 
-      // Process Batting Stats
+      // Process Batting Stats from live match views
       battingStatsData.forEach(curr => {
-        const type = 'overall'; // For now, views don't have ball_type, defaulting to overall
+        const type = 'overall'; // views don't partition by ball_type yet
         const s = statsByBall[type];
-
         s.batting.innings += 1;
         s.batting.runs += (curr.runs || 0);
         s.batting.highest = Math.max(s.batting.highest, curr.runs || 0);
@@ -355,22 +354,17 @@ export default function PlayerProfile() {
         if (curr.is_out && curr.runs === 0) s.batting.ducks += 1;
       });
 
-      // Process Bowling Stats
+      // Process Bowling Stats from live match views
       bowlingStatsData.forEach(curr => {
         const type = 'overall';
         const s = statsByBall[type];
-
         s.bowling.innings += 1;
         s.bowling.wickets += (curr.wickets || 0);
         s.bowling.runs_conceded += (curr.runs_conceded || 0);
-
         const legalBalls = curr.legal_balls || 0;
         const overs = Math.floor(legalBalls / 6) + (legalBalls % 6) / 10;
         s.bowling.overs += overs;
-
         if (curr.wickets >= 5) s.bowling.five_w += 1;
-
-        // Update best bowling
         const currentBest = s.bowling.best === '-' ? { w: 0, r: 999 } : {
           w: parseInt(s.bowling.best.split('/')[0]),
           r: parseInt(s.bowling.best.split('/')[1])
@@ -380,48 +374,149 @@ export default function PlayerProfile() {
         }
       });
 
-      // Matches count (unique match IDs from both)
+      // Matches count from live views
       const allStatsMatches = new Set([
         ...battingStatsData.map(b => b.match_id),
         ...bowlingStatsData.map(b => b.match_id)
       ]);
-      statsByBall.overall.matches = allStatsMatches.size;
+      if (allStatsMatches.size > 0) statsByBall.overall.matches = allStatsMatches.size;
 
-      // Calculate derived stats
-      Object.values(statsByBall).forEach(s => {
-        if (s.batting.innings > 0) {
-          const outs = s.batting.innings - s.batting.not_outs;
-          s.batting.average = outs > 0 ? (s.batting.runs / outs) : s.batting.runs;
-          const totalBalls = battingStatsData.reduce((acc, b) => acc + (b.balls || 0), 0);
-          s.batting.sr = totalBalls > 0 ? ((s.batting.runs / totalBalls) * 100) : 0;
+      // Derived stats for live-view data
+      if (statsByBall.overall.batting.innings > 0) {
+        const outs = statsByBall.overall.batting.innings - statsByBall.overall.batting.not_outs;
+        statsByBall.overall.batting.average = outs > 0
+          ? statsByBall.overall.batting.runs / outs
+          : statsByBall.overall.batting.runs;
+        const totalBalls = battingStatsData.reduce((acc, b) => acc + (b.balls || 0), 0);
+        statsByBall.overall.batting.sr = totalBalls > 0
+          ? (statsByBall.overall.batting.runs / totalBalls) * 100 : 0;
+      }
+      if (statsByBall.overall.bowling.overs > 0) {
+        const totalLegalBalls = bowlingStatsData.reduce((acc, b) => acc + (b.legal_balls || 0), 0);
+        statsByBall.overall.bowling.economy = totalLegalBalls > 0
+          ? (statsByBall.overall.bowling.runs_conceded / totalLegalBalls) * 6 : 0;
+        if (statsByBall.overall.bowling.wickets > 0) {
+          statsByBall.overall.bowling.average = statsByBall.overall.bowling.runs_conceded / statsByBall.overall.bowling.wickets;
+          statsByBall.overall.bowling.sr = totalLegalBalls / statsByBall.overall.bowling.wickets;
         }
-        if (s.bowling.overs > 0) {
-          const totalLegalBalls = bowlingStatsData.reduce((acc, b) => acc + (b.legal_balls || 0), 0);
-          s.bowling.economy = totalLegalBalls > 0 ? ((s.bowling.runs_conceded / totalLegalBalls) * 6) : 0;
+      }
 
-          if (s.bowling.wickets > 0) {
-            s.bowling.average = (s.bowling.runs_conceded / s.bowling.wickets);
-            s.bowling.sr = (totalLegalBalls / s.bowling.wickets);
-          } else {
-            s.bowling.average = s.bowling.runs_conceded;
-            s.bowling.sr = 0;
+      // 3.5 Fetch admin-imported player_ball_stats (partitioned by ball type: leather/tennis/other)
+      if (profileMemberIds.length > 0) {
+        const { data: pbs, error: pbsError } = await supabase
+          .from('player_ball_stats')
+          .select('*')
+          .in('member_id', profileMemberIds);
+
+        if (pbsError) {
+          console.error('[PlayerProfile] Error fetching player_ball_stats:', pbsError);
+        }
+
+        if (pbs && pbs.length > 0) {
+          // Merge a player_ball_stats row into a statsByBall bucket
+          const mergePbs = (bucket: any, row: any) => {
+            // Batting
+            bucket.batting.innings   = (bucket.batting.innings || 0)   + (row.innings_batted || 0);
+            bucket.batting.runs      = (bucket.batting.runs || 0)      + (row.total_runs || 0);
+            bucket.batting.not_outs  = (bucket.batting.not_outs || 0)  + (row.not_outs || 0);
+            bucket.batting.fours     = (bucket.batting.fours || 0)     + (row.fours_hit || 0);
+            bucket.batting.sixes     = (bucket.batting.sixes || 0)     + (row.sixes_hit || 0);
+            bucket.batting.fifties   = (bucket.batting.fifties || 0)   + (row.fifties || 0);
+            bucket.batting.hundreds  = (bucket.batting.hundreds || 0)  + (row.hundreds || 0);
+            bucket.batting.ducks     = (bucket.batting.ducks || 0)     + (row.ducks || 0);
+            bucket.batting.won       = (bucket.batting.won || 0)       + (row.matches_won || 0);
+            bucket.batting.lost      = (bucket.batting.lost || 0)      + (row.matches_lost || 0);
+            if ((row.highest_score || 0) > (bucket.batting.highest || 0)) {
+              bucket.batting.highest = row.highest_score;
+            }
+            const balls = row.balls_faced || 0;
+            const runs  = row.total_runs || 0;
+            if (balls > 0) bucket.batting.sr = (runs / balls) * 100;
+            const outs  = (row.innings_batted || 0) - (row.not_outs || 0);
+            bucket.batting.average = outs > 0 ? runs / outs : (row.innings_batted > 0 ? runs : 0);
+
+            // Bowling
+            bucket.bowling.innings      = (bucket.bowling.innings || 0)       + (row.innings_bowled || 0);
+            bucket.bowling.wickets      = (bucket.bowling.wickets || 0)       + (row.total_wickets || 0);
+            bucket.bowling.runs_conceded= (bucket.bowling.runs_conceded || 0) + (row.runs_conceded || 0);
+            bucket.bowling.overs        = parseFloat(((bucket.bowling.overs || 0) + parseFloat(row.overs_bowled || 0)).toFixed(1));
+            bucket.bowling.five_w       = (bucket.bowling.five_w || 0)        + (row.five_wicket_hauls || 0);
+            if (row.economy_rate && row.economy_rate > 0) bucket.bowling.economy = row.economy_rate;
+            const bbW = row.best_bowling_wickets || 0;
+            const bbR = row.best_bowling_runs || 0;
+            const curBest = bucket.bowling.best === '-' ? { w: 0, r: 999 } : {
+              w: parseInt(bucket.bowling.best.split('/')[0]),
+              r: parseInt(bucket.bowling.best.split('/')[1])
+            };
+            if (bbW > curBest.w || (bbW === curBest.w && bbR < curBest.r)) {
+              bucket.bowling.best = `${bbW}/${bbR}`;
+            }
+
+            // Fielding
+            bucket.fielding.catches           = (bucket.fielding.catches || 0)           + (row.total_catches || 0);
+            bucket.fielding.stumpings         = (bucket.fielding.stumpings || 0)         + (row.stumpings || 0);
+            bucket.fielding.runouts           = (bucket.fielding.runouts || 0)           + (row.run_outs || 0);
+            bucket.fielding.caught_and_bowled = (bucket.fielding.caught_and_bowled || 0) + (row.caught_and_bowled || 0);
+            bucket.fielding.assisted_run_outs = (bucket.fielding.assisted_run_outs || 0) + (row.assisted_run_outs || 0);
+            bucket.fielding.byes_conceded     = (bucket.fielding.byes_conceded || 0)     + (row.byes_conceded || 0);
+
+            // Captaincy
+            bucket.captain.matches = (bucket.captain.matches || 0) + (row.matches_captained || 0);
+            bucket.captain.wins    = (bucket.captain.wins || 0)    + (row.matches_won_as_captain || 0);
+            bucket.captain.losses  = (bucket.captain.losses || 0)  + (row.matches_lost_as_captain || 0);
+            const capTot = bucket.captain.matches;
+            bucket.captain.win_pc  = capTot > 0 ? ((bucket.captain.wins / capTot) * 100).toFixed(1) : '0';
+
+            // Matches
+            bucket.matches = (bucket.matches || 0) + (row.matches_played || 0);
+          };
+
+          pbs.forEach(row => {
+            const ballType = row.ball_type; // 'leather' | 'tennis' | 'other'
+            if (statsByBall[ballType]) mergePbs(statsByBall[ballType], row);
+            mergePbs(statsByBall.overall, row); // Always roll up into overall
+          });
+        }
+      }
+
+      // Captaincy calculation from live matches (based on team member roles)
+      const userCaptainedTeamIds = teamMembers
+        ?.filter(tm => tm.role === 'captain')
+        ?.map(tm => tm.team_id) || [];
+
+      const captainMatches = matchData?.filter(m => 
+        (m.team_a_id && userCaptainedTeamIds.includes(m.team_a_id)) || 
+        (m.team_b_id && userCaptainedTeamIds.includes(m.team_b_id))
+      ) || [];
+
+      captainMatches.forEach(m => {
+        const bType = m.ball_type || 'other';
+        const isTeamA = userCaptainedTeamIds.includes(m.team_a_id);
+        const winnerId = m.match_live_state?.winner_id;
+        const isWin = winnerId && ((isTeamA && winnerId === m.team_a_id) || (!isTeamA && winnerId === m.team_b_id));
+        const isLoss = winnerId && ((isTeamA && winnerId === m.team_b_id) || (!isTeamA && winnerId === m.team_a_id));
+
+        const bucketsToUpdate = [statsByBall.overall];
+        if (statsByBall[bType]) {
+          bucketsToUpdate.push(statsByBall[bType]);
+        }
+
+        bucketsToUpdate.forEach(bucket => {
+          bucket.captain.matches = (bucket.captain.matches || 0) + 1;
+          if (isWin) {
+            bucket.captain.wins = (bucket.captain.wins || 0) + 1;
+          } else if (isLoss) {
+            bucket.captain.losses = (bucket.captain.losses || 0) + 1;
           }
-        }
+        });
       });
 
-      // Captaincy (Overall only)
-      const captainMatches = matchData?.filter(m => m.team_a_captain_id === id || m.team_b_captain_id === id) || [];
-      const captainWins = captainMatches.filter(m => {
-        const isTeamA = m.team_a_captain_id === id;
-        return (isTeamA && m.match_live_state?.winner_id === m.team_a_id) || (!isTeamA && m.match_live_state?.winner_id === m.team_b_id);
-      }).length;
-
-      statsByBall.overall.captain = {
-        matches: captainMatches.length,
-        wins: captainWins,
-        losses: captainMatches.length - captainWins,
-        win_pc: captainMatches.length > 0 ? ((captainWins / captainMatches.length) * 100).toFixed(1) : '0'
-      };
+      // Recalculate win percentages for all captain buckets
+      Object.keys(statsByBall).forEach(key => {
+        const cap = statsByBall[key].captain;
+        const total = cap.matches || 0;
+        cap.win_pc = total > 0 ? ((cap.wins / total) * 100).toFixed(1) : '0';
+      });
 
       setStats(statsByBall);
 
@@ -801,8 +896,12 @@ export default function PlayerProfile() {
     const data = stats[recordType]?.[discipline];
     if (!data) return null;
 
+    const cols = Platform.OS === 'web' ? 4 : 3;
+    const gap = 10;
+    const cardWidth = (measuredPagerWidth - 32 - 32 - (cols - 1) * gap) / cols;
+
     const DataCard = ({ label, value }: { label: string, value: string | number }) => (
-      <View style={styles.dataCard}>
+      <View style={[styles.dataCard, { width: cardWidth }]}>
         <Text style={styles.dataValue}>{value}</Text>
         <Text style={styles.dataLabel}>{label}</Text>
       </View>
@@ -850,10 +949,13 @@ export default function PlayerProfile() {
       return (
         <>
           <DataCard label="MAT" value={stats[recordType].matches} />
-          <DataCard label="CATCHES" value={data.catches} />
-          <DataCard label="STUMPS" value={data.stumpings} />
-          <DataCard label="RUN OUTS" value={data.runouts} />
-          <DataCard label="DR. HITS" value="0" />
+          <DataCard label="CATCHES" value={data.catches || 0} />
+          <DataCard label="C.B" value={data.caught_and_bowled || 0} />
+          <DataCard label="STUMPS" value={data.stumpings || 0} />
+          <DataCard label="RUN OUTS" value={data.runouts || 0} />
+          <DataCard label="RO ASSIST" value={data.assisted_run_outs || 0} />
+          <DataCard label="DR. HITS" value={data.dr_hits || 0} />
+          <DataCard label="BYES" value={data.byes_conceded || 0} />
         </>
       );
     }
@@ -2389,7 +2491,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dataCard: {
-    width: (windowWidth - 32 - 32 - 20) / 3, // (Available width [windowWidth-32 outer -32 inner] - 2 gaps) / 3
+    // Width is set dynamically in renderStatsGrid based on platform (4 cols web, 3 cols mobile)
     backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingVertical: 16,
@@ -2520,19 +2622,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   mainPagerWrapper: {
-    width: windowWidth,
+    width: '100%',
     overflow: 'hidden',
   },
   tabSlideContent: {
-    width: windowWidth,
+    width: '100%',
     paddingHorizontal: 16,
     paddingBottom: 24,
   },
   fullWidthSlide: {
-    width: windowWidth,
+    width: '100%',
     paddingBottom: 24,
   },
   statsTabInner: {
-    width: windowWidth,
+    width: '100%',
   },
 });

@@ -23,6 +23,7 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -122,8 +123,18 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    setErrorMessage('');
     if (!fullName || !phoneNumber || !address || !city || !pinCode) {
-      Alert.alert('Missing Info', 'Please fill in all contact and delivery details');
+      const msg = 'Please fill in all contact and delivery details';
+      setErrorMessage(msg);
+      Alert.alert('Missing Info', msg);
+      return;
+    }
+
+    if (!sameAsDelivery && (!billingAddress || !billingCity || !billingPinCode)) {
+      const msg = 'Please fill in all billing details';
+      setErrorMessage(msg);
+      Alert.alert('Missing Info', msg);
       return;
     }
 
@@ -579,6 +590,11 @@ export default function CheckoutScreen() {
                 
                 {Platform.OS === 'web' && (
                   <View>
+                    {errorMessage ? (
+                      <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 16, fontWeight: '500' }}>
+                        {errorMessage}
+                      </Text>
+                    ) : null}
                     <TouchableOpacity 
                       style={[styles.placeOrderBtn, { marginTop: 24 }, loading && { opacity: 0.7 }]}
                       onPress={handlePlaceOrder}
@@ -628,6 +644,11 @@ export default function CheckoutScreen() {
       {/* Bottom Action (Mobile Only) */}
       {Platform.OS !== 'web' && (
         <View style={styles.bottomBar}>
+          {errorMessage ? (
+            <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginBottom: 8, fontWeight: '500' }}>
+              {errorMessage}
+            </Text>
+          ) : null}
           <TouchableOpacity 
             style={[styles.placeOrderBtn, loading && { opacity: 0.7 }]}
             onPress={handlePlaceOrder}
@@ -1004,8 +1025,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   totalValue: {
-    color: '#ff3564',
-    fontSize: 20,
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
   trustRow: {
