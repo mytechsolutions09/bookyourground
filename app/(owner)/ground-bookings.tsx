@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal, Pressable } from 'react-native';
-import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote, LandPlot } from 'lucide-react-native';
+import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote, LandPlot, ArrowLeft } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -8,7 +8,7 @@ import BookingCard from '@/components/bookings/BookingCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -1814,7 +1814,17 @@ export default function OwnerBookingsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Ground Bookings" titleColor="#0F172A" lightBg />
+      <Stack.Screen options={{ animation: 'none' }} />
+      <MobileAppNavbar 
+        title="Ground Bookings" 
+        titleColor="#0F172A" 
+        lightBg 
+        leftAction={
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/home_tab')} style={{ padding: 4 }}>
+            <ArrowLeft size={24} color="#0F172A" />
+          </TouchableOpacity>
+        }
+      />
       {content}
       {datePickerModal}
     </View>

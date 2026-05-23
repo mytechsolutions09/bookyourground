@@ -107,11 +107,14 @@ export default function CricketLayout() {
     }
   }, []);
 
-  // Web-only auth guard: redirect unauthenticated users to login,
+  // Auth guard: redirect unauthenticated users to login,
   // preserving the current path so they return here after signing in.
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
     if (authLoading) return; // wait until auth state is resolved
+    
+    // Only enforce guard if the user is actually trying to view a cricket path
+    if (pathname && !pathname.includes('/cricket')) return;
+    
     if (!user) {
       // Determine which player-profile sub-path they were trying to reach
       const returnPath = pathname.includes('player-profile')
@@ -894,7 +897,11 @@ export default function CricketLayout() {
               if (Platform.OS === 'web') {
                 window.location.href = '/cricket';
               } else {
-                router.back();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/home_tab');
+                }
               }
             }} 
             style={styles.actionCircleBtn}

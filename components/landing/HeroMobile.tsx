@@ -71,14 +71,6 @@ export default function HeroMobile({
         </Pressable>
         
         <View style={styles.headerActions}>
-          <Pressable style={styles.iconButton} onPress={() => router.push('/profile/notifications' as any)}>
-            <Bell size={20} color="#01e669" />
-            {unreadCount > 0 && (
-              <View style={styles.notificationDot}>
-                <Text style={styles.notificationDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </Pressable>
           <Pressable onPress={() => setShowProfileModal(true)} style={styles.avatarButton}>
             {profile?.avatar_url ? (
               <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
@@ -123,7 +115,7 @@ export default function HeroMobile({
           <TextInput
             style={styles.searchInput}
             placeholder="Search grounds, sports..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -144,7 +136,7 @@ export default function HeroMobile({
           <Text style={styles.filterButtonText} numberOfLines={1}>
             {SPORT_CATEGORIES.find(c => c.value === sportFilter)?.label || 'All'}
           </Text>
-          <ChevronDown size={12} color="#94A3B8" strokeWidth={2.5} style={{ marginLeft: 4 }} />
+          <ChevronDown size={12} color="rgba(255, 255, 255, 0.6)" strokeWidth={2.5} style={{ marginLeft: 4 }} />
         </TouchableOpacity>
 
         {/* Dropdown Menu Overlay */}
@@ -352,17 +344,14 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#134d40',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginTop: 30,
     marginBottom: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.2)',
     zIndex: 9999,
     position: 'relative',
   },
@@ -375,13 +364,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   searchDivider: {
     width: 1,
     height: 24,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     marginHorizontal: 12,
   },
   filterButton: {
@@ -392,7 +381,7 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 13,
-    color: '#0F172A',
+    color: '#00EA6B',
     fontWeight: '700',
     fontFamily: 'Inter',
   },

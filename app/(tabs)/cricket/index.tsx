@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { useUI } from '@/contexts/UIContext';
 
 export default function CricketHubScreen() {
   const router = useRouter();
@@ -29,6 +30,8 @@ export default function CricketHubScreen() {
   const isWeb = Platform.OS === 'web';
   const isMobile = width < 768;
   const { user } = useAuth();
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
 
   const [activeTab, setActiveTab] = useState<'profile' | 'board'>('board');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -55,6 +58,10 @@ export default function CricketHubScreen() {
       if (user) {
         fetchUnreadCount();
       }
+      setTabBarVisible(true);
+      return () => {
+        setTabBarVisible(true);
+      };
     }, [user])
   );
 
@@ -321,7 +328,7 @@ export default function CricketHubScreen() {
             }
           }}
         >
-          <MessageCircle size={18} color="#06392e" style={{ marginRight: 6 }} />
+          <MessageCircle size={18} color="#475569" style={{ marginRight: 6 }} />
           <Text style={styles.contactBtnText}>Message</Text>
         </TouchableOpacity>
       </View>
@@ -329,11 +336,34 @@ export default function CricketHubScreen() {
   };
 
 
+  const handleScroll = (event: any) => {
+    if (isWeb) return;
+    const currentScrollY = event.nativeEvent.contentOffset.y;
+    
+    // Always show at the very top
+    if (currentScrollY <= 0) {
+      setTabBarVisible(true);
+    } else if (currentScrollY > lastScrollY.current + 15) {
+      // Scrolling down
+      setTabBarVisible(false);
+      lastScrollY.current = currentScrollY;
+    } else if (currentScrollY < lastScrollY.current - 15) {
+      // Scrolling up
+      setTabBarVisible(true);
+      lastScrollY.current = currentScrollY;
+    }
+  };
+
   const content = (
     <View style={styles.page}>
       <Stack.Screen options={{ gestureEnabled: false }} />
       {!isWeb && <MobileAppNavbar title="CRICKET" titleColor="#0F172A" smallerTitle lightBg />}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* ── HERO BANNER ───────────────────────────────────────────── */}
         {!isWeb && !isMobile && (
           <View style={[styles.heroBanner, isMobile && styles.heroBannerMobile]}>
@@ -939,6 +969,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
     gap: 16,
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 0,
   },
   leftTabs: {
     flexDirection: 'row',
@@ -1390,16 +1423,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#00ea6b',
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#F1F5F9',
   },
   contactBtnText: {
-    color: '#06392e',
-    fontWeight: '800',
+    color: '#475569',
+    fontWeight: '700',
     fontSize: 15,
   },
   // ── MODAL ───────────────────────────────────────────────────

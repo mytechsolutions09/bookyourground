@@ -33,7 +33,8 @@ import {
   Package,
   Wallet,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -90,6 +91,32 @@ export default function ProfileScreen({
   const themeMuted = isLight ? LIGHT_MUTED : DARK_TEXT;
 
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const isFocused = useIsFocused();
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch (e) {
+      console.error('Error fetching unread count:', e);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount, isFocused]);
 
   const uploadAvatar = async (uri: string) => {
     if (!user?.id) return;
@@ -292,7 +319,7 @@ export default function ProfileScreen({
               onPress={() => router.push('/(admin)/dashboard' as any)}
             >
               <View style={styles.hubIconCircle}>
-              <Shield size={24} color="#00ea6b" />
+              <Shield size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Dashboard</RNText>
           </TouchableOpacity>
@@ -302,7 +329,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/manage-users' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <User size={24} color="#00ea6b" />
+              <User size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Users</RNText>
           </TouchableOpacity>
@@ -312,7 +339,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/grounds' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <MapPin size={24} color="#00ea6b" />
+              <MapPin size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Venues</RNText>
           </TouchableOpacity>
@@ -322,7 +349,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/bookings' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <Calendar size={24} color="#00ea6b" />
+              <Calendar size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Bookings</RNText>
           </TouchableOpacity>
@@ -332,7 +359,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/earnings' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <IndianRupee size={24} color="#00ea6b" />
+              <IndianRupee size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Earnings</RNText>
           </TouchableOpacity>
@@ -342,7 +369,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/orders' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <ShoppingCart size={24} color="#00ea6b" />
+              <ShoppingCart size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Shop Orders</RNText>
           </TouchableOpacity>
@@ -352,7 +379,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/products' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <ShoppingBag size={24} color="#00ea6b" />
+              <ShoppingBag size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Products</RNText>
           </TouchableOpacity>
@@ -362,7 +389,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/payouts' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <IndianRupee size={24} color="#00ea6b" />
+              <IndianRupee size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Payouts</RNText>
           </TouchableOpacity>
@@ -372,7 +399,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/inventory' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <LayoutGrid size={24} color="#00ea6b" />
+              <LayoutGrid size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Inventory</RNText>
           </TouchableOpacity>
@@ -382,7 +409,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/messages' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <LifeBuoy size={24} color="#00ea6b" />
+              <LifeBuoy size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Tickets</RNText>
           </TouchableOpacity>
@@ -392,7 +419,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/approve-grounds' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <CheckCircle2 size={24} color="#00ea6b" />
+              <CheckCircle2 size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Approvals</RNText>
           </TouchableOpacity>
@@ -402,7 +429,7 @@ export default function ProfileScreen({
             onPress={() => router.push('/(admin)/manage-ground-owners' as any)}
           >
             <View style={styles.hubIconCircle}>
-              <Users size={24} color="#00ea6b" />
+              <Users size={24} color="#64748B" />
             </View>
             <RNText style={styles.hubCardText}>Partners</RNText>
           </TouchableOpacity>
@@ -422,7 +449,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/owner-dashboard' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <LayoutGrid size={20} color="#00ea6b" />
+                  <LayoutGrid size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Dashboard</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Overview of your venues, bookings, and performance.</RNText>
@@ -433,7 +460,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/manage-grounds' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <MapPin size={20} color="#00ea6b" />
+                  <MapPin size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Venues</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>View and manage your venues and facilities.</RNText>
@@ -444,7 +471,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(tabs)/profile/orders' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <ShoppingBag size={20} color="#00ea6b" />
+                  <ShoppingBag size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Orders</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Track your equipment and shop purchases.</RNText>
@@ -455,7 +482,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/ground-bookings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Calendar size={20} color="#00ea6b" />
+                  <Calendar size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Bookings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Manage bookings, availability, and reservations.</RNText>
@@ -466,7 +493,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/earnings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <IndianRupee size={20} color="#00ea6b" />
+                  <IndianRupee size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Earnings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Track your earnings, transactions, and payouts.</RNText>
@@ -477,7 +504,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/inventory' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Package size={20} color="#00ea6b" />
+                  <Package size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Inventory</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Manage your inventory.</RNText>
@@ -488,7 +515,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/wallet' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Wallet size={20} color="#00ea6b" />
+                  <Wallet size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Wallet</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Manage your balance, add funds, and view history.</RNText>
@@ -499,7 +526,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(tabs)/support' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <LifeBuoy size={20} color="#00ea6b" />
+                  <LifeBuoy size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Contact Us</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Get help, report issues, or provide feedback.</RNText>
@@ -510,7 +537,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/settings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Settings size={20} color="#00ea6b" />
+                  <Settings size={20} color="#64748B" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Settings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Update your profile, preferences, and account settings.</RNText>
@@ -519,14 +546,13 @@ export default function ProfileScreen({
           </>
         ) : (
           <View style={styles.sectionContainer}>
-            <RNText style={styles.sectionTitle}>VENUE OWNER HUB</RNText>
             <View style={[styles.rowList, styles.noContainer]}>
               <TouchableOpacity 
                 style={styles.rowItem}
                 onPress={() => router.push('/(owner)/owner-dashboard' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <LayoutGrid size={20} color="#00ea6b" />
+                  <LayoutGrid size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Dashboard</RNText>
                 </View>
               </TouchableOpacity>
@@ -536,7 +562,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/manage-grounds' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <MapPin size={20} color="#00ea6b" />
+                  <MapPin size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Venues</RNText>
                 </View>
               </TouchableOpacity>
@@ -546,7 +572,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(tabs)/profile/orders' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <ShoppingBag size={20} color="#00ea6b" />
+                  <ShoppingBag size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Orders</RNText>
                 </View>
               </TouchableOpacity>
@@ -556,7 +582,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/ground-bookings' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <Calendar size={20} color="#00ea6b" />
+                  <Calendar size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Bookings</RNText>
                 </View>
               </TouchableOpacity>
@@ -566,7 +592,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/earnings' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <IndianRupee size={20} color="#00ea6b" />
+                  <IndianRupee size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Earnings</RNText>
                 </View>
               </TouchableOpacity>
@@ -576,7 +602,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/inventory' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <CalendarClock size={20} color="#00ea6b" />
+                  <CalendarClock size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Inventory</RNText>
                 </View>
               </TouchableOpacity>
@@ -586,7 +612,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/wallet' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <Wallet size={20} color="#00ea6b" />
+                  <Wallet size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Wallet</RNText>
                 </View>
               </TouchableOpacity>
@@ -596,7 +622,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(tabs)/support' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <LifeBuoy size={20} color="#00ea6b" />
+                  <LifeBuoy size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Contact Us</RNText>
                 </View>
               </TouchableOpacity>
@@ -606,7 +632,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/settings' as any)}
               >
                 <View style={styles.rowLeft}>
-                  <Settings size={20} color="#00ea6b" />
+                  <Settings size={20} color="#64748B" />
                   <RNText style={styles.rowText}>Settings</RNText>
                 </View>
               </TouchableOpacity>
@@ -627,7 +653,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/dashboard' as any)}
         >
           <View style={styles.rowLeft}>
-            <LayoutDashboard size={20} color="#00ea6b" />
+            <LayoutDashboard size={20} color="#64748B" />
             <RNText style={styles.rowText}>My Dashboard</RNText>
           </View>
         </TouchableOpacity>
@@ -637,7 +663,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/bookings' as any)}
         >
           <View style={styles.rowLeft}>
-            <Trophy size={20} color="#00ea6b" />
+            <Trophy size={20} color="#64748B" />
             <RNText style={styles.rowText}>My Bookings</RNText>
           </View>
         </TouchableOpacity>
@@ -647,7 +673,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/favorites' as any)}
         >
           <View style={styles.rowLeft}>
-            <Star size={20} color="#00ea6b" />
+            <Star size={20} color="#64748B" />
             <RNText style={styles.rowText}>My Favourites</RNText>
           </View>
         </TouchableOpacity>
@@ -657,7 +683,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/profile/orders' as any)}
         >
           <View style={styles.rowLeft}>
-            <ShoppingBag size={20} color="#00ea6b" />
+            <ShoppingBag size={20} color="#64748B" />
             <RNText style={styles.rowText}>Orders</RNText>
           </View>
         </TouchableOpacity>
@@ -667,7 +693,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/profile/settings' as any)}
         >
           <View style={styles.rowLeft}>
-            <Settings size={20} color="#00ea6b" />
+            <Settings size={20} color="#64748B" />
             <RNText style={styles.rowText}>Settings</RNText>
           </View>
         </TouchableOpacity>
@@ -677,7 +703,7 @@ export default function ProfileScreen({
           onPress={() => router.push('/wallet' as any)}
         >
           <View style={styles.rowLeft}>
-            <IndianRupee size={20} color="#00ea6b" />
+            <IndianRupee size={20} color="#64748B" />
             <RNText style={styles.rowText}>Wallet</RNText>
           </View>
         </TouchableOpacity>
@@ -687,30 +713,48 @@ export default function ProfileScreen({
           onPress={() => router.push('/(tabs)/support' as any)}
         >
           <View style={styles.rowLeft}>
-            <LifeBuoy size={20} color="#00ea6b" />
+            <LifeBuoy size={20} color="#64748B" />
             <RNText style={styles.rowText}>Contact Us</RNText>
           </View>
         </TouchableOpacity>
         </View>
       </View>
     )}
-
-      <TouchableOpacity
-        onPress={handleSignOut}
-        activeOpacity={0.8}
-        style={styles.signOutGlassContainer}
-      >
-        <BlurView intensity={20} tint="light" style={styles.signOutGlass}>
-          <RNText style={styles.signOutText}>Sign Out</RNText>
-        </BlurView>
-      </TouchableOpacity>
     </View>
   );
 
   if (!profile) {
     return (
       <View style={styles.nativeScreen}>
-        <MobileAppNavbar title="PROFILE" titleColor="#0F172A" smallerTitle lightBg />
+        <MobileAppNavbar 
+          title="PROFILE" 
+          titleColor="#0F172A" 
+          smallerTitle 
+          lightBg 
+          rightAction={
+            <TouchableOpacity onPress={() => router.push('/profile/notifications' as any)} style={{ padding: 4, marginRight: 8 }}>
+              <Bell size={22} color="#64748B" />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -4,
+                  backgroundColor: '#EF4444',
+                  borderRadius: 8,
+                  minWidth: 14,
+                  height: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 3,
+                }}>
+                  <RNText style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </RNText>
+                </View>
+              )}
+            </TouchableOpacity>
+          }
+        />
         <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
           <View style={{ padding: 16, gap: 16 }}>
             {/* Profile Card Skeleton */}
@@ -747,10 +791,26 @@ export default function ProfileScreen({
         smallerTitle
         lightBg
         rightAction={
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile/notifications' as any)}>
-            <View style={styles.headerIconCircle}>
-              <Bell size={20} color="#0F172A" />
-            </View>
+          <TouchableOpacity onPress={() => router.push('/profile/notifications' as any)} style={{ padding: 4, marginRight: 8 }}>
+            <Bell size={22} color="#64748B" />
+            {unreadCount > 0 && (
+              <View style={{
+                position: 'absolute',
+                top: -2,
+                right: -4,
+                backgroundColor: '#EF4444',
+                borderRadius: 8,
+                minWidth: 14,
+                height: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 3,
+              }}>
+                <RNText style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </RNText>
+              </View>
+            )}
           </TouchableOpacity>
         }
       />
@@ -1212,6 +1272,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#F8FAFC',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   signOutGlassContainer: {
     marginBottom: 40,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal, useWindowDimensions, Linking } from 'react-native';
-import { Mail, Phone, CheckCircle } from 'lucide-react-native';
+import { Mail, Phone, CheckCircle, LogOut } from 'lucide-react-native';
 import { router } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import Card from '@/components/ui/Card';
@@ -61,7 +61,28 @@ function UserSettingsInner() {
     }
   };
 
+  const handleSignOut = () => {
+    if (IS_WEB) {
+      if (confirm('Are you sure you want to sign out?')) {
+        void signOut().then(() => router.replace('/'));
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            router.replace('/');
+          },
+        },
+      ]);
+    }
+  };
+
   const onScroll = (event: any) => {
+
     if (Platform.OS === 'web') return;
     const currentY = event.nativeEvent.contentOffset.y;
     const diff = currentY - lastScrollY.current;
@@ -272,6 +293,24 @@ function UserSettingsInner() {
             <View>
               <Text style={styles.menuItemTitle}>Email Us</Text>
               <Text style={styles.menuItemSubtitle}>support@bookyourground.com</Text>
+            </View>
+          </TouchableOpacity>
+        </Card>
+
+        <Card style={[styles.panel, { marginTop: 16 }]}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionSubtitle}>
+            Sign out of your account on this device.
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
+            onPress={handleSignOut}
+          >
+            <LogOut size={18} color="#EF4444" style={{ marginRight: 10 }} />
+            <View>
+              <Text style={[styles.menuItemTitle, { color: '#EF4444' }]}>Sign Out</Text>
+              <Text style={styles.menuItemSubtitle}>You will be returned to the login screen.</Text>
             </View>
           </TouchableOpacity>
         </Card>

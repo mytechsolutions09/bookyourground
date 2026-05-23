@@ -35,7 +35,8 @@ import {
   LayoutGrid,
   Clock,
   X,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -533,7 +534,16 @@ export default function OwnerInventoryScreen() {
       ) : (
         <View style={{ flex: 1 }}>
           <Animated.View style={headerAnimatedStyle}>
-            <MobileAppNavbar title="Inventory" titleColor="#0F172A" lightBg />
+            <MobileAppNavbar 
+              title="Inventory" 
+              titleColor="#0F172A" 
+              lightBg 
+              leftAction={
+                <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/home_tab')} style={{ padding: 4 }}>
+                  <ArrowLeft size={24} color="#0F172A" />
+                </TouchableOpacity>
+              }
+            />
           </Animated.View>
           
           <ScrollView 

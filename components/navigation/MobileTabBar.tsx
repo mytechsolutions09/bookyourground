@@ -170,19 +170,27 @@ export default function MobileTabBar() {
     : ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', isSuperAdmin ? 'profile' : 'cricket'];
 
   const go = (href: string, tabName: string) => {
+    if (!user && (tabName === 'cricket' || tabName === 'profile')) {
+      router.push('/(auth)/login' as any);
+      return;
+    }
+
     const currentIndex = TAB_ORDER.indexOf(activeTab);
     const targetIndex = TAB_ORDER.indexOf(tabName);
 
     if (tabName === 'cart') {
       setTabAnimation('slide_from_bottom');
-    } else if (currentIndex !== -1 && targetIndex !== -1) {
-      if (targetIndex > currentIndex) {
-        setTabAnimation('slide_from_left');
-      } else if (targetIndex < currentIndex) {
-        setTabAnimation('slide_from_right');
+      router.push(href as any);
+    } else {
+      if (currentIndex !== -1 && targetIndex !== -1) {
+        if (targetIndex > currentIndex) {
+          setTabAnimation('slide_from_left');
+        } else if (targetIndex < currentIndex) {
+          setTabAnimation('slide_from_right');
+        }
       }
+      router.replace(href as any);
     }
-    router.push(href as any);
   };
 
   return (
@@ -208,8 +216,8 @@ export default function MobileTabBar() {
             <Text style={[styles.label, { color: activeTab === 'inbox' ? ACTIVE : INACTIVE }]} numberOfLines={1}>Inbox</Text>
           </Pressable>
           <Pressable style={styles.item} onPress={() => go('/find-an-opponent', 'find-opponent')}>
-            <Swords size={size} color={activeTab === 'find-opponent' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find-opponent' ? 2.5 : 2} />
-            <Text style={[styles.label, { color: activeTab === 'find-opponent' ? ACTIVE : INACTIVE }]} numberOfLines={1}>Opposition</Text>
+            <Swords size={size} color={activeTab === 'find-opponent' ? '#111827' : INACTIVE} strokeWidth={activeTab === 'find-opponent' ? 2.5 : 2} />
+            <Text style={[styles.label, { color: activeTab === 'find-opponent' ? '#111827' : INACTIVE }]} numberOfLines={1}>Opposition</Text>
           </Pressable>
           <Pressable style={styles.item} onPress={() => go('/(tabs)/cricket', 'cricket')}>
             <BarChart2 size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
@@ -271,9 +279,9 @@ export default function MobileTabBar() {
             {showOwnerBookings ? (
               <CalendarCheck2 size={size} color={activeTab === 'bookings' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'bookings' ? 2.5 : 2} />
             ) : (
-              <Search size={size} color={(activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE} strokeWidth={(activeTab === 'find' || activeTab === 'find-opponent') ? 2.5 : 2} />
+              <Search size={size} color={(activeTab === 'find' || activeTab === 'find-opponent') ? '#111827' : INACTIVE} strokeWidth={(activeTab === 'find' || activeTab === 'find-opponent') ? 2.5 : 2} />
             )}
-            <Text style={[styles.label, { color: (activeTab === 'find' || activeTab === 'find-opponent' || activeTab === 'bookings') ? ACTIVE : INACTIVE }]}>
+            <Text style={[styles.label, { color: activeTab === 'bookings' ? ACTIVE : (activeTab === 'find' || activeTab === 'find-opponent') ? '#111827' : INACTIVE }]}>
               {showOwnerBookings ? 'Bookings' : (Platform.OS === 'web' ? 'Search' : 'Find')}
             </Text>
           </>
