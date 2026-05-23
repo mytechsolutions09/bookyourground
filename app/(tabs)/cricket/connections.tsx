@@ -6,10 +6,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { getPlayerSlug } from '@/lib/utils';
 
-export default function CricketConnections() {
+export default function CricketConnections({ activeTab: propActiveTab }: { activeTab?: 'followers' | 'following' }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
+  const [internalActiveTab, setInternalActiveTab] = useState<'followers' | 'following'>('followers');
+  const activeTab = propActiveTab || internalActiveTab;
+  const setActiveTab = setInternalActiveTab;
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,20 +72,22 @@ export default function CricketConnections() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'followers' && styles.activeTab]}
-          onPress={() => setActiveTab('followers')}
-        >
-          <Text style={[styles.tabText, activeTab === 'followers' && styles.activeTabText]}>Followers</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'following' && styles.activeTab]}
-          onPress={() => setActiveTab('following')}
-        >
-          <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>Following</Text>
-        </TouchableOpacity>
-      </View>
+      {!propActiveTab && (
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'followers' && styles.activeTab]}
+            onPress={() => setActiveTab('followers')}
+          >
+            <Text style={[styles.tabText, activeTab === 'followers' && styles.activeTabText]}>Followers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'following' && styles.activeTab]}
+            onPress={() => setActiveTab('following')}
+          >
+            <Text style={[styles.tabText, activeTab === 'following' && styles.activeTabText]}>Following</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.centerContainer}>
