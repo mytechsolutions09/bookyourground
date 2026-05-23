@@ -111,9 +111,7 @@ export default function TabLayout() {
     }
   }, [loading, user, needsAuth, router]);
 
-  const webTabBarStyle = hideTabBarOnBigScreens
-    ? ({ display: 'none' } as const)
-    : { backgroundColor: '#06392e', borderTopWidth: 1, borderTopColor: '#06392e', height: 60 };
+  const webTabBarStyle = { display: 'none' as const, height: 0, overflow: 'hidden' as const };
 
   const showLoading = needsAuth && (loading || !user) && !pathname.endsWith('/profile');
 

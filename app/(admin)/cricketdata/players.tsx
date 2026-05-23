@@ -10,6 +10,7 @@ import CricketSubbar from '@/components/admin/CricketSubbar';
 import WebLayout from '@/components/web/WebLayout';
 
 export default function AdminCricketPlayers() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

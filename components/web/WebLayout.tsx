@@ -888,13 +888,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
-                    {isAuthenticated && (
                       <TouchableOpacity onPress={() => router.push('/cricket' as any)}>
                         <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
                           CRICKET
                         </Text>
                       </TouchableOpacity>
-                    )}
 
                         {isLanding && (
                           <>
@@ -932,13 +930,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {cleanPath === '/find-an-opponent' && (
                       <>
-                        {isAuthenticated && (
                           <TouchableOpacity onPress={() => router.push('/cricket' as any)}>
                             <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
                               CRICKET
                             </Text>
                           </TouchableOpacity>
-                        )}
                         <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
                           <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled, { color: '#00ea6b' }]}>
                             VENUES

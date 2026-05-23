@@ -116,11 +116,13 @@ export default function AdminCricketLeaderboard() {
     } else if (activeCategory === 'fielding') {
       columns = [
         { label: 'Player', style: styles.colPlayer },
-        { label: 'Catches', style: styles.colStatFull },
-        { label: 'C.B', style: styles.colStat },
-        { label: 'Run Outs', style: styles.colStatFull },
-        { label: 'Stumpings', style: styles.colStatFull },
-        { label: 'Matches', style: styles.colStatFull },
+        { label: 'Mat', style: styles.colStatSmall },
+        { label: 'Catches', style: styles.colStatSmall },
+        { label: 'C.B', style: styles.colStatSmall },
+        { label: 'R/O', style: styles.colStatSmall },
+        { label: 'St', style: styles.colStatSmall },
+        { label: 'Asst. R/O', style: styles.colStat },
+        { label: 'Byes', style: styles.colStatSmall },
       ];
     } else if (activeCategory === 'captaincy') {
       columns = [
@@ -231,11 +233,13 @@ export default function AdminCricketLeaderboard() {
                 </View>
               </View>
             </View>
-            <Text style={[styles.tableCell, styles.colStatFull, styles.centerText, styles.boldText]}>{item.total_catches}</Text>
-            <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.caught_and_bowled || 0}</Text>
-            <Text style={[styles.tableCell, styles.colStatFull, styles.centerText]}>{item.run_outs}</Text>
-            <Text style={[styles.tableCell, styles.colStatFull, styles.centerText]}>{item.stumpings}</Text>
-            <Text style={[styles.tableCell, styles.colStatFull, styles.centerText]}>{item.matches_played}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText]}>{item.matches_played}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText, styles.boldText]}>{item.total_catches}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText]}>{item.caught_and_bowled || 0}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText]}>{item.run_outs}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText]}>{item.stumpings}</Text>
+            <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.assisted_run_outs || 0}</Text>
+            <Text style={[styles.tableCell, styles.colStatSmall, styles.centerText]}>{item.byes_conceded || 0}</Text>
           </View>
         );
       }
