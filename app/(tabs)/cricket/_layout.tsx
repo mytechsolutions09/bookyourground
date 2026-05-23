@@ -657,10 +657,16 @@ export default function CricketLayout() {
           <View style={styles.qrContent}>
             <View style={styles.qrWrapper}>
               <QRCode
-                value={`https://bookyourground.com/cricket-player/${user?.id}`}
+                value={`https://bookyourground.com/players/${user?.id}`}
                 size={200}
                 color="#06392e"
                 backgroundColor="white"
+                logo={require('../../../assets/images/icon.png')}
+                logoSize={40}
+                logoBackgroundColor="#FFFFFF"
+                logoMargin={4}
+                logoBorderRadius={8}
+                ecl="H"
               />
             </View>
             <Text style={styles.qrPlayerName}>{profile?.full_name}</Text>
@@ -671,7 +677,7 @@ export default function CricketLayout() {
             style={styles.shareQrBtn}
             onPress={() => {
               Share.share({
-                message: `Check out my cricket profile on Book Your Ground: https://bookyourground.com/cricket-player/${user?.id}`,
+                message: `Check out my cricket profile on Book Your Ground: https://bookyourground.com/players/${user?.id}`,
               });
             }}
           >
@@ -907,7 +913,7 @@ export default function CricketLayout() {
               <QrCode size={20} color="#FFFFFF" />
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => Share.share({ message: `Check out my profile: https://bookyourground.com/cricket-player/${user?.id}` })} 
+              onPress={() => Share.share({ message: `Check out my profile: https://bookyourground.com/players/${user?.id}` })} 
               style={styles.actionCircleBtn}
             >
               <Share2 size={20} color="#FFFFFF" />
@@ -1174,7 +1180,7 @@ export default function CricketLayout() {
                 {tab.id === 'teams' && <CricketTeams activeSubTab={teamsTab} />}
                 {tab.id === 'highlights' && <CricketHighlights />}
                 {tab.id === 'photos' && <CricketPhotos />}
-                {tab.id === 'connections' && <CricketConnections />}
+                {tab.id === 'connections' && <CricketConnections activeTab={connectionsTab as any} />}
               </View>
             </Animated.ScrollView>
           </View>

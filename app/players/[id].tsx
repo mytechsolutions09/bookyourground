@@ -52,7 +52,7 @@ import { useIsCompact } from '@/hooks/useIsCompact';
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const HEADER_MAX_HEIGHT = 280;
-const HEADER_MIN_HEIGHT = 110;
+const HEADER_MIN_HEIGHT = Platform.OS === 'web' ? 70 : 110;
 const CONTENT_MIN_HEIGHT = windowHeight - HEADER_MIN_HEIGHT;
 
 const TABS = [
@@ -1047,7 +1047,7 @@ export default function PlayerProfile() {
             style={styles.modalShareBtn}
             onPress={handleShare}
           >
-            <Share2 size={20} color="#431043" />
+            <Share2 size={20} color="#043529" />
           </TouchableOpacity>
 
           <View ref={qrRef} collapsable={false} style={styles.qrCaptureArea}>
@@ -1065,8 +1065,14 @@ export default function PlayerProfile() {
               <QRCode
                 value={`https://bookyourground.com/players/${getPlayerSlug(profile?.full_name, id)}`}
                 size={180}
-                color="#431043"
+                color="#043529"
                 backgroundColor="#FFFFFF"
+                logo={require('../../assets/images/icon.png')}
+                logoSize={38}
+                logoBackgroundColor="#FFFFFF"
+                logoMargin={3}
+                logoBorderRadius={8}
+                ecl="H"
               />
             </View>
 
@@ -1113,7 +1119,16 @@ export default function PlayerProfile() {
     const notFoundContent = (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
         <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, alignSelf: 'flex-start' }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/cricket' as any);
+              }
+            }}
+            style={{ padding: 8, alignSelf: 'flex-start' }}
+          >
             <ChevronLeft color="#0F172A" size={28} />
           </TouchableOpacity>
         </View>
@@ -1143,7 +1158,16 @@ export default function PlayerProfile() {
         />
         <View style={[styles.miniHeaderContent, Platform.OS === 'web' && { maxWidth: 'none', alignSelf: 'stretch' }]}>
           {Platform.OS === 'web' ? (
-            <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/cricket' as any);
+                }
+              }}
+              style={styles.navBtn}
+            >
               <ChevronLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ) : (
@@ -1241,7 +1265,7 @@ export default function PlayerProfile() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.insightsBtn}
-              onPress={() => onTabPress('stats', 2)}
+              onPress={() => router.push(`/cricket/insights?playerId=${id}`)}
             >
               <BarChart2 size={18} color="#1e1b4b" />
               <Text style={styles.insightsBtnText}>Insights</Text>
@@ -2575,7 +2599,7 @@ const styles = StyleSheet.create({
   qrTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#431043',
+    color: '#043529',
     fontFamily: 'Inter',
     marginBottom: 4,
   },
@@ -2605,12 +2629,12 @@ const styles = StyleSheet.create({
   compactShareBtn: {
     width: 200,
     height: 44,
-    backgroundColor: '#431043',
+    backgroundColor: '#043529',
     borderRadius: 22,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#431043',
+    shadowColor: '#043529',
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
