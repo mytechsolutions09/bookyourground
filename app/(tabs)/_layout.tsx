@@ -126,7 +126,7 @@ export default function TabLayout() {
             animation: tabAnimation,
           }}
         >
-          <Stack.Screen name="home_tab" />
+          <Stack.Screen name="home_tab" options={{ animation: 'none' }} />
           <Stack.Screen name="grounds" />
           <Stack.Screen name="shop" />
           <Stack.Screen name="matches" />
@@ -139,9 +139,9 @@ export default function TabLayout() {
           <Stack.Screen name="profile/order-details" />
           <Stack.Screen name="support" />
           <Stack.Screen name="logout" />
-          <Stack.Screen name="cricket" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="book-my-ground" />
-          <Stack.Screen name="find-an-opponent" />
+          <Stack.Screen name="cricket" options={{ gestureEnabled: false, animation: 'none' }} />
+          <Stack.Screen name="book-my-ground" options={{ animation: 'none' }} />
+          <Stack.Screen name="find-an-opponent" options={{ animation: 'none' }} />
           <Stack.Screen name="dashboard" />
         </Stack>
       ) : (

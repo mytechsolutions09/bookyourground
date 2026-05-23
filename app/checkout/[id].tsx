@@ -1924,10 +1924,8 @@ export default function CheckoutScreen() {
                                     return (
                                         <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <Calendar size={16} color="#00ea6b" />
-                                                <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
-                                                <Clock size={16} color="#00ea6b" style={{ marginLeft: 16 }} />
-                                                <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
+                                                <RNText style={{ fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
+                                                <RNText style={{ marginLeft: 16, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
                                             </View>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                 {!isNets && (
@@ -1951,10 +1949,10 @@ export default function CheckoutScreen() {
                         </ScrollView>
 
                         <TouchableOpacity
-                            style={{ backgroundColor: '#00ea6b', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                            style={{ backgroundColor: '#0F172A', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsSlotsModalVisible(false)}
                         >
-                            <RNText style={{ color: '#06392e', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
+                            <RNText style={{ color: '#FFFFFF', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -2067,14 +2065,12 @@ export default function CheckoutScreen() {
                             {(booking.grounds || booking.ground)?.name}
                         </RNText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <MapPin size={12} color="#64748B" />
                             <RNText style={{ fontSize: 12, color: '#64748B', fontFamily: 'Inter' }} numberOfLines={1}>
                                 {(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}
                             </RNText>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8, backgroundColor: '#E8F8F0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#DCFCE7' }}>
-                            <Calendar size={12} color="#15803D" />
-                            <RNText style={{ fontSize: 11, color: '#15803D', fontWeight: '500', fontFamily: 'Inter' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                            <RNText style={{ fontSize: 12, color: '#64748B', fontFamily: 'Inter' }}>
                                 {booking.slots && booking.slots.length > 0
                                     ? `${booking.slots.length} ${booking.slots.length === 1 ? 'Slot' : 'Slots'} Selected`
                                     : `1 Slot Selected`}
@@ -2082,7 +2078,7 @@ export default function CheckoutScreen() {
                         </View>
                     </View>
                     <View style={{ alignSelf: 'center' }}>
-                        <RNText style={{ fontSize: 16, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>
+                        <RNText style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>
                             {formatCurrency(baseGroundPrice)}
                         </RNText>
                     </View>
@@ -2101,19 +2097,14 @@ export default function CheckoutScreen() {
                         }}
                     >
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Ticket size={18} color="#15803D" />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
-                                    <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 1 }}>Unlock offers & save more</RNText>
-                                </View>
+                            <View style={{ flex: 1 }}>
+                                <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
+                                <RNText style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter', marginTop: 1 }}>Unlock offers & save more</RNText>
                             </View>
                             <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                                    <RNText style={{ fontSize: 12, fontWeight: '600', color: '#15803D', fontFamily: 'Inter' }}>View Offers</RNText>
-                                    <ChevronRight size={12} color="#15803D" />
+                                    <RNText style={{ fontSize: 12, fontWeight: '600', color: '#64748B', fontFamily: 'Inter' }}>View Offers</RNText>
+                                    <ChevronRight size={12} color="#64748B" />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -2142,7 +2133,7 @@ export default function CheckoutScreen() {
                                 style={{
                                     height: 40,
                                     paddingHorizontal: 16,
-                                    backgroundColor: '#00ea6b',
+                                    backgroundColor: '#0F172A',
                                     borderRadius: 8,
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -2204,7 +2195,7 @@ export default function CheckoutScreen() {
                             <RNText style={{ fontSize: 12, fontWeight: '500', color: '#475569', fontFamily: 'Inter' }}>Total Payable</RNText>
                             <RNText style={{ fontSize: 10, color: '#94A3B8', marginTop: 2, fontFamily: 'Inter' }}>Incl. all taxes</RNText>
                         </View>
-                        <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{formatCurrency(totalPayable)}</RNText>
+                        <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{formatCurrency(totalPayable)}</RNText>
                     </View>
                 </View>
 
@@ -2219,10 +2210,7 @@ export default function CheckoutScreen() {
                         marginBottom: 16,
                     }}
                 >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
-                            <Users size={16} color="#15803D" />
-                        </View>
+                    <View style={{ marginBottom: 16 }}>
                         <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Confirm Contact Details</RNText>
                     </View>
 
@@ -2264,10 +2252,7 @@ export default function CheckoutScreen() {
                         marginBottom: 20,
                     }}
                 >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }}>
-                            <CreditCard size={16} color="#15803D" />
-                        </View>
+                    <View style={{ marginBottom: 16 }}>
                         <RNText style={{ fontSize: 15, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Payment Method</RNText>
                     </View>
 
@@ -2552,10 +2537,8 @@ export default function CheckoutScreen() {
                                         return (
                                             <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                    <Calendar size={16} color="#00ea6b" />
-                                                    <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
-                                                    <Clock size={16} color="#00ea6b" style={{ marginLeft: 16 }} />
-                                                    <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
+                                                    <RNText style={{ fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
+                                                    <RNText style={{ marginLeft: 16, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
                                                 </View>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                     {!isNets && (
@@ -2579,10 +2562,10 @@ export default function CheckoutScreen() {
                             </ScrollView>
 
                             <TouchableOpacity
-                                style={{ backgroundColor: '#00ea6b', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                                style={{ backgroundColor: '#0F172A', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                                 onPress={() => setIsSlotsModalVisible(false)}
                             >
-                                <RNText style={{ color: '#06392e', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
+                                <RNText style={{ color: '#FFFFFF', fontWeight: '700', fontFamily: 'Inter' }}>Close</RNText>
                             </TouchableOpacity>
                         </View>
                     </Pressable>

@@ -3099,7 +3099,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             )}
 
             {groundPageAccent && !isWeb ? (
-              <View style={{ paddingHorizontal: 0, marginTop: 4, marginBottom: 12 }}>
+              <View style={{ paddingHorizontal: 0, marginTop: 24, marginBottom: 12 }}>
                 <Button
                   title={submitting ? '...' : 'Proceed'}
                   onPress={handleBook}
@@ -3116,9 +3116,12 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       justifyContent: 'center', 
                       alignItems: 'center', 
                       borderRadius: 12,
-                      backgroundColor: '#00ea6b',
-                      borderColor: '#00ea6b',
+                      backgroundColor: '#475569',
+                      borderColor: '#475569',
                       width: '100%',
+                      shadowOpacity: 0,
+                      elevation: 0,
+                      boxShadow: 'none',
                     }
                   ]}
                   textStyle={[
@@ -3157,17 +3160,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           <Text style={styles.changeGroundText}>Choose a different ground</Text>
                         </Pressable>
                       </View>
-                    ) : !hasSearched || searchResults.length === 0 ? (
-                      <Button
-                        title="Search"
-                        onPress={handleSearch}
-                        disabled={submitting || searching || !canRunSearch}
-                        loading={searching}
-                        fullWidth
-                        size="large"
-                        style={styles.premiumGlassButton}
-                        textStyle={styles.premiumGlassButtonText}
-                      />
                     ) : null
                   ) : (
                     <Button
@@ -3519,7 +3511,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   teamToggle: {
     flexDirection: 'row',
-    gap: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
   },
   loadMoreWrap: {
     paddingVertical: 32,
@@ -3534,16 +3528,12 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 12,
     paddingVertical: 6,
     minHeight: 40,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   teamToggleOptionDisabled: {
     backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
     opacity: 0.85,
     ...Platform.select({
       web: { cursor: 'not-allowed' as any },
@@ -3556,9 +3546,12 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    backgroundColor: 'transparent',
-    borderColor: '#00ea6b',
-    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   teamToggleText: {
     fontSize: 14,
@@ -3567,8 +3560,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: '#64748B',
   },
   teamToggleTextActive: {
-    color: '#059669',
-    fontWeight: '800',
+    color: '#0F172A',
+    fontWeight: '700',
   },
   teamToggleTextDisabled: {
     color: '#9CA3AF',
@@ -3848,8 +3841,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: '#00ea6b',
-    fontWeight: '500',
+    color: isLight ? '#111827' : '#FFFFFF',
+    fontWeight: '600',
     fontSize: 14,
     marginTop: 0,
   },
@@ -3948,7 +3941,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#64748B',
   },
 
   /** Ground detail: Location / Type — web keeps green accent; native uses tan (#dcc093). */
@@ -4065,7 +4058,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   dateChipActive: {
     backgroundColor: 'transparent',
-    borderColor: '#00ea6b',
+    borderColor: '#475569',
     borderWidth: 1.5,
   },
   dateChipDisabled: {
@@ -4087,7 +4080,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 11,
   },
   dateChipTextActive: {
-    color: '#059669',
+    color: '#475569',
     fontWeight: '800',
   },
   dateChipTextBookGroundNative: {
@@ -4104,7 +4097,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 9,
   },
   dateChipWeekdayActive: {
-    color: '#059669',
+    color: '#475569',
     fontWeight: '800',
   },
   dateChipWeekdayBookGroundNative: {
@@ -4198,7 +4191,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   timeSlotChipActive: {
     backgroundColor: 'transparent',
-    borderColor: '#00ea6b',
+    borderColor: '#475569',
     borderWidth: 1.5,
   },
   timeSlotChipDisabled: {
@@ -4230,7 +4223,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 9,
   },
   timeSlotTextActive: {
-    color: '#059669',
+    color: '#475569',
     fontWeight: '800',
   },
   timeSlotTextBookGroundNative: {

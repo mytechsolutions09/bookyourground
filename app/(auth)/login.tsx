@@ -691,6 +691,15 @@ export default function LoginScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
+
+                  <TouchableOpacity 
+                    onPress={() => router.replace('/(tabs)/home_tab' as any)}
+                    style={{ marginTop: 24, alignItems: 'center', paddingVertical: 8 }}
+                  >
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14, fontFamily: 'Inter' }}>
+                      SKIP FOR NOW
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </BlurView>
             </View>
@@ -1044,6 +1053,15 @@ export default function LoginScreen() {
               </Pressable>
             )}
           </View>
+
+          <Pressable 
+            onPress={() => router.replace('/(tabs)/home_tab' as any)}
+            style={{ marginTop: 24, alignItems: 'center', paddingVertical: 8 }}
+          >
+            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14, fontFamily: 'Inter' }}>
+              SKIP FOR NOW
+            </Text>
+          </Pressable>
         </BlurView>
       </ScrollView>
     </ImageBackground>
