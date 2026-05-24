@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText, UserX } from 'lucide-react-native';
 
 const BASE = '/(admin)/settings';
 
@@ -17,6 +17,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isPayment = pathname.includes('/settings/payment');
   const isPlatformFees = pathname.includes('/settings/platform-fees');
   const isContracts = pathname.includes('/settings/contract-submissions');
+  const isDeletions = pathname.includes('/settings/deletion-requests');
 
   return (
     <View style={styles.shell}>
@@ -101,6 +102,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             <FileText size={16} color={isContracts ? '#FFFFFF' : '#666'} />
             <Text style={[styles.subLinkText, isContracts && styles.subLinkTextActive]}>
               Contracts
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/deletion-requests') as any)}
+            style={[styles.subLink, isDeletions && styles.subLinkActive]}
+          >
+            <UserX size={16} color={isDeletions ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isDeletions && styles.subLinkTextActive]}>
+              Deletions
             </Text>
           </Pressable>
         </ScrollView>
