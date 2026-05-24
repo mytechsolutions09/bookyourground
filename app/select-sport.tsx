@@ -530,7 +530,7 @@ export default function SelectSportScreen() {
           </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.headerTab, sportTabStyle, { height: HEADER_TABS[0], backgroundColor: sport.bg }]}>
-          <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={styles.tabText}>{sport.name}</Text></View>
+          <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={[styles.tabText, { color: '#00ea6b' }]}>{sport.name}</Text></View>
         </Animated.View>
         <Animated.View style={[styles.headerTab, locTabStyle, { height: HEADER_TABS[1], backgroundColor: '#00ea6b' }]}>
           <View style={styles.centerRow}><Text style={styles.tabTextSmall}>{loc.name}</Text></View>
@@ -725,8 +725,8 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', fontFamily: 'Inter' },
   tabTextSmall: { fontSize: 16, fontWeight: '900', color: '#043529', fontFamily: 'Inter' },
   slide: { width: STATIC_WIDTH, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 100 },
-  iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
-  iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
+  iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   heroName: { fontSize: 44, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1 },
   pageCard: { flex: 1 },
   contentWrapper: { alignItems: 'center', justifyContent: 'center', width: '100%' },

@@ -617,15 +617,17 @@ export default function GroundDetailsPrettyUrlScreen() {
             <>
               {/* Mobile / Small-screen layout */}
               {IS_WEB ? (
-                <WebHeroGallery 
-                  ground={ground} 
-                  heroIdx={heroIdx} 
-                  imageUrls={imageUrls} 
-                  setHeroImageIndex={setHeroImageIndex}
-                  isFavorite={isFavorite}
-                  toggleFavorite={toggleFavorite}
-                  favoriteLoading={favoriteLoading}
-                />
+                <View style={{ paddingTop: 60 }}>
+                  <WebHeroGallery 
+                    ground={ground} 
+                    heroIdx={heroIdx} 
+                    imageUrls={imageUrls} 
+                    setHeroImageIndex={setHeroImageIndex}
+                    isFavorite={isFavorite}
+                    toggleFavorite={toggleFavorite}
+                    favoriteLoading={favoriteLoading}
+                  />
+                </View>
               ) : (
                 <View style={[styles.section, styles.imageCard]}>
                   <Image

@@ -1324,8 +1324,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   sportCatChipActive: {
-    backgroundColor: '#06392e',
-    borderColor: '#06392e',
+    backgroundColor: '#134d40',
+    borderColor: '#134d40',
   },
   sportCatText: {
     fontSize: 13,

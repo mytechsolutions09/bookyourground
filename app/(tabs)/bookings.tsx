@@ -23,6 +23,7 @@ import { Alert, TouchableOpacity } from 'react-native';
 import { formatDateDDMMYY, formatCurrency, isDateInPast } from '@/utils/helpers';
 import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
+import WebDateRangePicker from '@/components/bookings/WebDateRangePicker';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { Calendar, X, Swords, Save, CheckCircle2, Circle, Clock, TrendingUp, Filter } from 'lucide-react-native';
@@ -90,6 +91,7 @@ export default function BookingsScreen() {
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [tempFromDate, setTempFromDate] = useState<string | null>(null);
   const [tempToDate, setTempToDate] = useState<string | null>(null);
+  const [isWebDatePickerVisible, setIsWebDatePickerVisible] = useState(false);
   const PAGE_SIZE = 10;
   const [totalCount, setTotalCount] = useState(0);
   const [userStats, setUserStats] = useState({
@@ -563,6 +565,7 @@ export default function BookingsScreen() {
     );
   };
 
+
   const handleDateClick = (dateStr: string) => {
     if (!tempFromDate || (tempFromDate && tempToDate)) {
       setTempFromDate(dateStr);
@@ -660,9 +663,20 @@ export default function BookingsScreen() {
           <View style={[styles.webTwoCol, isStacking && { flexDirection: 'column' }]}>
           {/* LEFT: bookings list */}
           <View style={styles.webLeft}>
-            <View style={styles.webPageHeader}>
-              <Text style={[styles.webPageTitle, isUltraNarrow && { fontSize: 20 }]}>My Bookings</Text>
-              <Text style={[styles.webPageSub, isUltraNarrow && { fontSize: 11 }]}>Manage your upcoming games and view history</Text>
+            <View style={[styles.webPageHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <View>
+                <Text style={[styles.webPageTitle, isUltraNarrow && { fontSize: 20 }]}>My Bookings</Text>
+                <Text style={[styles.webPageSub, isUltraNarrow && { fontSize: 11 }]}>Manage your upcoming games and view history</Text>
+              </View>
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 8 }}
+                onPress={() => setIsWebDatePickerVisible(true)}
+              >
+                <Filter size={18} color="#64748B" />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569' }}>
+                  {fromDate && toDate ? `${formatDateDDMMYY(fromDate)} - ${formatDateDDMMYY(toDate)}` : fromDate ? `From ${formatDateDDMMYY(fromDate)}` : toDate ? `Until ${formatDateDDMMYY(toDate)}` : 'Filter by Date'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Tabs */}
@@ -887,10 +901,20 @@ export default function BookingsScreen() {
                 </View>
               </View>
             </ScrollView>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-
+          
+          <WebDateRangePicker 
+            visible={isWebDatePickerVisible}
+            onClose={() => setIsWebDatePickerVisible(false)}
+            initialFromDate={fromDate}
+            initialToDate={toDate}
+            onApply={(from, to) => {
+              setFromDate(from);
+              setToDate(to);
+            }}
+          />
+        </ScrollView>
       ) : (
         <>
 
@@ -1833,7 +1857,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   webTabTextActive: {
-    color: '#00ea6b',
+    color: '#475569',
     fontWeight: '700',
     fontFamily: 'Inter',
   },

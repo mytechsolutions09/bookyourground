@@ -953,17 +953,17 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         </Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                        <TouchableOpacity
-                          style={styles.profileChip}
-                          onPress={() => router.push('/profile')}
-                        >
-                          <Image
-                            source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
-                            style={styles.profileAvatar}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                    <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={styles.profileChip}
+                        onPress={() => router.push('/profile')}
+                      >
+                        <Image
+                          source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
+                          style={styles.profileAvatar}
+                        />
+                      </TouchableOpacity>
+                    </View>
                     )}
                   </>
                 ) : (
@@ -1087,9 +1087,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           style={styles.userAvatar}
                         />
                       </TouchableOpacity>
-
-
-
                     </View>
                   )}
                 </View>
@@ -1339,20 +1336,20 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink
                           href="/(tabs)/profile"
                           icon={CircleUser}
-                          label="My Profile"
+                          label="Profile"
                           isActiveOverride={cleanPath === '/(tabs)/profile' || cleanPath === '/profile'}
                         />
                         <NavLink
                           href="/(tabs)/bookings"
                           icon={Calendar}
-                          label="My Bookings"
+                          label="Bookings"
                           isActiveOverride={cleanPath === '/(tabs)/bookings' || cleanPath === '/bookings'}
                         />
 
                         <NavLink
                           href="/profile/orders"
                           icon={ShoppingBag}
-                          label="Shop Orders"
+                          label="Orders"
                           isActiveOverride={cleanPath === '/profile/orders'}
                         />
 
@@ -1432,6 +1429,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Cricket', icon: Trophy, href: '/cricket' },
+            { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||

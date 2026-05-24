@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   activeTabText: {
-    color: '#02c259',
+    color: '#475569',
     fontWeight: '700',
   },
   card: {

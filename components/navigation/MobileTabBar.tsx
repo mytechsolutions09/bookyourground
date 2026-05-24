@@ -23,7 +23,7 @@ import { useUI } from '@/contexts/UIContext';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 
-const ACTIVE = '#00ea6b';
+const ACTIVE = '#475569';
 const INACTIVE = '#9ca3af';
 
 function getActiveTab(

@@ -25,7 +25,7 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
   if (hideTabBarOnBigScreens) return null;
 
   const visibleTabNames = Platform.OS === 'web' 
-    ? ['home_tab', 'find-an-opponent', 'shop', 'cricket']
+    ? ['home_tab', 'find-an-opponent', 'shop', 'cricket', 'profile']
     : ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
 
   const visibleRoutes = state.routes.filter((route: any) => {
