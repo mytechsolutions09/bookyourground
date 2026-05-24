@@ -25,6 +25,7 @@ import {
   MapPin,
   User,
   Users,
+  ArrowLeft
 } from 'lucide-react-native';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useAuth } from '@/contexts/AuthContext';
@@ -518,6 +519,16 @@ export default function SelectSportScreen() {
 
       <View style={styles.headerOverlay}>
         <Animated.View style={[styles.statusBarFill, { height: insets.top }, statusBarBgStyle]} />
+        <Animated.View style={[{ position: 'absolute', top: insets.top + 10, left: 16, zIndex: 100 }, dots1Opacity]}>
+          <TouchableOpacity 
+            onPress={() => {
+              router.replace('/(tabs)/home_tab');
+            }} 
+            style={{ padding: 8 }}
+          >
+            <ArrowLeft color="#FFFFFF" size={28} />
+          </TouchableOpacity>
+        </Animated.View>
         <Animated.View style={[styles.headerTab, sportTabStyle, { height: HEADER_TABS[0], backgroundColor: sport.bg }]}>
           <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={styles.tabText}>{sport.name}</Text></View>
         </Animated.View>

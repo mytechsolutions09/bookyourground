@@ -46,17 +46,18 @@ export async function sendSMSOTP(
 
     // Determine the template and message based on the type
     let templateId = SIGNUP_TEMPLATE_ID;
-    let message = ` Your OTP ${otp} to authenticate your signup. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
+    let message = `Your OTP ${otp} to authenticate your signup. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
 
     if (type === 'login') {
       templateId = LOGIN_TEMPLATE_ID;
-      message = ` Your OTP ${otp} to authenticate your login. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
+      message = `Your OTP ${otp} to authenticate your login. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
     }
 
     const encodedMessage = encodeURIComponent(message);
-    const url = `https://connect.muzztech.com/api/sms/send?api_key=${API_KEY}&phone_number=${cleanedPhone}&sender_name=${SENDER_NAME}&message=${encodedMessage}&template_id=${templateId}`;
+    const apiPhone = `91${cleanedPhone}`;
+    const url = `https://connect.muzztech.com/api/sms/send?api_key=${API_KEY}&phone_number=${apiPhone}&sender_name=${SENDER_NAME}&message=${encodedMessage}&template_id=${templateId}`;
 
-    console.log(`Sending ${type} SMS to ${cleanedPhone}...`);
+    console.log(`Sending ${type} SMS to ${apiPhone}...`);
     
     // Safely log the OTP only in local development mode
     if (typeof __DEV__ !== 'undefined' && __DEV__) {

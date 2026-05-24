@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { Tag, Percent, Scissors, Trash2, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { Tag, Percent, Scissors, Trash2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -22,7 +22,7 @@ const IS_WEB = Platform.OS === 'web';
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 function OwnerSettingsInner() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
@@ -620,6 +620,18 @@ function OwnerSettingsInner() {
             />
           </View>
         </View>
+
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity 
+            style={styles.signOutButton} 
+            onPress={() => {
+              void signOut().then(() => router.replace('/'));
+            }}
+          >
+            <LogOut size={20} color="#EF4444" />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        )}
       </Card>
     </View>
   );
@@ -1135,6 +1147,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 32,
+    paddingVertical: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  signOutText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
 });

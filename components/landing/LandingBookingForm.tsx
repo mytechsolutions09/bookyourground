@@ -1803,6 +1803,23 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       return;
     }
 
+    if (!user.email) {
+      if (Platform.OS === 'web') {
+        alert('Email required: Please add your email address in Settings before making a booking.');
+        router.push('/(tabs)/profile/settings');
+      } else {
+        Alert.alert(
+          'Email Required', 
+          'Please add your email address in Settings before making a booking.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Go to Settings', onPress: () => router.push('/(tabs)/profile/settings') }
+          ]
+        );
+      }
+      return;
+    }
+
     if (!selectedGround) {
       Alert.alert('Select a ground', 'Please choose a ground to book.');
       return;

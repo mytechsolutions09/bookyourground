@@ -18,6 +18,7 @@ function UserSettingsInner() {
   const isUltraNarrow = width < 350;
   const { user, profile, updateProfile, signOut } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [teamName, setTeamName] = useState(profile?.team_name || '');
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +31,7 @@ function UserSettingsInner() {
 
   const hasChanges = 
     fullName.trim() !== (profile?.full_name || '') ||
+    email.trim() !== (user?.email || '') ||
     phone.trim() !== (profile?.phone || '') ||
     teamName.trim() !== (profile?.team_name || '');
 
@@ -101,6 +103,9 @@ function UserSettingsInner() {
       setPhone(profile.phone || '');
       setTeamName(profile.team_name || '');
     }
+    if (user) {
+      setEmail(user.email || '');
+    }
   }, [profile]);
 
   const handleUpdateProfile = async () => {
@@ -116,6 +121,13 @@ function UserSettingsInner() {
 
     try {
       setSubmitting(true);
+      
+      // Update email if changed and they didn't have one before
+      if (email.trim() && email.trim() !== (user.email || '')) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: email.trim() });
+        if (emailError) throw emailError;
+      }
+
       const { error } = await updateProfile({
         full_name: fullName.trim(),
         phone: phone.trim() || null,
@@ -201,9 +213,14 @@ function UserSettingsInner() {
           <View style={styles.formRow}>
             <Text style={styles.label}>Email Address</Text>
             <TextInput
-              value={user?.email || ''}
-              editable={false}
-              style={[styles.input, { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+              value={email}
+              onChangeText={setEmail}
+              editable={!user?.email} // Only editable if they don't have an email yet
+              placeholder="Enter your email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={[styles.input, !!user?.email && { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 

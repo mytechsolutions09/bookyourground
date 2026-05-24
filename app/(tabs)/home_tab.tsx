@@ -125,13 +125,15 @@ function GroundCardMobile({
   index, 
   timeSlot, 
   timeSlotPrice,
-  timeSlotValue 
+  timeSlotValue,
+  timeSlotColor
 }: { 
   ground: any; 
   index: number; 
   timeSlot?: string; 
   timeSlotPrice?: number;
   timeSlotValue?: string;
+  timeSlotColor?: string;
 }) {
   const primaryImage =
     ground.ground_images?.find((img: any) => img.is_primary)?.image_url ||
@@ -194,8 +196,8 @@ function GroundCardMobile({
         <View style={styles.groundFooter}>
           <View style={styles.bookLinkContainer}>
             {timeSlot && (
-              <View style={styles.slotTimeBadge}>
-                <Text style={styles.slotTimeText}>{timeSlot}</Text>
+              <View style={[styles.slotTimeBadge, timeSlotColor ? { backgroundColor: `${timeSlotColor}20`, paddingHorizontal: 6 } : {}]}>
+                <Text style={[styles.slotTimeText, timeSlotColor ? { color: timeSlotColor } : {}]}>{timeSlot}</Text>
               </View>
             )}
             <Text style={styles.bookLinkText}>
@@ -425,7 +427,11 @@ export default function HomeScreen() {
     .direction(Directions.LEFT)
     .runOnJS(true)
     .onStart(() => {
-      setShowProfileModal(true);
+      if (user) {
+        setShowProfileModal(true);
+      } else {
+        router.push('/(auth)/login');
+      }
     });
 
   useEffect(() => {
@@ -780,7 +786,13 @@ export default function HomeScreen() {
           sportFilter={sportFilter}
           setSportFilter={setSportFilter}
           profile={profile}
-          setShowProfileModal={setShowProfileModal}
+          setShowProfileModal={(show) => {
+            if (show && !user) {
+              router.push('/(auth)/login');
+            } else {
+              setShowProfileModal(show);
+            }
+          }}
           unreadCount={unreadCount}
         />
 
@@ -831,6 +843,7 @@ export default function HomeScreen() {
                       timeSlot={TIME_TABS.find(t => t.id === selectedTimeTab)?.label}
                       timeSlotValue={TIME_TABS.find(t => t.id === selectedTimeTab)?.timeValue}
                       timeSlotPrice={g._currentSlotPrice}
+                      timeSlotColor={TIME_TABS.find(t => t.id === selectedTimeTab)?.color}
                     />
                   </View>
                 ))}

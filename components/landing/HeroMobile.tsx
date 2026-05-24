@@ -40,7 +40,7 @@ export default function HeroMobile({
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    if (!cityName) {
+    if (!cityName || cityName === 'Checking...') {
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 0.8, duration: 800, useNativeDriver: true }),
@@ -61,12 +61,12 @@ export default function HeroMobile({
       <View style={styles.headerRow}>
         <Pressable style={styles.locationPillHeader} onPress={refreshLocation}>
           <MapPin size={14} color="#00EA6B" fill="rgba(0, 234, 107, 0.2)" />
-          {cityName ? (
+          {cityName && cityName !== 'Checking...' ? (
             <Text style={styles.locationText}>
               {cityName}
             </Text>
           ) : (
-            <Animated.View style={{ width: 80, height: 14, backgroundColor: 'rgba(0, 234, 107, 0.3)', borderRadius: 4, opacity: pulse }} />
+            <Animated.View style={{ width: 100, height: 16, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 4, opacity: pulse }} />
           )}
         </Pressable>
         
@@ -94,15 +94,17 @@ export default function HeroMobile({
             return 'Good Evening';
           })()}
         </Text>
-        <Text style={styles.greetingMain}>
-          {(() => {
-            const fullName = profile?.full_name || profile?.username || 'Albie';
-            return fullName
-              .split(' ')
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-              .join(' ');
-          })()}
-        </Text>
+        {profile && (
+          <Text style={styles.greetingMain}>
+            {(() => {
+              const fullName = profile.full_name || profile.username || 'Player';
+              return fullName
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            })()}
+          </Text>
+        )}
         <Text style={styles.greetingPrompt}>
           What sport are you in mood to play today?
         </Text>

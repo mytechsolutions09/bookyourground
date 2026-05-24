@@ -43,6 +43,7 @@ export default function LoginScreen() {
   
   // Inline Phone OTP Login States
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [phoneOtpVal, setPhoneOtpVal] = useState('');
   const [phoneGeneratedOtp, setPhoneGeneratedOtp] = useState('');
   const [phoneOtpTimer, setPhoneOtpTimer] = useState(0);
@@ -99,7 +100,7 @@ export default function LoginScreen() {
       }
     });
 
-  const { signIn, profile, user, resetPassword, signOut } = useAuth();
+  const { signIn, signUp, profile, user, resetPassword, signOut } = useAuth();
   const os = Platform.OS as string;
   const { width } = useWindowDimensions();
   const showHeroImage = os === 'web' && width >= 900;
@@ -118,16 +119,15 @@ export default function LoginScreen() {
     const cleaned = phone.replace(/[^0-9]/g, '');
     const { data: resolvedEmail, error: rpcError } = await supabase.rpc('get_email_by_phone', { p_phone: cleaned });
 
-    if (rpcError || !resolvedEmail) {
-      setLoading(false);
-      const msg = 'No registered account found with this phone number.';
-      if (Platform.OS === 'web') alert(msg);
-      else Alert.alert('Error', msg);
-      return;
+    const isNew = Boolean(rpcError || !resolvedEmail);
+    if (isNew) {
+      setIsNewUser(true);
+    } else {
+      setIsNewUser(false);
     }
 
     const otp = generateOTP();
-    const res = await sendSMSOTP(cleaned, otp, 'login');
+    const res = await sendSMSOTP(cleaned, otp, isNew ? 'signup' : 'login');
     setLoading(false);
 
     if (res.success) {
@@ -137,9 +137,6 @@ export default function LoginScreen() {
       setPhoneOtpVal('');
       const msg = 'OTP sent successfully to your registered mobile number.';
       setOtpSuccessMessage(msg);
-      if (Platform.OS !== 'web') {
-        Alert.alert('OTP Sent', msg);
-      }
       setTimeout(() => {
         phoneOtpRef.current?.focus();
       }, 300);
@@ -152,30 +149,42 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (loginMethod === 'phone') {
-      if (!phoneOtpSent) {
-        await sendPhoneOtp();
-        return;
-      }
+    if (!phoneOtpSent) {
+      await sendPhoneOtp();
+      return;
+    }
 
-      if (!phone || !phoneOtpVal) {
-        const msg = 'Please fill in all fields';
-        if (Platform.OS === 'web') alert(msg);
-        else Alert.alert('Error', msg);
-        return;
-      }
+    if (!phone || !phoneOtpVal) {
+      const msg = 'Please fill in all fields';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
 
-      if (phoneOtpVal !== phoneGeneratedOtp) {
-        const msg = 'Incorrect OTP. Please check and try again.';
-        if (Platform.OS === 'web') alert(msg);
-        else Alert.alert('Error', msg);
-        return;
-      }
+    if (phoneOtpVal !== phoneGeneratedOtp) {
+      const msg = 'Incorrect OTP. Please check and try again.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
 
-      setLoading(true);
-      const cleaned = phone.replace(/[^0-9]/g, '');
-      const tempPassword = 'BYGTempOTPAuthPass_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    setLoading(true);
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    const tempPassword = 'BYGTempOTPAuthPass_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    if (isNewUser) {
+      const randomEmail = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}@bookyourground.com`;
+      const { error } = await signUp(randomEmail, tempPassword, 'Player', cleaned, 'user', undefined, '', '', undefined, 'Player', undefined, true);
       
+      setLoading(false);
+      if (error) {
+        const msg = 'Failed to create account. Please try again.';
+        if (Platform.OS === 'web') alert(msg + ' ' + error.message);
+        else Alert.alert('Error', msg);
+      } else {
+        setLoginOtpVerified(true);
+      }
+    } else {
       const { data: resolvedEmail, error: rpcError } = await supabase.rpc('login_with_otp_auth', {
         p_phone: cleaned,
         p_new_password: tempPassword,
@@ -189,7 +198,6 @@ export default function LoginScreen() {
         return;
       }
 
-      // Pre-verify OTP to bypass 2FA modal
       setLoginOtpVerified(true);
       
       const { error } = await signIn(resolvedEmail, tempPassword);
@@ -198,26 +206,6 @@ export default function LoginScreen() {
       if (error) {
         if (Platform.OS === 'web') alert('Login Failed: ' + error.message);
         else Alert.alert('Login Failed', error.message);
-      }
-    } else {
-      if (!email || !password) {
-        if (Platform.OS === 'web') alert('Please fill in all fields');
-        else Alert.alert('Error', 'Please fill in all fields');
-        return;
-      }
-
-      setLoading(true);
-      const { error } = await signIn(email, password);
-      setLoading(false);
-
-      if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          setShowEmailNotConfirmedModal(true);
-        } else if (Platform.OS === 'web') {
-          alert('Login Failed: ' + error.message);
-        } else {
-          Alert.alert('Login Failed', error.message);
-        }
       }
     }
   };
@@ -491,89 +479,7 @@ export default function LoginScreen() {
                 </View>
   
                 <View style={webStyles.form}>
-                  {/* Toggle Selector */}
-                  <View style={{
-                    flexDirection: 'row',
-                    backgroundColor: 'rgba(15, 23, 42, 0.3)',
-                    borderRadius: 12,
-                    padding: 4,
-                    marginBottom: 20,
-                  }}>
-                    <TouchableOpacity
-                      onPress={() => setLoginMethod('email')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                        backgroundColor: loginMethod === 'email' ? '#01b854' : 'transparent',
-                        borderColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
-                        borderWidth: 1,
-                        alignItems: 'center',
-                        shadowColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: loginMethod === 'email' ? 0.25 : 0,
-                        shadowRadius: 8,
-                      }}
-                    >
-                      <Text style={{
-                        color: loginMethod === 'email' ? '#FFF' : 'rgba(255, 255, 255, 0.7)',
-                        fontWeight: '700',
-                        fontSize: 13,
-                      }}>
-                        Email
-                      </Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={() => setLoginMethod('phone')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 10,
-                        backgroundColor: loginMethod === 'phone' ? '#01b854' : 'transparent',
-                        borderColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
-                        borderWidth: 1,
-                        alignItems: 'center',
-                        shadowColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: loginMethod === 'phone' ? 0.25 : 0,
-                        shadowRadius: 8,
-                      }}
-                    >
-                      <Text style={{
-                        color: loginMethod === 'phone' ? '#FFF' : 'rgba(255, 255, 255, 0.7)',
-                        fontWeight: '700',
-                        fontSize: 13,
-                      }}>
-                        Phone
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {loginMethod === 'email' ? (
-                    <>
-                      <WebInput
-                        label="Email Address"
-                        value={email}
-                        onChangeText={setEmail}
-                        placeholder=""
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                      />
-      
-                      <WebInput
-                        label="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder=""
-                        secureTextEntry={!showPassword}
-                        showToggle={true}
-                        onToggle={() => setShowPassword(!showPassword)}
-                        isToggled={showPassword}
-                      />
-                    </>
-                  ) : (
                     <>
                        <WebInput
                         label="Phone Number"
@@ -586,7 +492,6 @@ export default function LoginScreen() {
                         placeholder=""
                         keyboardType="phone-pad"
                         autoCapitalize="none"
-                        editable={!phoneOtpSent}
                         rightElement={
                           !phoneOtpSent ? (
                             <TouchableOpacity
@@ -663,15 +568,11 @@ export default function LoginScreen() {
                         </>
                       )}
                     </>
-                  )}
+
 
 
   
-                  {loginMethod === 'email' && (
-                    <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={webStyles.forgotWrap}>
-                      <Text style={webStyles.forgotText}>Forgot password?</Text>
-                    </TouchableOpacity>
-                  )}
+
   
                   <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
@@ -681,15 +582,6 @@ export default function LoginScreen() {
                     >
                       <Text style={webStyles.buttonText}>SIGN IN</Text>
                     </TouchableOpacity>
-  
-                    {loginMethod !== 'phone' && (
-                      <TouchableOpacity
-                        style={webStyles.outlineButton}
-                        onPress={() => router.push('/(auth)/signup')}
-                      >
-                        <Text style={webStyles.outlineButtonText}>SIGN UP</Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
 
                   <TouchableOpacity 
@@ -767,139 +659,8 @@ export default function LoginScreen() {
           tint="dark" 
           style={styles.card}
         >
-          {/* Mobile Login Toggle */}
-          <View style={{
-            flexDirection: 'row',
-            backgroundColor: 'rgba(15, 23, 42, 0.3)',
-            borderRadius: 12,
-            padding: 4,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-          }}>
-            <TouchableOpacity
-              onPress={() => setLoginMethod('email')}
-              style={{
-                flex: 1,
-                paddingVertical: 8,
-                borderRadius: 10,
-                backgroundColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
-                borderColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
-                borderWidth: 1,
-                alignItems: 'center',
-                shadowColor: loginMethod === 'email' ? '#00ea6b' : 'transparent',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: loginMethod === 'email' ? 0.25 : 0,
-                shadowRadius: 8,
-              }}
-            >
-              <Text style={{
-                color: loginMethod === 'email' ? '#06392e' : 'rgba(255, 255, 255, 0.7)',
-                fontWeight: '700',
-                fontSize: 13,
-              }}>
-                Email
-              </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setLoginMethod('phone')}
-              style={{
-                flex: 1,
-                paddingVertical: 8,
-                borderRadius: 10,
-                backgroundColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
-                borderColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
-                borderWidth: 1,
-                alignItems: 'center',
-                shadowColor: loginMethod === 'phone' ? '#00ea6b' : 'transparent',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: loginMethod === 'phone' ? 0.25 : 0,
-                shadowRadius: 8,
-              }}
-            >
-              <Text style={{
-                color: loginMethod === 'phone' ? '#06392e' : 'rgba(255, 255, 255, 0.7)',
-                fontWeight: '700',
-                fontSize: 13,
-              }}>
-                Phone
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          {loginMethod === 'email' ? (
-            <>
-              {/* Email field */}
-              <View style={{ width: '100%' }}>
-                <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
-                  <Text style={styles.fieldLabel}>Email</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => emailRef.current?.focus()}
-                  style={[
-                    styles.inputRow,
-                    emailFocused && styles.inputRowFocused,
-                  ]}
-                >
-                  <Mail size={17} color={emailFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
-                  <TextInput
-                    ref={emailRef}
-                    style={styles.textInput}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder=""
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
-                  />
-                </Pressable>
-              </View>
-
-              {/* Password field */}
-              <View style={[styles.fieldWrap, { marginTop: 16 }]}>
-                <Pressable style={styles.fieldLabel} onPress={() => passwordRef.current?.focus()}>
-                  <Text style={styles.fieldLabel}>Password</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => passwordRef.current?.focus()}
-                  style={[
-                    styles.inputRow,
-                    passwordFocused && styles.inputRowFocused,
-                  ]}
-                >
-                  <Lock size={17} color={passwordFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
-                  <TextInput
-                    ref={passwordRef}
-                    style={styles.textInput}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder=""
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    secureTextEntry={!showPassword}
-                    autoComplete="password"
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                  />
-                  <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                    {showPassword ? (
-                      <EyeOff size={17} color="rgba(255, 255, 255, 0.5)" strokeWidth={2} />
-                    ) : (
-                      <Eye size={17} color="rgba(255, 255, 255, 0.5)" strokeWidth={2} />
-                    )}
-                  </Pressable>
-                </Pressable>
-              </View>
-
-              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotWrap}>
-                <Text style={styles.forgotText}>Forgot Password?</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
               {/* Phone field */}
               <View style={{ width: '100%' }}>
                 <Pressable style={styles.fieldLabel} onPress={() => phoneRef.current?.focus()}>
@@ -926,7 +687,6 @@ export default function LoginScreen() {
                     placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     keyboardType="phone-pad"
                     autoCapitalize="none"
-                    editable={!phoneOtpSent}
                     onFocus={() => setPhoneFocused(true)}
                     onBlur={() => setPhoneFocused(false)}
                   />
@@ -987,7 +747,8 @@ export default function LoginScreen() {
                       onPress={() => phoneOtpRef.current?.focus()}
                       style={[
                         styles.inputRow,
-                        phoneOtpFocused && styles.inputRowFocused,
+                        { borderWidth: 0, borderColor: 'transparent' },
+                        phoneOtpFocused && { shadowColor: 'transparent', backgroundColor: 'rgba(255, 255, 255, 0.08)' },
                       ]}
                     >
                       <Lock size={17} color={phoneOtpFocused ? '#00ea6b' : 'rgba(255, 255, 255, 0.5)'} strokeWidth={2} />
@@ -1024,8 +785,7 @@ export default function LoginScreen() {
                   </View>
                 </>
               )}
-            </>
-          )}
+
 
           {/* Action buttons */}
           <View style={[styles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
@@ -1040,18 +800,6 @@ export default function LoginScreen() {
             >
               <Text style={styles.signInBtnText}>SIGN IN</Text>
             </Pressable>
-  
-            {loginMethod !== 'phone' && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.outlineBtn,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => router.push('/(auth)/signup')}
-              >
-                <Text style={styles.outlineBtnText}>SIGN UP</Text>
-              </Pressable>
-            )}
           </View>
 
           <Pressable 
@@ -1130,16 +878,17 @@ const WebInput = React.forwardRef((props: any, ref: any) => {
         <TextInput
           ref={ref}
           style={{
-            borderWidth: 1.5,
+            borderWidth: 0.5,
             borderColor: 'rgba(255, 255, 255, 0.2)',
             borderRadius: 8,
+            height: 48,
+            ...props.style,
             paddingHorizontal: 10,
-            paddingVertical: 8,
             paddingRight: (showToggle || rightElement) ? 100 : 10,
             fontSize: 14,
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             color: '#FFFFFF',
-            fontWeight: '300',
+            fontWeight: '500',
             outlineStyle: 'none',
           } as any}
           placeholderTextColor="rgba(255, 255, 255, 0.4)"
@@ -1234,7 +983,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1254,7 +1003,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#FFFFFF',
     fontFamily: 'Inter',
-    fontWeight: '300',
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -1265,7 +1014,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#06392e',
     borderColor: '#00ea6b',
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderRadius: 10,
     height: 46,
     alignItems: 'center',
@@ -1360,7 +1109,7 @@ const webStyles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#06392e', 
     borderColor: '#00ea6b',
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderRadius: 10, 
     height: 48, 
     alignItems: 'center', 
