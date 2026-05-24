@@ -25,7 +25,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY, formatTime } from '@/utils/helpers';
 import { makeGroundPath } from '@/utils/groundSlug';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves, Lock } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ArrowLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target, Waves, Lock } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { useUI } from '@/contexts/UIContext';
@@ -1268,7 +1268,9 @@ export default function CheckoutScreen() {
                                 onPress={handleBack}
                                 style={{ marginBottom: 24 }}
                             >
-                                <RNText style={{ fontSize: 14, color: '#f8688a', fontWeight: '600', fontFamily: 'Inter' }}>{"< Back"}</RNText>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <ArrowLeft size={20} color="#f8688a" />
+                                </View>
                             </TouchableOpacity>
 
                             <RNText style={[styles.heroTitle, dynamicStyles.heroTitle, { color: '#01e669' }]}>
@@ -3208,7 +3210,7 @@ const styles = StyleSheet.create({
     cashAmountLabel: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#166534',
+        color: '#475569',
         marginBottom: 6,
         fontFamily: 'Inter',
         textTransform: 'uppercase',
@@ -3216,13 +3218,13 @@ const styles = StyleSheet.create({
     cashAmountInput: {
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
-        borderColor: '#86EFAC',
+        borderColor: '#E2E8F0',
         borderRadius: 12,
         paddingHorizontal: 12,
         height: 44,
         fontSize: 15,
-        fontWeight: '700',
-        color: '#14532D',
+        fontWeight: '600',
+        color: '#0F172A',
         fontFamily: 'Inter',
         ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
     },

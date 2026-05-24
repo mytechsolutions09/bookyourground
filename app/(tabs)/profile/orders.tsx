@@ -354,7 +354,7 @@ export default function UserOrdersScreen() {
             source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
             style={{ width: 80, height: 80, borderRadius: 8 }} 
           />
-          <div style={{ flex: 1, justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
             <View>
               <Text style={{ fontSize: 16, fontWeight: '600', color: '#0F1111', fontFamily: 'Inter' }}>{item.name}</Text>
               <Text style={{ fontSize: 14, color: '#64748B', fontFamily: 'Inter' }}>{item.category?.name || 'Equipment'}</Text>
@@ -368,7 +368,7 @@ export default function UserOrdersScreen() {
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'Inter' }}>View Product</Text>
               </TouchableOpacity>
             </View>
-          </div>
+          </View>
         </View>
       </TouchableOpacity>
     );

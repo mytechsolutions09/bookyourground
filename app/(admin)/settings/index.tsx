@@ -1,11 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
-import { Bell, Database, Shield, Mail } from 'lucide-react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Bell, Database, Shield, Mail, LogOut } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
+import { router } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminSettingsIndex() {
+  const { signOut } = useAuth();
+
   const content = (
     <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
       {Platform.OS === 'web' && (
@@ -68,6 +72,18 @@ export default function AdminSettingsIndex() {
       <Text style={styles.hint}>
         Use the subbar for Locations and Venue types used in booking filters.
       </Text>
+
+      {Platform.OS !== 'web' && (
+        <TouchableOpacity 
+          style={styles.signOutButton} 
+          onPress={() => {
+            void signOut().then(() => router.replace('/'));
+          }}
+        >
+          <LogOut size={20} color="#EF4444" />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 
@@ -146,5 +162,23 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontFamily: 'Inter',
     lineHeight: 18,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 32,
+    paddingVertical: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  signOutText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });

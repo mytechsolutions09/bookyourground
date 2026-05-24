@@ -526,27 +526,8 @@ function DashboardContent() {
   return (
     <View style={styles.nativeWrapper}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Dashboard" titleColor="#01b854" />
-        <View style={[styles.tabContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', borderWidth: 0 } as any]}>
-          <GlassButton
-            variant={activeTab === 'overview' ? 'white' : 'clear'}
-            size="sm"
-            pill
-            onClick={() => onTabPress('overview')}
-            style={{ flex: 1, height: 40 }}
-          >
-            <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>Overview</Text>
-          </GlassButton>
-          <GlassButton
-            variant={activeTab === 'activity' ? 'white' : 'clear'}
-            size="sm"
-            pill
-            onClick={() => onTabPress('activity')}
-            style={{ flex: 1, height: 40 }}
-          >
-            <Text style={[styles.tabText, activeTab === 'activity' && styles.activeTabText]}>Activity</Text>
-          </GlassButton>
-        </View>
+        <MobileAppNavbar title="Dashboard" titleColor="#0F1111" />
+
       </Animated.View>
 
       <AnimatedScrollView
@@ -559,7 +540,7 @@ function DashboardContent() {
         style={{ flex: 1 }}
       >
         {/* Slide 1: Overview */}
-        <View style={{ width }}>
+        <View style={{ width, flex: 1 }}>
           <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
@@ -630,13 +611,52 @@ function DashboardContent() {
                     </TouchableOpacity>
                   )}
                 </View>
+
+                {/* Recent Ground */}
+                <View style={[styles.contentCardSmall, styles.noContainer, width > 768 && styles.contentCardWide]}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
+                    <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                      <Text style={styles.cardActionText}>View</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {lastBooking ? (
+                    <TouchableOpacity 
+                      style={styles.recentGroundItem}
+                      onPress={() => router.push(makeGroundPath(lastBooking.ground) as any)}
+                    >
+                       <View style={styles.recentGroundImage}>
+                          {lastBooking.ground?.ground_images?.[0]?.image_url ? (
+                            <Image 
+                              source={{ uri: lastBooking.ground.ground_images[0].image_url }} 
+                              style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                            />
+                          ) : (
+                            <MapIcon size={24} color="#CBD5E1" />
+                          )}
+                       </View>
+                       <View>
+                          <Text style={styles.recentGroundName}>{lastBooking.ground?.name}</Text>
+                          <Text style={styles.recentGroundPrice}>₹{lastBooking.total_amount?.toLocaleString()} total</Text>
+                       </View>
+                    </TouchableOpacity>
+                  ) : (
+                     <TouchableOpacity 
+                        style={styles.emptyCardInner}
+                        onPress={() => router.push('/book-my-ground' as any)}
+                      >
+                       <Star size={32} color="#CBD5E1" />
+                       <Text style={styles.emptyCardText}>Explore venues</Text>
+                     </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
           </AnimatedScrollView>
         </View>
 
         {/* Slide 2: Activity/Stats */}
-        <View style={{ width }}>
+        <View style={{ width, flex: 1 }}>
           <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}

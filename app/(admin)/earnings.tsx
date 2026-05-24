@@ -253,7 +253,7 @@ function AdminEarningsInner() {
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, { backgroundColor: '#d9f99d' }]}>
               <Text style={styles.statLabel}>{isFiltered ? 'Owner Gross Revenue' : 'Total Platform Volume'}</Text>
-              <Text style={styles.statValue}>{formatCurrency(stats.totalEarnings)}</Text>
+              <Text style={styles.statValue} adjustsFontSizeToFit numberOfLines={1}>{formatCurrency(stats.totalEarnings)}</Text>
               <View style={styles.statTrend}>
                  <TrendingUp size={14} color="#043529" />
                  <Text style={styles.statTrendText}>{isFiltered ? selectedOwner?.full_name : 'Platform Wide'}</Text>
@@ -261,7 +261,7 @@ function AdminEarningsInner() {
             </View>
             <View style={[styles.statCard, { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#E9D5FF' }]}>
               <Text style={[styles.statLabel, { color: '#6D28D9' }]}>Platform Net Revenue</Text>
-              <Text style={[styles.statValue, { color: '#6D28D9' }]}>{formatCurrency(stats.totalPlatformRevenue || 0)}</Text>
+              <Text style={[styles.statValue, { color: '#6D28D9' }]} adjustsFontSizeToFit numberOfLines={1}>{formatCurrency(stats.totalPlatformRevenue || 0)}</Text>
               <View style={{ marginTop: 4 }}>
                  <Text style={{ fontSize: 10, color: '#7C3AED', fontWeight: '600' }}>Owner Comm: {formatCurrency(stats.totalOwnerFees || 0)}</Text>
                  <Text style={{ fontSize: 10, color: '#7C3AED', fontWeight: '600' }}>User Fees: {formatCurrency(stats.totalUserFees || 0)}</Text>
@@ -269,7 +269,7 @@ function AdminEarningsInner() {
             </View>
             <View style={[styles.statCard, { backgroundColor: '#F0F9FF' }]}>
               <Text style={[styles.statLabel, { color: '#0369A1' }]}>{isFiltered ? 'Withdrawable Balance' : 'Owner Net Pool'}</Text>
-              <Text style={[styles.statValue, { color: '#0369A1' }]}>{formatCurrency(stats.totalNet)}</Text>
+              <Text style={[styles.statValue, { color: '#0369A1' }]} adjustsFontSizeToFit numberOfLines={1}>{formatCurrency(stats.totalNet)}</Text>
               <View style={styles.statTrend}>
                  <TrendingUp size={14} color="#0369A1" />
                  <Text style={[styles.statTrendText, { color: '#0369A1' }]}>Payable to Owners</Text>
@@ -277,7 +277,7 @@ function AdminEarningsInner() {
             </View>
             <View style={[styles.statCard, { backgroundColor: '#F5F3FF' }]}>
               <Text style={[styles.statLabel, { color: '#6D28D9' }]}>Total Bookings</Text>
-              <Text style={[styles.statValue, { color: '#6D28D9' }]}>{stats.totalBookings}</Text>
+              <Text style={[styles.statValue, { color: '#6D28D9' }]} adjustsFontSizeToFit numberOfLines={1}>{stats.totalBookings}</Text>
               <View style={styles.statTrend}>
                  <TrendingUp size={14} color="#6D28D9" />
                  <Text style={[styles.statTrendText, { color: '#6D28D9' }]}>Completed</Text>
@@ -416,39 +416,37 @@ function AdminEarningsInner() {
       <View style={[styles.content, (isMobile || isSmallWeb) && { paddingLeft: 16, paddingRight: 16 }]}>
         {/* Header Row: Filter + Tabs */}
         <View style={[styles.headerRow, (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch' }]}>
-          <View style={styles.filterCard}>
-            <View style={styles.ownerPickerContainer}>
-              {IS_WEB ? (
-                <select
-                  value={selectedOwnerId}
-                  onChange={(e) => setSelectedOwnerId(e.target.value)}
-                  style={styles.webSelect}
+          <View style={{ width: 280 }}>
+            {IS_WEB ? (
+              <select
+                value={selectedOwnerId}
+                onChange={(e) => setSelectedOwnerId(e.target.value)}
+                style={styles.webSelect}
+              >
+                <option value="all">All Venue Owners</option>
+                {owners.map(o => (
+                  <option key={o.id} value={o.id}>{o.full_name} {o.business_name ? `(${o.business_name})` : ''}</option>
+                ))}
+              </select>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ownerPills}>
+                <TouchableOpacity 
+                  style={[styles.ownerPill, selectedOwnerId === 'all' && styles.ownerPillActive]}
+                  onPress={() => setSelectedOwnerId('all')}
                 >
-                  <option value="all">All Venue Owners</option>
-                  {owners.map(o => (
-                    <option key={o.id} value={o.id}>{o.full_name} {o.business_name ? `(${o.business_name})` : ''}</option>
-                  ))}
-                </select>
-              ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ownerPills}>
+                  <Text style={[styles.ownerPillText, selectedOwnerId === 'all' && styles.ownerPillTextActive]}>All Owners</Text>
+                </TouchableOpacity>
+                {owners.map(o => (
                   <TouchableOpacity 
-                    style={[styles.ownerPill, selectedOwnerId === 'all' && styles.ownerPillActive]}
-                    onPress={() => setSelectedOwnerId('all')}
+                    key={o.id}
+                    style={[styles.ownerPill, selectedOwnerId === o.id && styles.ownerPillActive]}
+                    onPress={() => setSelectedOwnerId(o.id)}
                   >
-                    <Text style={[styles.ownerPillText, selectedOwnerId === 'all' && styles.ownerPillTextActive]}>All Owners</Text>
+                    <Text style={[styles.ownerPillText, selectedOwnerId === o.id && styles.ownerPillTextActive]}>{o.full_name}</Text>
                   </TouchableOpacity>
-                  {owners.map(o => (
-                    <TouchableOpacity 
-                      key={o.id}
-                      style={[styles.ownerPill, selectedOwnerId === o.id && styles.ownerPillActive]}
-                      onPress={() => setSelectedOwnerId(o.id)}
-                    >
-                      <Text style={[styles.ownerPillText, selectedOwnerId === o.id && styles.ownerPillTextActive]}>{o.full_name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           <View style={styles.tabBar}>
@@ -618,7 +616,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 16,
     fontWeight: '800',
     color: '#043529',
     marginBottom: 8,

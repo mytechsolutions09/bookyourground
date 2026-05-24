@@ -2225,7 +2225,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#00ea6b',
     borderRadius: 3,
   },
   webTabContentArea: {
@@ -2362,7 +2362,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ECFDF5',
     alignItems: 'center',
     justifyContent: 'center',
   },

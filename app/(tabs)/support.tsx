@@ -347,7 +347,7 @@ export default function SupportScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="Contact Us" titleColor="#01b854" />
+      <MobileAppNavbar title="Contact Us" titleColor="#0F1111" />
       <View style={styles.nativeBody}>{mainContent}</View>
     </View>
   );

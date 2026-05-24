@@ -381,7 +381,10 @@ export default function ProductDetailScreen() {
 
   const renderMarkdown = (text: string) => {
     if (!text) return null;
-    const parts = text.split(/(\*\*.*?\*\*)/g);
+    const cleanedText = text.replace(/Fetched from Amazon:\s*https?:\/\/[^\s]+/gi, '').trim();
+    if (!cleanedText) return null;
+    
+    const parts = cleanedText.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return <Text key={i} style={{ fontWeight: '700', color: '#0F1111' }}>{part.slice(2, -2)}</Text>;
@@ -392,7 +395,10 @@ export default function ProductDetailScreen() {
 
   const renderTableMarkdown = (text: string) => {
     if (!text) return null;
-    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const cleanedText = text.replace(/Fetched from Amazon:\s*https?:\/\/[^\s]+/gi, '').trim();
+    if (!cleanedText) return null;
+    
+    const lines = cleanedText.split('\n').filter(line => line.trim() !== '');
     return (
       <View style={{ gap: 8 }}>
         {lines.map((line, index) => {
@@ -523,7 +529,6 @@ export default function ProductDetailScreen() {
 
           {/* Description */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>{renderMarkdown(product.description)}</Text>
           </View>
 
@@ -594,7 +599,7 @@ export default function ProductDetailScreen() {
                     </View>
                     <View style={{ padding: 12 }}>
                       <Text style={{ fontSize: 12, color: '#2b2f4b', marginBottom: 4, fontFamily: 'Inter', minHeight: 30 }} numberOfLines={2}>{item.name}</Text>
-                      <Text style={{ fontSize: 14, color: '#ff3564', fontWeight: '700', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 14, color: '#0F1111', fontWeight: '700', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -1028,7 +1033,7 @@ export default function ProductDetailScreen() {
                         </View>
                         <View style={{ paddingTop: 12 }}>
                           <Text style={{ fontSize: 14, color: '#007185', marginBottom: 4, fontFamily: 'Inter', minHeight: 40 }} numberOfLines={2}>{item.name}</Text>
-                          <Text style={{ fontSize: 18, color: '#B12704', fontWeight: '500', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
+                          <Text style={{ fontSize: 18, color: '#0F1111', fontWeight: '500', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
                         </View>
                       </TouchableOpacity>
                     ))}
@@ -1164,11 +1169,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   productName: {
-    fontSize: 26,
-    fontWeight: '300',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#2b2f4b',
     marginBottom: 12,
-    lineHeight: 32,
+    lineHeight: 26,
     fontFamily: 'Inter',
   },
   ratingRow: {

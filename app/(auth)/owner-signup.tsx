@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown, Eye, EyeOff, Smartphone } from 'lucide-react-native';
 import PasswordRequirement from '@/components/ui/PasswordRequirement';

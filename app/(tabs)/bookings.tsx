@@ -1161,7 +1161,7 @@ export default function BookingsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="My Bookings" titleColor="#01b854" lightBg />
+      <MobileAppNavbar title="My Bookings" titleColor="#0F1111" lightBg />
       <View style={styles.nativeBody}>
         {content}
         {datePickerModal}

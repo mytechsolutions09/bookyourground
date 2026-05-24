@@ -68,7 +68,7 @@ export default function ProfileScreen({
   isModal?: boolean; 
   onClose?: () => void;
 } = {}) {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
   const isUltraNarrow = width < 350;
@@ -722,6 +722,36 @@ export default function ProfileScreen({
     )}
     </View>
   );
+
+  if (!user && !loading) {
+    return (
+      <View style={[styles.nativeScreen, { flex: 1, backgroundColor: '#f8fafc' }]}>
+        <MobileAppNavbar 
+          title="PROFILE" 
+          titleColor="#0F172A" 
+          smallerTitle 
+          lightBg 
+        />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(1, 184, 84, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+            <User size={40} color="#01b854" />
+          </View>
+          <RNText style={{ fontSize: 24, fontWeight: '800', color: '#0f172a', marginBottom: 8, textAlign: 'center' }}>
+            Your Profile
+          </RNText>
+          <RNText style={{ fontSize: 16, color: '#64748b', textAlign: 'center', marginBottom: 32, lineHeight: 24 }}>
+            Sign in to view your profile details, manage your bookings, and access your wallet.
+          </RNText>
+          <TouchableOpacity 
+            style={{ width: '100%', backgroundColor: '#01b854', paddingVertical: 16, borderRadius: 16, alignItems: 'center', maxWidth: 350 }}
+            onPress={() => router.push('/(auth)/login' as any)}
+          >
+            <RNText style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>SIGN IN</RNText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (!profile) {
     return (
