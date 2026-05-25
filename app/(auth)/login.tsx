@@ -340,8 +340,12 @@ export default function LoginScreen() {
     }
 
     // Role-based defaults if no redirect path
-    if (Platform.OS === 'web' && profile.role === 'super_admin') {
-      router.replace('/(admin)/dashboard');
+    if (Platform.OS === 'web') {
+      if (profile.role === 'super_admin') {
+        router.replace('/(admin)/dashboard');
+      } else {
+        router.replace('/');
+      }
     } else {
       // On mobile, everyone (including admins) lands on the home discovery screen
       router.replace('/(tabs)/home_tab');
