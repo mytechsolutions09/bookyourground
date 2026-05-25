@@ -3068,7 +3068,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
                       
                       let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                      const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+                      const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
                       price = price * factor;
                       
                       const textVal = `${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`;

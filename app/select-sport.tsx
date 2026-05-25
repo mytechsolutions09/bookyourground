@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
   miniCardLoc: { fontSize: 10, color: '#64748B' },
   miniCardPrice: { fontSize: 13, fontWeight: '900', color: '#00ea6b', marginTop: 6 },
   noResults: { fontSize: 18, color: '#94A3B8', fontWeight: '700' },
-  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 100 : 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 100 : 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 },
   dotLight: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   activeDotLight: { backgroundColor: '#00ea6b', width: 32, borderColor: '#00ea6b' },
   dotDark: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(4,53,41,0.15)' },
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
   cardFullUnit: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
   cardFullBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   cardFullBadgeText: { fontSize: 12, fontWeight: '800', color: '#059669' },
-  dotContainerResults: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 20 },
+  dotContainerResults: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, paddingBottom: 20 },
 
   // MODAL STYLES
   modalOverlay: { 
