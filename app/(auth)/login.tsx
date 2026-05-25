@@ -15,12 +15,14 @@ import {
   ActivityIndicator,
   Modal,
   ImageBackground,
+  Animated,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, CheckCircle, Send, Smartphone } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { generateOTP, sendSMSOTP } from '@/utils/sms';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -41,6 +43,19 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   
+  // Separate refs for the Web OTP layout
+  const webOtpRefs = [
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+    React.useRef<TextInput>(null),
+  ];
+
+  // Animated shake for email OTP error
+  const shakeAnimation = React.useRef(new Animated.Value(0)).current;
+
   // Inline Phone OTP Login States
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
@@ -460,151 +475,227 @@ export default function LoginScreen() {
     </Modal>
   );
 
-  // Web layout (unchanged split design)
+  // Web layout (Flipkart style split design)
   if (os === 'web') {
     return (
-      <View style={webStyles.container}>
-        <ImageBackground 
-          source={require('../../assets/signup-stadium.png')}
-          style={StyleSheet.absoluteFillObject}
-          resizeMode="cover"
-        >
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(4,53,41,0.4)' }]} />
-          
-          <ScrollView contentContainerStyle={webStyles.scrollContent}>
-            <View style={webStyles.formContainer}>
-              <BlurView intensity={Platform.OS === 'web' ? 40 : 25} tint="dark" style={webStyles.glassCard}>
-                <View style={webStyles.header}>
-                  <TouchableOpacity onPress={() => router.replace('/')}>
+      <LinearGradient 
+        colors={['#00ea6b', '#134d40', '#06392e']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={webStyles.container}
+      >
+        <ScrollView contentContainerStyle={webStyles.scrollContent}>
+          <View style={[webStyles.formContainer, width < 768 && { padding: 16 }]}>
+            <View style={[webStyles.glassCard, width < 768 && { flexDirection: 'column', height: 'auto', minHeight: 400 }]}>
+              
+              {/* Left Pane (Hidden on Mobile/Tablet) */}
+              {width >= 768 && (
+                <View style={webStyles.leftPane}>
+                  <View>
+                    <Text style={webStyles.leftPaneTitle}>Login</Text>
+                    <Text style={webStyles.leftPaneSubtitle}>
+                      Get access to your Bookings,{'\n'}Favorites and Profile
+                    </Text>
+                  </View>
+                  
+                  <View style={webStyles.logoContainer}>
                     <Image
                       source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                      style={[webStyles.logoImage, width < 480 && { width: 180, height: 45 }]}
+                      style={webStyles.logoImage}
                       resizeMode="contain"
                     />
-                  </TouchableOpacity>
-
-                  <Text style={webStyles.formSubtitle}>Sign in to your account</Text>
+                  </View>
                 </View>
-  
-                <View style={webStyles.form}>
+              )}
 
-                    <>
-                       <WebInput
-                        label="Phone Number"
-                        value={phone}
-                        onChangeText={(t: string) => {
-                          setPhone(t);
-                          if (phoneOtpSent) setPhoneOtpSent(false);
-                          if (otpSuccessMessage) setOtpSuccessMessage('');
-                        }}
-                        placeholder=""
-                        keyboardType="phone-pad"
-                        autoCapitalize="none"
-                        rightElement={
-                          !phoneOtpSent ? (
-                            <TouchableOpacity
-                              onPress={sendPhoneOtp}
-                              disabled={loading}
-                              style={{
-                                backgroundColor: '#01b854',
-                                paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 6,
+              {/* Right Pane */}
+              <View style={[webStyles.rightPane, width < 768 && { flex: 1, padding: 24, alignItems: 'center' }]}>
+                {width < 768 && (
+                  <View style={{ alignItems: 'center', marginBottom: 32 }}>
+                    <Image
+                      source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                      style={{ width: 180, height: 45, marginBottom: 12 }}
+                      resizeMode="contain"
+                    />
+                    <Text style={{ fontSize: 24, fontWeight: '800', fontFamily: 'Inter', color: '#0F172A' }}>Login</Text>
+                  </View>
+                )}
+                <View style={[webStyles.form, width < 768 && { width: '100%', maxWidth: 360 }]}>
+                  <>
+                    {!phoneOtpSent ? (
+                      <>
+                        <View style={{ marginBottom: 10 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '400', color: '#64748B', marginBottom: 0, marginTop: 4, fontFamily: 'Inter' }}>
+                            Enter Phone Number
+                          </Text>
+                          <View style={{ 
+                            flexDirection: 'row', 
+                            alignItems: 'center', 
+                            borderBottomWidth: 2, 
+                            borderBottomColor: '#cbd5e1', 
+                            height: 48 
+                          }}>
+                            <Text style={{ fontSize: 14, fontWeight: '500', color: '#0F172A', marginRight: 8, marginTop: 2, fontFamily: 'Inter' }}>
+                              +91
+                            </Text>
+                            <TextInput
+                              value={phone}
+                              onChangeText={(t: string) => {
+                                const numericText = t.replace(/[^0-9]/g, '');
+                                setPhone(numericText);
+                                if (phoneOtpSent) setPhoneOtpSent(false);
+                                if (otpSuccessMessage) setOtpSuccessMessage('');
                               }}
-                            >
-                              {loading ? (
-                                <ActivityIndicator size="small" color="#FFF" />
-                              ) : (
-                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 11 }}>SEND OTP</Text>
-                              )}
-                            </TouchableOpacity>
-                          ) : (
-                            <View style={{ paddingRight: 6 }}>
-                              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 11 }}>SENT</Text>
-                            </View>
-                          )
-                        }
-                      />
-
-                      {!phoneOtpSent ? (
-                        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, marginTop: 4, marginBottom: 20 }}>
-                          Enter your phone number and tap SEND OTP to receive your 6-digit verification code.
-                        </Text>
-                      ) : (
-                        <>
-                          {otpSuccessMessage ? (
-                            <View style={{
-                              backgroundColor: 'rgba(1, 184, 84, 0.15)',
-                              borderWidth: 1,
-                              borderColor: 'rgba(1, 184, 84, 0.3)',
-                              borderRadius: 8,
-                              padding: 10,
-                              marginBottom: 12,
-                            }}>
-                              <Text style={{ color: '#00ea6b', fontSize: 12, fontWeight: '600', lineHeight: 16 }}>
-                                ✓ {otpSuccessMessage}
-                              </Text>
-                            </View>
-                          ) : null}
-
-                          <WebInput
-                            ref={phoneOtpRef}
-                            label="Enter 6-Digit OTP"
-                            value={phoneOtpVal}
-                            onChangeText={setPhoneOtpVal}
-                            placeholder=""
-                            keyboardType="number-pad"
-                            maxLength={6}
-                          />
-
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -4, marginBottom: 20 }}>
-                            <TouchableOpacity
-                              onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
-                              style={{ opacity: phoneOtpTimer > 0 ? 0.6 : 1 }}
-                            >
-                              <Text style={{ color: '#01b854', fontWeight: '700', fontSize: 13 }}>
-                                {phoneOtpTimer > 0 ? `Resend in ${phoneOtpTimer}s` : 'Resend OTP'}
-                              </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => setPhoneOtpSent(false)}>
-                              <Text style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '600', fontSize: 13 }}>
-                                Change Phone
-                              </Text>
-                            </TouchableOpacity>
+                              keyboardType="phone-pad"
+                              maxLength={10}
+                              style={{
+                                flex: 1,
+                                height: 48,
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: '500',
+                                color: '#0F172A',
+                                backgroundColor: 'transparent',
+                                outlineStyle: 'none',
+                                outline: 'none',
+                                outlineWidth: 0,
+                                boxShadow: 'none',
+                                borderWidth: 0,
+                                padding: 0,
+                                marginTop: 2,
+                              } as any}
+                            />
                           </View>
-                        </>
-                      )}
-                    </>
+                        </View>
+                        <Text style={webStyles.termsText}>
+                          By continuing, you agree to BookYourGround's{' '}
+                          <Text 
+                            style={[webStyles.termsLink, { cursor: 'pointer' } as any]} 
+                            onPress={() => router.push('/terms' as any)}
+                          >
+                            Terms of Use
+                          </Text>{' '}
+                          and{' '}
+                          <Text 
+                            style={[webStyles.termsLink, { cursor: 'pointer' } as any]} 
+                            onPress={() => router.push('/privacy' as any)}
+                          >
+                            Privacy Policy
+                          </Text>.
+                        </Text>
+                      </>
+                    ) : (
+                      <View style={{ alignItems: 'center', marginBottom: 24, width: '100%' }}>
+                        <Text style={{ fontSize: 15, color: '#334155', fontFamily: 'Inter', marginBottom: 4 }}>
+                          Please enter the OTP sent to
+                        </Text>
+                        <Text style={{ fontSize: 15, color: '#0F172A', fontFamily: 'Inter', fontWeight: '500', marginBottom: 24 }}>
+                          {phone}.{' '}
+                          <Text 
+                            style={{ color: '#ff611d', fontWeight: '600', cursor: 'pointer' } as any}
+                            onPress={() => setPhoneOtpSent(false)}
+                          >
+                            Change
+                          </Text>
+                        </Text>
 
+                        {/* OTP Boxes */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', height: 60, marginBottom: 16 }}>
+                          {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <TextInput
+                              key={i}
+                              ref={webOtpRefs[i]}
+                              value={phoneOtpVal[i] || ''}
+                              onChangeText={(text) => {
+                                const char = text.slice(-1);
+                                let newVal = phoneOtpVal.split('');
+                                if (char) {
+                                  newVal[i] = char;
+                                } else {
+                                  newVal[i] = '';
+                                }
+                                const resultingOtp = newVal.join('').substring(0, 6);
+                                setPhoneOtpVal(resultingOtp);
+                                
+                                // Automatically move focus to next input
+                                if (char && i < 5) {
+                                  webOtpRefs[i + 1].current?.focus();
+                                }
+                              }}
+                              onKeyPress={({ nativeEvent }) => {
+                                if (nativeEvent.key === 'Backspace' && !phoneOtpVal[i] && i > 0) {
+                                  webOtpRefs[i - 1].current?.focus();
+                                }
+                              }}
+                              keyboardType="number-pad"
+                              maxLength={1}
+                              style={{
+                                width: '15%',
+                                height: 50,
+                                borderTopWidth: 0,
+                                borderLeftWidth: 0,
+                                borderRightWidth: 0,
+                                borderBottomWidth: 2,
+                                borderColor: phoneOtpVal[i] ? '#0F172A' : '#cbd5e1',
+                                textAlign: 'center',
+                                fontSize: 24, 
+                                fontWeight: '600',
+                                color: '#0F172A',
+                                outlineStyle: 'none',
+                                outline: 'none',
+                                outlineWidth: 0,
+                                boxShadow: 'none',
+                              } as any}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
 
-
-  
-
-  
                   <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
                       style={[webStyles.button, loading && { opacity: 0.7 }]}
-                      onPress={handleLogin}
+                      onPress={!phoneOtpSent ? sendPhoneOtp : handleLogin}
                       disabled={loading}
                     >
-                      <Text style={webStyles.buttonText}>{isNewUser ? 'SIGN UP' : 'SIGN IN'}</Text>
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={webStyles.buttonText}>{!phoneOtpSent ? 'Request OTP' : 'Verify'}</Text>
+                      )}
                     </TouchableOpacity>
                   </View>
-
-                  <TouchableOpacity 
-                    onPress={() => router.replace('/(tabs)/home_tab' as any)}
-                    style={{ marginTop: 24, alignItems: 'center', paddingVertical: 8 }}
-                  >
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14, fontFamily: 'Inter' }}>
-                      SKIP FOR NOW
-                    </Text>
-                  </TouchableOpacity>
+                  
+                  {phoneOtpSent && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
+                      <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'Inter' }}>
+                        Not received your code?{' '}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
+                        style={{ opacity: phoneOtpTimer > 0 ? 0.5 : 1 }}
+                      >
+                        <Text style={{ color: '#ff611d', fontWeight: '700', fontSize: 13, fontFamily: 'Inter' }}>
+                          Resend code
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  
+                  <View style={webStyles.createAccountContainer}>
+                    <TouchableOpacity onPress={() => router.replace('/(tabs)/home_tab' as any)}>
+                      <Text style={webStyles.createAccountText}>
+                        Skip for now? Continue to Site
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </BlurView>
+              </View>
+
             </View>
-          </ScrollView>
-        </ImageBackground>
+          </View>
+        </ScrollView>
 
         {/* Email Not Confirmed Modal */}
         <Modal
@@ -629,7 +720,7 @@ export default function LoginScreen() {
           </View>
         </Modal>
         {renderOtpModal()}
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -882,28 +973,40 @@ export default function LoginScreen() {
 }
 
 const WebInput = React.forwardRef((props: any, ref: any) => {
-  const { label, showToggle, onToggle, isToggled, rightElement, ...rest } = props;
+  const { label, showToggle, onToggle, isToggled, rightElement, leftElement, lightMode, style, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '400', color: '#FFFFFF', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '400', color: lightMode ? '#64748B' : '#FFFFFF', marginBottom: 0, marginTop: 4, fontFamily: 'Inter' }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
+        {leftElement && (
+          <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: 1 }}>
+            {leftElement}
+          </View>
+        )}
         <TextInput
           ref={ref}
-          style={{
-            borderWidth: 0.5,
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: 8,
-            height: 48,
-            ...props.style,
-            paddingHorizontal: 10,
-            paddingRight: (showToggle || rightElement) ? 100 : 10,
-            fontSize: 14,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: '#FFFFFF',
-            fontWeight: '500',
-            outlineStyle: 'none',
-          } as any}
-          placeholderTextColor="rgba(255, 255, 255, 0.4)"
+          style={[
+            {
+              borderWidth: 0.5,
+              borderColor: lightMode ? '#cbd5e1' : 'rgba(255, 255, 255, 0.2)',
+              borderRadius: 8,
+              height: 48,
+              paddingHorizontal: 10,
+              paddingLeft: leftElement ? 28 : 10,
+              paddingRight: (showToggle || rightElement) ? 100 : 10,
+              fontSize: 14,
+              fontFamily: 'Inter',
+              backgroundColor: lightMode ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)',
+              color: lightMode ? '#0F172A' : '#FFFFFF',
+              fontWeight: '500',
+              outlineStyle: 'none',
+              outline: 'none',
+              outlineWidth: 0,
+              boxShadow: 'none',
+            } as any,
+            style
+          ]}
+          placeholderTextColor={lightMode ? "#94a3b8" : "rgba(255, 255, 255, 0.4)"}
           {...rest}
         />
         {showToggle && (
@@ -1075,90 +1178,125 @@ const styles = StyleSheet.create({
 
 // --- Web styles (matching original web layout exactly) ---
 const webStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#043529' },
-  scrollContent: { flexGrow: 1 },
+  container: { flex: 1, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { flexGrow: 1, width: '100%', justifyContent: 'center', alignItems: 'center' },
   formContainer: { 
-    flex: 1, 
     width: '100%', 
-    minHeight: '100vh' as any,
-    paddingHorizontal: 24, 
-    paddingVertical: 40, 
+    height: '100%',
+    padding: 24, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   glassCard: { 
     width: '100%', 
-    maxWidth: 420, 
-    backgroundColor: 'rgba(15, 23, 42, 0.4)', 
-    borderRadius: 32, 
-    paddingHorizontal: Platform.select({ web: 32, default: 24 }), 
-    paddingVertical: 32, 
+    maxWidth: 850, 
+    height: 550,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', 
+    borderRadius: 12,
+    flexDirection: 'row',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 30,
+    elevation: 20,
     overflow: 'hidden',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(20px)' }
+    }) as any,
   },
-  header: { marginBottom: 24, alignItems: 'center' },
-  logoImage: { width: 220, height: 55, marginBottom: 8 },
+  leftPane: {
+    flex: 0.4,
+    backgroundColor: '#06392e',
+    padding: 40,
+    justifyContent: 'space-between',
+  },
+  rightPane: {
+    flex: 0.6,
+    padding: 48,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
+  leftPaneTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    marginBottom: 16,
+  },
+  leftPaneSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 24,
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  logoImage: { 
+    width: 200, 
+    height: 50, 
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
   formTitle: { 
     fontSize: 26, 
     fontWeight: '900', 
     color: '#0F172A', 
-    marginTop: 4, 
     marginBottom: 0,
     fontFamily: 'Inter',
   },
   formSubtitle: { 
     fontSize: 14, 
-    color: '#FFFFFF', 
-    marginTop: 4, 
+    color: '#64748B', 
+    marginTop: 8, 
+    marginBottom: 32,
     fontFamily: 'Inter' 
   },
-  form: { },
+  form: { 
+    width: '100%',
+  },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: '#06392e', 
-    borderColor: '#00ea6b',
-    borderWidth: 0.5,
-    borderRadius: 10, 
+    backgroundColor: '#ff611d', // Flipkart orange style, or we can use site green: #00ea6b
+    borderRadius: 4, 
     height: 48, 
     alignItems: 'center', 
     justifyContent: 'center',
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
+    shadowColor: '#ff611d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   buttonText: { 
     fontSize: 15, 
     fontWeight: '800', 
-    color: '#00ea6b', 
-    letterSpacing: -0.3,
-    fontFamily: 'Inter',
-  },
-  outlineButton: { 
-    flex: 1, 
-    borderRadius: 10, 
-    height: 48, 
-    borderWidth: 1.5, 
-    borderColor: 'rgba(255, 255, 255, 0.4)', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
-  },
-  outlineButtonText: { 
-    fontSize: 14, 
-    fontWeight: '700', 
     color: '#FFFFFF', 
-    textTransform: 'uppercase' as any,
+    letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
-  forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
-  forgotText: { fontSize: 13, fontWeight: '700', color: '#01b854', fontFamily: 'Inter' },
+  termsText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 24,
+    fontFamily: 'Inter',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#01b854',
+    fontWeight: '600',
+  },
+  createAccountContainer: {
+    marginTop: 'auto', // Pushes it to the bottom
+    paddingTop: 32,
+    alignItems: 'center',
+  },
+  createAccountText: {
+    color: '#01b854',
+    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: 'Inter',
+  },
 });
 
 const modalStyles = StyleSheet.create({
