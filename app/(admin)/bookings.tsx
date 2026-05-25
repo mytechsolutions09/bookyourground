@@ -31,6 +31,7 @@ export default function AdminBookingsScreen() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [currentQueryCount, setCurrentQueryCount] = useState(0);
   const PAGE_SIZE = 20;
 
   const [totalDbCount, setTotalDbCount] = useState(0);
@@ -444,7 +445,7 @@ export default function AdminBookingsScreen() {
             ground_images(*)
           ),
           user:profiles(full_name, phone)
-        `);
+        `, { count: 'exact' });
       // Apply database-level ordering based on sortKey and sortAsc
       if (sortKey === 'booked_at') {
         query = query.order('created_at', { ascending: sortAsc });
@@ -501,9 +502,11 @@ export default function AdminBookingsScreen() {
         query = query.lte('booking_date', endStr);
       }
 
-      const { data, error } = await query.range(from, to);
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
+      
+      if (count !== null) setCurrentQueryCount(count);
       
       let newBatch = (data || []) as BookingWithDetails[];
 
@@ -1297,23 +1300,32 @@ export default function AdminBookingsScreen() {
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => loadBookings(0, false)} />
         }
-        ListFooterComponent={() => (
-          hasMore ? (
-            <TouchableOpacity 
-              style={styles.loadMoreBtn} 
-              onPress={() => loadBookings(page + 1, true)}
-              disabled={loadingMore}
-            >
-              {loadingMore ? (
-                <Text style={styles.loadMoreText}>LOADING...</Text>
-              ) : (
-                <Text style={styles.loadMoreText}>LOAD MORE BOOKINGS</Text>
-              )}
-            </TouchableOpacity>
-          ) : bookings.length > 0 ? (
-            <Text style={styles.noMoreText}>That's all for now! No more bookings to load.</Text>
-          ) : null
-        )}
+        ListFooterComponent={() => {
+          const totalPages = Math.ceil(currentQueryCount / PAGE_SIZE) || 1;
+          return (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity 
+                style={[styles.paginationBtn, page === 0 && styles.paginationBtnDisabled]} 
+                onPress={() => loadBookings(page - 1, false)}
+                disabled={page === 0 || loading}
+              >
+                <Text style={[styles.paginationBtnText, page === 0 && styles.paginationBtnTextDisabled]}>Previous</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.paginationInfo}>
+                Page {page + 1} of {totalPages}
+              </Text>
+
+              <TouchableOpacity 
+                style={[styles.paginationBtn, (!hasMore || page >= totalPages - 1) && styles.paginationBtnDisabled]} 
+                onPress={() => loadBookings(page + 1, false)}
+                disabled={!hasMore || page >= totalPages - 1 || loading}
+              >
+                <Text style={[styles.paginationBtnText, (!hasMore || page >= totalPages - 1) && styles.paginationBtnTextDisabled]}>Next</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No bookings found</Text>
@@ -1782,31 +1794,38 @@ const styles = StyleSheet.create({
     color: '#166534',
     fontWeight: '700',
   },
-  loadMoreBtn: {
-    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
-    borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : '#00ea6b',
-    borderRadius: 12,
-    paddingVertical: 16,
+  paginationContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    paddingVertical: 20,
     marginBottom: 40,
+    gap: 16,
   },
-  loadMoreText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: IS_WEB ? '#111827' : '#00ea6b',
-    letterSpacing: 1,
+  paginationBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  noMoreText: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    fontSize: 12,
+  paginationBtnDisabled: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#F3F4F6',
+  },
+  paginationBtnText: {
+    fontSize: 13,
     fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 40,
-    letterSpacing: 1,
+    color: '#111827',
+  },
+  paginationBtnTextDisabled: {
+    color: '#9CA3AF',
+  },
+  paginationInfo: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   dateFilterBtn: {
     flexDirection: 'row',

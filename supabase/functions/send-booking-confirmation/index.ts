@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib"
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -313,6 +314,50 @@ serve(async (req) => {
       </html>
     `;
 
+    // 3.5 Generate PDF Receipt
+    let pdfAttachment = null;
+    if (!isCancelled) {
+      try {
+        const pdfDoc = await PDFDocument.create();
+        const page = pdfDoc.addPage([600, 700]);
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+        page.drawText('BOOK YOUR GROUND', { x: 50, y: 640, size: 22, font: boldFont, color: rgb(0.015, 0.207, 0.16) });
+        page.drawText('BOOKING RECEIPT', { x: 50, y: 590, size: 16, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
+        page.drawLine({ start: { x: 50, y: 575 }, end: { x: 550, y: 575 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        const startY = 540;
+        const lineSpacing = 32;
+
+        const drawRow = (label, value, y) => {
+          page.drawText(label, { x: 50, y, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
+          page.drawText(String(value), { x: 200, y, size: 12, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+        };
+
+        drawRow('Booking ID:', `#${record.id.substring(0, 8).toUpperCase()}`, startY);
+        drawRow('Player Name:', userFullName, startY - lineSpacing);
+        drawRow('Date:', record.booking_date.substring(0, 10), startY - lineSpacing * 2);
+        drawRow('Time:', `${record.start_time.split(':').slice(0, 2).join(':')} - ${record.end_time.split(':').slice(0, 2).join(':')}`, startY - lineSpacing * 3);
+        drawRow('Venue:', ground.name, startY - lineSpacing * 4);
+        drawRow('Location:', `${ground.address}, ${ground.city}, ${ground.state}`, startY - lineSpacing * 5);
+        drawRow('Payment Method:', record.payment_method === 'cash' ? 'Cash at Venue' : 'Online Payment', startY - lineSpacing * 6);
+        
+        page.drawLine({ start: { x: 50, y: startY - lineSpacing * 7 + 10 }, end: { x: 550, y: startY - lineSpacing * 7 + 10 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        page.drawText('Total Paid:', { x: 50, y: startY - lineSpacing * 7 - 25, size: 14, font: boldFont });
+        page.drawText(`Rs ${record.total_charged || record.total_amount}`, { x: 450, y: startY - lineSpacing * 7 - 25, size: 14, font: boldFont, color: rgb(0.007, 0.768, 0.352) });
+
+        const pdfBytes = await pdfDoc.saveAsBase64();
+        pdfAttachment = {
+          filename: `Booking_Receipt_${record.id.substring(0, 8).toUpperCase()}.pdf`,
+          content: pdfBytes,
+        };
+      } catch (pdfErr) {
+        console.error('Error generating PDF receipt:', pdfErr);
+      }
+    }
+
     // 4. Send Emails in Parallel
     const emailPromises = [
       fetch('https://api.resend.com/emails', {
@@ -328,6 +373,7 @@ serve(async (req) => {
             ? `Cancelled: Your booking at ${ground.name}`
             : `Confirmed: Your session at ${ground.name}`,
           html: playerHtml,
+          ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
         }),
       })
     ];

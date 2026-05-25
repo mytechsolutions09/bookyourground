@@ -101,7 +101,7 @@ export default function NotFoundScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout isNotFoundPage>{content}</WebLayout>;
   }
 
   return (
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#043529',
-    borderRadius: 20,
     overflow: 'hidden',
   },
   bgImage: {
