@@ -248,15 +248,45 @@ export default function ProfileScreen({
   const profileBody = (
     <View style={[styles.content, isUltraNarrow && { paddingHorizontal: 12, paddingTop: 10 }]}>
       {(!isCompact && isWeb) && (
-        <ProfileHeaderTabs
-          themeAccent={themeAccent}
-          themeText={themeText}
-          isCompact={isCompact}
-        />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: 24 }}>
+          <ProfileHeaderTabs
+            themeAccent={themeAccent}
+            themeText={themeText}
+            isCompact={isCompact}
+            style={{ marginBottom: 0, borderBottomWidth: 0, flex: 1 }}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingRight: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)', paddingBottom: 12 }}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <RNText style={{ fontSize: 16, fontWeight: '600', color: '#0F172A' }}>{getFormattedName(profile?.full_name)}</RNText>
+              <RNText style={{ fontSize: 12, color: '#64748B' }}>{profile?.role === 'ground_owner' ? 'Venue Owner' : 'Player'}</RNText>
+            </View>
+            <TouchableOpacity 
+              activeOpacity={0.8} 
+              onPress={pickImage} 
+              disabled={uploading}
+              style={{ position: 'relative' }}
+            >
+              <Image
+                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
+                style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#F1F5F9' }}
+              />
+              {uploading ? (
+                <View style={{ position: 'absolute', bottom: -4, right: -4, backgroundColor: '#00ea6b', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }}>
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                </View>
+              ) : (
+                <View style={{ position: 'absolute', bottom: -4, right: -4, backgroundColor: '#00ea6b', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }}>
+                  <Camera size={12} color="#FFFFFF" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {/* 1. PROFILE CARD */}
-      <View style={[
+      {!isWeb && (
+        <View style={[
         styles.profileCardNew, 
         (profile?.role === 'ground_owner' || isSuperAdmin) && !isCompact && styles.profileCardOwner,
         isModal && styles.noContainer, 
@@ -308,6 +338,7 @@ export default function ProfileScreen({
           </View>
         </View>
       </View>
+      )}
 
       {/* 2. ADMIN HUB (Grid) */}
       {isSuperAdmin && (
@@ -371,7 +402,7 @@ export default function ProfileScreen({
             <View style={styles.hubIconCircle}>
               <ShoppingCart size={24} color="#64748B" />
             </View>
-            <RNText style={styles.hubCardText}>Shop Orders</RNText>
+            <RNText style={styles.hubCardText}>Orders</RNText>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -654,7 +685,7 @@ export default function ProfileScreen({
         >
           <View style={styles.rowLeft}>
             <LayoutDashboard size={20} color="#64748B" />
-            <RNText style={styles.rowText}>My Dashboard</RNText>
+            <RNText style={styles.rowText}>Dashboard</RNText>
           </View>
         </TouchableOpacity>
 
@@ -664,7 +695,7 @@ export default function ProfileScreen({
         >
           <View style={styles.rowLeft}>
             <Trophy size={20} color="#64748B" />
-            <RNText style={styles.rowText}>My Bookings</RNText>
+            <RNText style={styles.rowText}>Bookings</RNText>
           </View>
         </TouchableOpacity>
 
@@ -674,7 +705,7 @@ export default function ProfileScreen({
         >
           <View style={styles.rowLeft}>
             <Star size={20} color="#64748B" />
-            <RNText style={styles.rowText}>My Favourites</RNText>
+            <RNText style={styles.rowText}>Favourites</RNText>
           </View>
         </TouchableOpacity>
 
@@ -724,6 +755,7 @@ export default function ProfileScreen({
   );
 
   if (!user && !loading) {
+
     return (
       <View style={[styles.nativeScreen, { flex: 1, backgroundColor: '#f8fafc' }]}>
         <MobileAppNavbar 
@@ -754,7 +786,7 @@ export default function ProfileScreen({
   }
 
   if (!profile) {
-    return (
+    const SkeletonContent = () => (
       <View style={styles.nativeScreen}>
         <MobileAppNavbar 
           title="PROFILE" 
@@ -786,26 +818,45 @@ export default function ProfileScreen({
           }
         />
         <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
-          <View style={{ padding: 16, gap: 16 }}>
-            {/* Profile Card Skeleton */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#E2E8F0' }} />
-              <View style={{ flex: 1, gap: 8 }}>
-                <View style={{ width: '60%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
-                <View style={{ width: '40%', height: 12, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+          {!loading ? (
+            <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center', marginTop: 40 }}>
+              <Info size={48} color="#64748B" style={{ marginBottom: 16 }} />
+              <RNText style={{ fontSize: 18, fontWeight: '600', color: '#0F172A', marginBottom: 8 }}>Profile Not Found</RNText>
+              <RNText style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 24 }}>
+                We couldn't load your profile information. This may happen if your account is in an inconsistent state.
+              </RNText>
+              <Button title="Sign Out" onPress={handleSignOut} variant="primary" />
+            </View>
+          ) : (
+            <View style={{ padding: 16, gap: 16 }}>
+              {/* Profile Card Skeleton */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#E2E8F0' }} />
+                <View style={{ flex: 1, gap: 8 }}>
+                  <View style={{ width: '60%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                  <View style={{ width: '40%', height: 12, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                </View>
+              </View>
+              
+              {/* Tabs Skeleton */}
+              <View style={{ height: 200, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 12 }}>
+                <View style={{ width: '30%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
+                <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
+                <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
               </View>
             </View>
-            
-            {/* Tabs Skeleton */}
-            <View style={{ height: 200, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 12 }}>
-              <View style={{ width: '30%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
-              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
-              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
-              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
-            </View>
-          </View>
+          )}
         </ScrollView>
       </View>
+    );
+
+    return (Platform.OS === 'web' && !isCompact) ? (
+      <WebLayout noCard>
+        <SkeletonContent />
+      </WebLayout>
+    ) : (
+      <SkeletonContent />
     );
   }
 

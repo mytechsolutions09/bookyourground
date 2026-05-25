@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   toggleBtnTxtActive: {
-    color: '#00ea6b',
+    color: '#475569',
     fontWeight: '700',
   },
   btnContent: {

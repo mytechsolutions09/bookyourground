@@ -17,8 +17,9 @@ function UserSettingsInner() {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const { user, profile, updateProfile, signOut } = useAuth();
-  const [fullName, setFullName] = useState(profile?.full_name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [fullName, setFullName] = useState(profile?.full_name?.toUpperCase() === 'PLAYER' ? '' : (profile?.full_name || ''));
+  const isGeneratedEmail = (e?: string) => e ? (e.startsWith('user_') && e.endsWith('@bookyourground.com')) : false;
+  const [email, setEmail] = useState(isGeneratedEmail(user?.email) ? '' : (user?.email || ''));
   const [phone, setPhone] = useState(profile?.phone || '');
   const [teamName, setTeamName] = useState(profile?.team_name || '');
   const [submitting, setSubmitting] = useState(false);
@@ -38,11 +39,38 @@ function UserSettingsInner() {
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    
+    const executeDeletion = async () => {
+      try {
+        const { error } = await supabase.from('account_deletion_requests').insert({ user_id: user.id });
+        if (error && error.code !== '23505') {
+          // 23505 is unique violation (already requested)
+          throw error;
+        }
+        
+        if (IS_WEB) {
+          alert('Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
+          void signOut().then(() => router.replace('/'));
+        } else {
+          Alert.alert('Request Sent', 'Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.', [
+            { text: 'OK', onPress: () => void signOut().then(() => router.replace('/')) }
+          ]);
+        }
+      } catch (err: any) {
+        console.error('Deletion request error:', err);
+        if (IS_WEB) {
+          alert('Failed to submit request. Please try again or contact support.');
+        } else {
+          Alert.alert('Error', 'Failed to submit request. Please try again or contact support.');
+        }
+      }
+    };
+
     if (IS_WEB) {
       if (confirm('Are you sure you want to delete your account? This action is permanent and will delete all your data.')) {
-        alert('Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
-        void signOut().then(() => router.replace('/'));
+        await executeDeletion();
       }
     } else {
       Alert.alert(
@@ -54,8 +82,7 @@ function UserSettingsInner() {
             text: 'Delete Permanently',
             style: 'destructive',
             onPress: () => {
-              Alert.alert('Request Sent', 'Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
-              void signOut().then(() => router.replace('/'));
+              void executeDeletion();
             },
           },
         ]
@@ -99,12 +126,12 @@ function UserSettingsInner() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name);
+      setFullName(profile.full_name?.toUpperCase() === 'PLAYER' ? '' : (profile.full_name || ''));
       setPhone(profile.phone || '');
       setTeamName(profile.team_name || '');
     }
     if (user) {
-      setEmail(user.email || '');
+      setEmail(isGeneratedEmail(user.email) ? '' : (user.email || ''));
     }
   }, [profile]);
 
@@ -215,11 +242,10 @@ function UserSettingsInner() {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              editable={!user?.email} // Only editable if they don't have an email yet
               placeholder="Enter your email address"
               keyboardType="email-address"
               autoCapitalize="none"
-              style={[styles.input, !!user?.email && { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+              style={styles.input}
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -231,7 +257,8 @@ function UserSettingsInner() {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholder="Enter your phone number"
-              style={styles.input}
+              editable={false}
+              style={[styles.input, { backgroundColor: '#F1F5F9', color: '#64748B' }]}
               placeholderTextColor="#9CA3AF"
             />
           </View>

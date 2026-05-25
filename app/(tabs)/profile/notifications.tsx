@@ -256,12 +256,14 @@ function NotificationsInner() {
              </View>
              <Text style={styles.emptyTitle}>All caught up!</Text>
              <Text style={styles.emptyText}>No matches or bookings starting in the next 24 hours.</Text>
-             <TouchableOpacity 
-                style={styles.exploreBtn}
-                onPress={() => router.push('/(tabs)/grounds')}
-             >
-                <Text style={styles.exploreBtnText}>Book a new game</Text>
-             </TouchableOpacity>
+             {!IS_WEB && (
+               <TouchableOpacity 
+                  style={styles.exploreBtn}
+                  onPress={() => router.push('/(tabs)/grounds')}
+               >
+                  <Text style={styles.exploreBtnText}>Book a new game</Text>
+               </TouchableOpacity>
+             )}
           </View>
         ) : (
           <View style={styles.list}>

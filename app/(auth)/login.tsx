@@ -135,7 +135,9 @@ export default function LoginScreen() {
       setPhoneOtpSent(true);
       setPhoneOtpTimer(60);
       setPhoneOtpVal('');
-      const msg = 'OTP sent successfully to your registered mobile number.';
+      const msg = isNew 
+        ? 'OTP sent successfully! Please verify to create your account.'
+        : 'OTP sent successfully to your registered mobile number.';
       setOtpSuccessMessage(msg);
       setTimeout(() => {
         phoneOtpRef.current?.focus();
@@ -174,15 +176,16 @@ export default function LoginScreen() {
     
     if (isNewUser) {
       const randomEmail = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}@bookyourground.com`;
-      const { error } = await signUp(randomEmail, tempPassword, 'Player', cleaned, 'user', undefined, '', '', undefined, 'Player', undefined, true);
+      const { error } = await signUp(randomEmail, tempPassword, '', cleaned, 'user', undefined, '', '', undefined, 'Player', undefined, true);
       
-      setLoading(false);
       if (error) {
+        setLoading(false);
         const msg = 'Failed to create account. Please try again.';
         if (Platform.OS === 'web') alert(msg + ' ' + error.message);
         else Alert.alert('Error', msg);
       } else {
         setLoginOtpVerified(true);
+        // Do not set loading to false here, keep it spinning while AuthContext loads profile and redirects
       }
     } else {
       const { data: resolvedEmail, error: rpcError } = await supabase.rpc('login_with_otp_auth', {
@@ -201,11 +204,12 @@ export default function LoginScreen() {
       setLoginOtpVerified(true);
       
       const { error } = await signIn(resolvedEmail, tempPassword);
-      setLoading(false);
-
       if (error) {
+        setLoading(false);
         if (Platform.OS === 'web') alert('Login Failed: ' + error.message);
         else Alert.alert('Login Failed', error.message);
+      } else {
+        // Do not set loading to false on success, keep it spinning while redirecting
       }
     }
   };
@@ -336,8 +340,12 @@ export default function LoginScreen() {
     }
 
     // Role-based defaults if no redirect path
-    if (Platform.OS === 'web' && profile.role === 'super_admin') {
-      router.replace('/(admin)/dashboard');
+    if (Platform.OS === 'web') {
+      if (profile.role === 'super_admin') {
+        router.replace('/(admin)/dashboard');
+      } else {
+        router.replace('/');
+      }
     } else {
       // On mobile, everyone (including admins) lands on the home discovery screen
       router.replace('/(tabs)/home_tab');
@@ -580,7 +588,7 @@ export default function LoginScreen() {
                       onPress={handleLogin}
                       disabled={loading}
                     >
-                      <Text style={webStyles.buttonText}>SIGN IN</Text>
+                      <Text style={webStyles.buttonText}>{isNewUser ? 'SIGN UP' : 'SIGN IN'}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -798,7 +806,15 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={loading}
             >
+<<<<<<< HEAD
               <Text style={styles.signInBtnText}>SIGN IN</Text>
+=======
+              {loading ? (
+                <ActivityIndicator color="#06392e" />
+              ) : (
+                <Text style={styles.signInBtnText}>{isNewUser ? 'SIGN UP' : 'SIGN IN'}</Text>
+              )}
+>>>>>>> dev
             </Pressable>
           </View>
 

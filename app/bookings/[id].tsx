@@ -140,6 +140,7 @@ export default function BookingDetailsScreen() {
           .select('*')
           .eq('ground_id', data.ground_id)
           .eq('user_id', data.user_id)
+          .eq('booking_date', data.booking_date)
           .ilike('notes', `%${slotsPart}%`)
           .order('booking_date', { ascending: true })
           .order('start_time', { ascending: true });
@@ -476,7 +477,7 @@ export default function BookingDetailsScreen() {
                 <Pressable style={[styles.bookingIdChipInline, { borderColor: '#E8EDE4', backgroundColor: '#F4F6F0' }]} onPress={handleCopy}>
                   <Text style={[styles.idLabelInline, { color: '#8A9580' }]}>ID: </Text>
                   <Text style={[styles.idValueInline, { color: '#1A2215' }]}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
-                  {copied ? <Check size={11} color="#01C45A" style={{ marginLeft: 4 }} /> : <Copy size={11} color="#8A9580" style={{ marginLeft: 4 }} />}
+                  {!copied && <Copy size={11} color="#8A9580" style={{ marginLeft: 4 }} />}
                   {copied && <Text style={styles.copiedBadgeInline}>Copied ✓</Text>}
                 </Pressable>
               </View>
@@ -515,7 +516,7 @@ export default function BookingDetailsScreen() {
               <Text style={[styles.idLabel, { color: '#8A9580' }]}>Booking ID</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={[styles.idValue, { color: '#1A2215' }]}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
-                {copied ? <Check size={12} color="#01C45A" /> : <Copy size={12} color="#8A9580" />}
+                {!copied && <Copy size={12} color="#8A9580" />}
               </View>
               {copied && <Text style={styles.copiedBadge}>Copied ✓</Text>}
             </Pressable>
@@ -552,7 +553,7 @@ export default function BookingDetailsScreen() {
                   )}
                 </View>
                 <View style={styles.slotGrid}>
-                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: 'transparent' }]}>
                     <View style={styles.slotLabel}>
                       <Calendar size={11} color="#01C45A" strokeWidth={2.5} />
                       <Text style={styles.slotLabelText}>Date</Text>
@@ -560,7 +561,7 @@ export default function BookingDetailsScreen() {
                     <Text style={styles.slotValue}>{formatDate(booking.booking_date)}</Text>
                   </View>
                   {!isNetsWithMultipleSlots && (
-                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: 'transparent' }]}>
                       <View style={styles.slotLabel}>
                         <Clock size={11} color="#01C45A" strokeWidth={2.5} />
                         <Text style={styles.slotLabelText}>Start Time</Text>
@@ -568,7 +569,7 @@ export default function BookingDetailsScreen() {
                       <Text style={styles.slotValue}>{timeSlotLabel}</Text>
                     </View>
                   )}
-                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                  <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: 'transparent' }]}>
                     <View style={styles.slotLabel}>
                       <Clock size={11} color="#01C45A" strokeWidth={2.5} />
                       <Text style={styles.slotLabelText}>Duration</Text>
@@ -590,7 +591,7 @@ export default function BookingDetailsScreen() {
                     </Text>
                   </View>
                   {!isNetsWithMultipleSlots && (
-                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: '#F4F6F0' }]}>
+                    <View style={[styles.slotItem, { minWidth: width < 360 ? '100%' : '46%', backgroundColor: 'transparent' }]}>
                       <View style={styles.slotLabel}>
                         <Users size={11} color="#01C45A" strokeWidth={2.5} />
                         <Text style={styles.slotLabelText}>{booking.ground?.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
@@ -1038,7 +1039,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F4F6F0',
+    backgroundColor: 'transparent',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1166,7 +1167,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   paymentMethodCard: {
-    backgroundColor: '#F4F6F0',
+    backgroundColor: 'transparent',
     padding: 12,
     borderRadius: 12,
     flexDirection: 'row',

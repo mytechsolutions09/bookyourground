@@ -15,6 +15,7 @@ export function MobileTabBarHost() {
   const { user, profile } = useAuth();
   
   if (!isTabBarVisible) return null;
+  if (Platform.OS === 'web') return null;
 
   const root = segments[0];
   const sub = segments[1];

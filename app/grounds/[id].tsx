@@ -513,7 +513,7 @@ export default function GroundDetailsScreen() {
                     <Text style={styles.priceValue}>
                       ₹{minPrice.toLocaleString('en-IN')}
                       <Text style={styles.priceUnit}>
-                        {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                        {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : (String(ground.pitch_type ?? '').toLowerCase().includes('nets') ? ' /slot' : ' /match')}
                       </Text>
                     </Text>
                   </View>

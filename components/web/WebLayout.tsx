@@ -73,6 +73,7 @@ interface WebLayoutProps {
   isPublicNoSidebar?: boolean;
   defaultSidebarOpen?: boolean;
   headerContent?: React.ReactNode;
+  isNotFoundPage?: boolean;
 }
 
 const NavLink = React.memo(({
@@ -192,6 +193,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   isPublicNoSidebar: propIsPublicNoSidebar = false,
   defaultSidebarOpen = true,
   headerContent,
+  isNotFoundPage = false,
 }: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
@@ -235,6 +237,15 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const [unreadCount, setUnreadCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [superAdminBadges, setSuperAdminBadges] = useState({
+    bookings: 0,
+    grounds: 0,
+    users: 0,
+    tickets: 0,
+    payouts: 0,
+    contracts: 0,
+    deletions: 0,
+  });
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const { isTabBarVisible } = useUI();
   const isBottomBarVisibleRef = useRef(true);
@@ -325,6 +336,44 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           
           const isComplete = !!(bankData && bankData.bank_name && bankData.account_number && bankData.ifsc);
           setHasPayoutSetup(isComplete);
+        }
+
+        if (profile?.role === 'super_admin' || (user?.email?.toLowerCase() ?? '') === 'invirtualcoin@gmail.com') {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const startOfToday = today.toISOString();
+          
+          try {
+            const [
+               newBookingsRes,
+               newGroundsRes,
+               newUsersRes,
+               newTicketsRes,
+               pendingPayoutsRes,
+               pendingContractsRes,
+               pendingDeletionsRes,
+            ] = await Promise.all([
+               supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+               supabase.from('grounds').select('id', { count: 'exact', head: true }).eq('approved', false),
+               supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', startOfToday),
+               supabase.from('contact_queries').select('id', { count: 'exact', head: true }).eq('resolved', false),
+               supabase.from('withdrawals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+               supabase.from('contract_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+               supabase.from('account_deletion_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+            ]);
+
+            setSuperAdminBadges({
+              bookings: newBookingsRes.count || 0,
+              grounds: newGroundsRes.count || 0,
+              users: newUsersRes.count || 0,
+              tickets: newTicketsRes.count || 0,
+              payouts: pendingPayoutsRes.count || 0,
+              contracts: pendingContractsRes.count || 0,
+              deletions: pendingDeletionsRes.count || 0,
+            });
+          } catch (e) {
+            console.error('Super Admin counts fetch error:', e);
+          }
         }
       } catch (err) {
         console.error('Sidebar fetch error:', err);
@@ -630,7 +679,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       cleanPath.startsWith('/live/') ||
       (cleanPath.startsWith('/cricket/') || cleanPath === '/cricket') && !cleanPath.startsWith('/cricketdata') ||
       cleanPath.startsWith('/players/') ||
-      cleanPath.startsWith('/blog')
+      cleanPath.startsWith('/blog') ||
+      isNotFoundPage
     ),
     [
       isAdminRoute,
@@ -953,17 +1003,17 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         </Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                        <TouchableOpacity
-                          style={styles.profileChip}
-                          onPress={() => router.push('/profile')}
-                        >
-                          <Image
-                            source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
-                            style={styles.profileAvatar}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                    <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={styles.profileChip}
+                        onPress={() => router.push('/profile')}
+                      >
+                        <Image
+                          source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
+                          style={styles.profileAvatar}
+                        />
+                      </TouchableOpacity>
+                    </View>
                     )}
                   </>
                 ) : (
@@ -999,7 +1049,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           style={[
             styles.header,
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
-            (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
+            (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { height: 60, backgroundColor: '#06392e', borderBottomColor: '#00ea6b', borderBottomWidth: 1 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -1038,7 +1088,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <Text style={[
                           styles.headerNavLink,
                           (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive,
-                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }
+                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { color: '#00ea6b' }
                         ]}>
                           VENUES
                         </Text>
@@ -1048,7 +1098,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <Text style={[
                           styles.headerNavLink,
                           cleanPath.startsWith('/shop') && { color: '#ff3564' },
-                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }
+                          (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { color: '#00ea6b' }
                         ]}>
                           SHOP
                         </Text>
@@ -1067,7 +1117,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                   {!isAuthenticated ? (
                     <Text
-                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog')) && { color: '#00ea6b' }]}
+                      style={[styles.headerSecondaryButtonText, (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { color: '#00ea6b' }]}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
                       SIGN IN
@@ -1087,9 +1137,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           style={styles.userAvatar}
                         />
                       </TouchableOpacity>
-
-
-
                     </View>
                   )}
                 </View>
@@ -1184,12 +1231,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           href="/(admin)/bookings"
                           icon={Calendar}
                           label="Bookings"
+                          badge={superAdminBadges.bookings || undefined}
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
                           href="/(admin)/grounds"
                           icon={Building2}
                           label="Venues"
+                          badge={superAdminBadges.grounds || undefined}
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -1215,6 +1264,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           href="/(admin)/payouts"
                           icon={Wallet2}
                           label="Payouts"
+                          badge={superAdminBadges.payouts || undefined}
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -1227,18 +1277,21 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           href="/(admin)/manage-users"
                           icon={Users}
                           label="Users"
+                          badge={superAdminBadges.users || undefined}
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
                           href="/(admin)/messages"
                           icon={LifeBuoy}
                           label="Support Tickets"
+                          badge={superAdminBadges.tickets || undefined}
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
                           href="/(admin)/settings"
                           icon={Settings}
                           label="Settings"
+                          badge={(superAdminBadges.contracts + superAdminBadges.deletions) || undefined}
                           hideLabel={sidebarCollapsed}
                         />
 
@@ -1339,20 +1392,20 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink
                           href="/(tabs)/profile"
                           icon={CircleUser}
-                          label="My Profile"
+                          label="Profile"
                           isActiveOverride={cleanPath === '/(tabs)/profile' || cleanPath === '/profile'}
                         />
                         <NavLink
                           href="/(tabs)/bookings"
                           icon={Calendar}
-                          label="My Bookings"
+                          label="Bookings"
                           isActiveOverride={cleanPath === '/(tabs)/bookings' || cleanPath === '/bookings'}
                         />
 
                         <NavLink
                           href="/profile/orders"
                           icon={ShoppingBag}
-                          label="Shop Orders"
+                          label="Orders"
                           isActiveOverride={cleanPath === '/profile/orders'}
                         />
 
@@ -1432,6 +1485,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Cricket', icon: Trophy, href: '/cricket' },
+            { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||

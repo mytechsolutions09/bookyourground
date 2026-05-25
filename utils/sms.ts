@@ -44,9 +44,9 @@ export async function sendSMSOTP(
       return { success: false, error: 'Invalid phone number. Must be a 10-digit Indian mobile number.' };
     }
 
-    // Determine the template and message based on the type
-    let templateId = SIGNUP_TEMPLATE_ID;
-    let message = `Your OTP ${otp} to authenticate your signup. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
+    // Fallback: Using the login template for both flows since the signup template is failing DLT validation
+    let templateId = LOGIN_TEMPLATE_ID;
+    let message = ` Your OTP ${otp} to authenticate your login. Never share your OTP with anyone - https://bookyourground.com/ PRPBYG`;
 
     if (type === 'login') {
       templateId = LOGIN_TEMPLATE_ID;
@@ -54,7 +54,7 @@ export async function sendSMSOTP(
     }
 
     const encodedMessage = encodeURIComponent(message);
-    const apiPhone = `91${cleanedPhone}`;
+    const apiPhone = cleanedPhone;
     const url = `https://connect.muzztech.com/api/sms/send?api_key=${API_KEY}&phone_number=${apiPhone}&sender_name=${SENDER_NAME}&message=${encodedMessage}&template_id=${templateId}`;
 
     console.log(`Sending ${type} SMS to ${apiPhone}...`);

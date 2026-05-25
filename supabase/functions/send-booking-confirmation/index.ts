@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib"
 
 const resendApiKey = Deno.env.get('RESEND_API_KEY')
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -33,7 +34,7 @@ serve(async (req) => {
     const [profileRes, userRes, groundRes] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', record.user_id).single(),
       supabase.auth.admin.getUserById(record.user_id),
-      supabase.from('grounds').select('name, address, city, state, owner_id').eq('id', record.ground_id).single()
+      supabase.from('grounds').select('name, address, city, state, owner_id, latitude, longitude').eq('id', record.ground_id).single()
     ]);
 
     if (profileRes.error || !profileRes.data) {
@@ -65,7 +66,13 @@ serve(async (req) => {
     const ownerEmail = ownerUserRes.data?.user?.email;
     const ownerName = ownerProfileRes.data?.full_name || 'Ground Owner';
 
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ground.name} ${ground.address} ${ground.city}`)}`
+    let destination;
+    if (ground.latitude && ground.longitude) {
+      destination = `${ground.latitude},${ground.longitude}`;
+    } else {
+      destination = encodeURIComponent([ground.name, ground.address, ground.city, ground.state].filter(Boolean).join(', '));
+    }
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
     
     const isCancelled = record.status === 'cancelled';
     const isRefunded = record.payment_method !== 'cash' && isCancelled;
@@ -87,7 +94,7 @@ serve(async (req) => {
                 <!-- Header -->
                 <tr>
                   <td align="center" style="padding: 32px 24px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
-                    <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
+                    <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto; background: transparent;">
                   </td>
                 </tr>
                 <tr>
@@ -127,6 +134,16 @@ serve(async (req) => {
                     <!-- Booking Summary Card -->
                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; margin-bottom: 40px;">
                       <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="padding-bottom: 24px;">
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Booking ID</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">#${record.id.substring(0, 8).toUpperCase()}</p>
+                          </td>
+                          <td style="padding-bottom: 24px;">
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Payment Method</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.payment_method === 'cash' ? 'Cash at Venue' : record.payment_method === 'wallet' ? 'Wallet' : 'Online Payment'}</p>
+                          </td>
+                        </tr>
                         <tr>
                           <td style="padding-bottom: 24px;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Date</p>
@@ -208,7 +225,7 @@ serve(async (req) => {
                 <!-- Header -->
                 <tr>
                   <td align="center" style="padding: 32px 24px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
-                    <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
+                    <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto; background: transparent;">
                   </td>
                 </tr>
                 <tr>
@@ -235,12 +252,28 @@ serve(async (req) => {
                       <table width="100%" border="0" cellspacing="0" cellpadding="0">
                         <tr>
                           <td style="padding-bottom: 24px;">
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Booking ID</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">#${record.id.substring(0, 8).toUpperCase()}</p>
+                          </td>
+                          <td style="padding-bottom: 24px;">
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Payment Method</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.payment_method === 'cash' ? 'Cash at Venue' : record.payment_method === 'wallet' ? 'Wallet' : 'Online Payment'}</p>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding-bottom: 24px;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Player</p>
                             <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${userFullName}</p>
                           </td>
                           <td style="padding-bottom: 24px;">
-                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">${isCancelled ? 'Status' : 'Payment'}</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${isCancelled ? 'CANCELLED' : `₹${record.total_charged || record.total_amount} (${record.payment_method || 'Confirmed'})`}</p>
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">${isCancelled ? 'Status' : 'Total Receivable'}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${isCancelled ? 'CANCELLED' : `₹${(record.ground_price || record.total_charged || record.total_amount) - (record.platform_fee_owner || 0) - (record.gst_owner || 0)}`}</p>
+                            ${!isCancelled && record.payment_method === 'cash' ? `
+                            <p style="color: #ef4444; margin: 6px 0 0 0; font-size: 13px; font-weight: 600;">Collect from Player: ₹${record.total_charged || record.total_amount}</p>
+                            ` : ''}
+                            ${!isCancelled && record.payment_method !== 'cash' ? `
+                            <p style="color: #02c259; margin: 6px 0 0 0; font-size: 13px; font-weight: 600;">Paid Online</p>
+                            ` : ''}
                           </td>
                         </tr>
                         <tr>
@@ -258,7 +291,7 @@ serve(async (req) => {
 
                     <!-- CTA Button -->
                     <div align="center" style="margin-bottom: 40px;">
-                      <a href="https://bookyourground.com/owner/dashboard" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block;">Manage Bookings</a>
+                      <a href="https://bookyourground.com/bookings/${record.id}" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block;">Manage Booking</a>
                     </div>
                   </td>
                 </tr>
@@ -281,6 +314,50 @@ serve(async (req) => {
       </html>
     `;
 
+    // 3.5 Generate PDF Receipt
+    let pdfAttachment = null;
+    if (!isCancelled) {
+      try {
+        const pdfDoc = await PDFDocument.create();
+        const page = pdfDoc.addPage([600, 700]);
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+        page.drawText('BOOK YOUR GROUND', { x: 50, y: 640, size: 22, font: boldFont, color: rgb(0.015, 0.207, 0.16) });
+        page.drawText('BOOKING RECEIPT', { x: 50, y: 590, size: 16, font: boldFont, color: rgb(0.3, 0.3, 0.3) });
+        page.drawLine({ start: { x: 50, y: 575 }, end: { x: 550, y: 575 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        const startY = 540;
+        const lineSpacing = 32;
+
+        const drawRow = (label, value, y) => {
+          page.drawText(label, { x: 50, y, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
+          page.drawText(String(value), { x: 200, y, size: 12, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+        };
+
+        drawRow('Booking ID:', `#${record.id.substring(0, 8).toUpperCase()}`, startY);
+        drawRow('Player Name:', userFullName, startY - lineSpacing);
+        drawRow('Date:', record.booking_date.substring(0, 10), startY - lineSpacing * 2);
+        drawRow('Time:', `${record.start_time.split(':').slice(0, 2).join(':')} - ${record.end_time.split(':').slice(0, 2).join(':')}`, startY - lineSpacing * 3);
+        drawRow('Venue:', ground.name, startY - lineSpacing * 4);
+        drawRow('Location:', `${ground.address}, ${ground.city}, ${ground.state}`, startY - lineSpacing * 5);
+        drawRow('Payment Method:', record.payment_method === 'cash' ? 'Cash at Venue' : 'Online Payment', startY - lineSpacing * 6);
+        
+        page.drawLine({ start: { x: 50, y: startY - lineSpacing * 7 + 10 }, end: { x: 550, y: startY - lineSpacing * 7 + 10 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+
+        page.drawText('Total Paid:', { x: 50, y: startY - lineSpacing * 7 - 25, size: 14, font: boldFont });
+        page.drawText(`Rs ${record.total_charged || record.total_amount}`, { x: 450, y: startY - lineSpacing * 7 - 25, size: 14, font: boldFont, color: rgb(0.007, 0.768, 0.352) });
+
+        const pdfBytes = await pdfDoc.saveAsBase64();
+        pdfAttachment = {
+          filename: `Booking_Receipt_${record.id.substring(0, 8).toUpperCase()}.pdf`,
+          content: pdfBytes,
+        };
+      } catch (pdfErr) {
+        console.error('Error generating PDF receipt:', pdfErr);
+      }
+    }
+
     // 4. Send Emails in Parallel
     const emailPromises = [
       fetch('https://api.resend.com/emails', {
@@ -296,6 +373,7 @@ serve(async (req) => {
             ? `Cancelled: Your booking at ${ground.name}`
             : `Confirmed: Your session at ${ground.name}`,
           html: playerHtml,
+          ...(pdfAttachment ? { attachments: [pdfAttachment] } : {})
         }),
       })
     ];

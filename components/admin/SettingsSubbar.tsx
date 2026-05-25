@@ -1,12 +1,33 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText, UserX } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 
 const BASE = '/(admin)/settings';
 
 export default function SettingsSubbar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [pendingContractsCount, setPendingContractsCount] = React.useState(0);
+  const [pendingDeletionsCount, setPendingDeletionsCount] = React.useState(0);
+
+  React.useEffect(() => {
+    async function fetchCounts() {
+      const [{ count: contractsCount }, { count: deletionsCount }] = await Promise.all([
+        supabase
+          .from('contract_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending'),
+        supabase
+          .from('account_deletion_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending')
+      ]);
+      if (contractsCount) setPendingContractsCount(contractsCount);
+      if (deletionsCount) setPendingDeletionsCount(deletionsCount);
+    }
+    fetchCounts();
+  }, []);
 
   const isGeneral =
     !pathname.includes('/settings/') && String(pathname).includes('settings');
@@ -17,6 +38,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isPayment = pathname.includes('/settings/payment');
   const isPlatformFees = pathname.includes('/settings/platform-fees');
   const isContracts = pathname.includes('/settings/contract-submissions');
+  const isDeletions = pathname.includes('/settings/deletion-requests');
 
   return (
     <View style={styles.shell}>
@@ -102,6 +124,26 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             <Text style={[styles.subLinkText, isContracts && styles.subLinkTextActive]}>
               Contracts
             </Text>
+            {pendingContractsCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingContractsCount}</Text>
+              </View>
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/deletion-requests') as any)}
+            style={[styles.subLink, isDeletions && styles.subLinkActive]}
+          >
+            <UserX size={16} color={isDeletions ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isDeletions && styles.subLinkTextActive]}>
+              Deletions
+            </Text>
+            {pendingDeletionsCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingDeletionsCount}</Text>
+              </View>
+            )}
           </Pressable>
         </ScrollView>
       </View>
@@ -159,5 +201,17 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     minWidth: 0,
+  },
+  badge: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

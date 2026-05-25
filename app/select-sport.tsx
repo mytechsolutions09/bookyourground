@@ -530,7 +530,7 @@ export default function SelectSportScreen() {
           </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.headerTab, sportTabStyle, { height: HEADER_TABS[0], backgroundColor: sport.bg }]}>
-          <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={styles.tabText}>{sport.name}</Text></View>
+          <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={[styles.tabText, { color: '#00ea6b' }]}>{sport.name}</Text></View>
         </Animated.View>
         <Animated.View style={[styles.headerTab, locTabStyle, { height: HEADER_TABS[1], backgroundColor: '#00ea6b' }]}>
           <View style={styles.centerRow}><Text style={styles.tabTextSmall}>{loc.name}</Text></View>
@@ -725,8 +725,8 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', fontFamily: 'Inter' },
   tabTextSmall: { fontSize: 16, fontWeight: '900', color: '#043529', fontFamily: 'Inter' },
   slide: { width: STATIC_WIDTH, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 100 },
-  iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
-  iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
+  iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   heroName: { fontSize: 44, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1 },
   pageCard: { flex: 1 },
   contentWrapper: { alignItems: 'center', justifyContent: 'center', width: '100%' },
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
   miniCardLoc: { fontSize: 10, color: '#64748B' },
   miniCardPrice: { fontSize: 13, fontWeight: '900', color: '#00ea6b', marginTop: 6 },
   noResults: { fontSize: 18, color: '#94A3B8', fontWeight: '700' },
-  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 100 : 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 100 : 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 },
   dotLight: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   activeDotLight: { backgroundColor: '#00ea6b', width: 32, borderColor: '#00ea6b' },
   dotDark: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(4,53,41,0.15)' },
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
   cardFullUnit: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
   cardFullBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   cardFullBadgeText: { fontSize: 12, fontWeight: '800', color: '#059669' },
-  dotContainerResults: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 20 },
+  dotContainerResults: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, paddingBottom: 20 },
 
   // MODAL STYLES
   modalOverlay: { 

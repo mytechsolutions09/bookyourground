@@ -414,7 +414,6 @@ function AdminEarningsInner() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
     >
       <View style={[styles.content, (isMobile || isSmallWeb) && { paddingLeft: 16, paddingRight: 16 }]}>
-        {/* Header Row: Filter + Tabs */}
         <View style={[styles.headerRow, (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch' }]}>
           <View style={{ width: 280 }}>
             {IS_WEB ? (
@@ -479,7 +478,7 @@ function AdminEarningsInner() {
 
         {viewMode === 'overview' && renderOverview()}
         {viewMode === 'transactions' && renderTransactions()}
-        {viewMode === 'analytics' && renderOverview()} {/* Reusing for now, can expand later */}
+        {viewMode === 'analytics' && renderOverview()}
         {viewMode === 'payouts' && renderPayouts()}
       </View>
     </ScrollView>
