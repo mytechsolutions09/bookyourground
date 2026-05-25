@@ -806,15 +806,11 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={loading}
             >
-<<<<<<< HEAD
-              <Text style={styles.signInBtnText}>SIGN IN</Text>
-=======
               {loading ? (
                 <ActivityIndicator color="#06392e" />
               ) : (
                 <Text style={styles.signInBtnText}>{isNewUser ? 'SIGN UP' : 'SIGN IN'}</Text>
               )}
->>>>>>> dev
             </Pressable>
           </View>
 
