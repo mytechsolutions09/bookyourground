@@ -65,16 +65,7 @@ export default function DashboardMap() {
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
       <View style={{ flex: 1, position: 'relative' }}>
-        {/* Global SVG Definitions */}
-        <svg width="0" height="0" style={{ position: 'absolute' }}>
-          <defs>
-            <linearGradient id="dashboardNeonPinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
-              <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
-            </linearGradient>
-          </defs>
-        </svg>
+
 
         <Map
           style={{ width: '100%', height: '100%' }}
@@ -98,9 +89,16 @@ export default function DashboardMap() {
                 >
                   <View style={{ width: 40, height: 40, position: 'relative' }}>
                     <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                      <defs>
+                        <linearGradient id={`dashboardNeonPinGradient-${g.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
+                          <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
+                          <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
+                        </linearGradient>
+                      </defs>
                       <path 
                         d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" 
-                        fill="url(#dashboardNeonPinGradient)"
+                        fill={`url(#dashboardNeonPinGradient-${g.id})`}
                         stroke="#FFFFFF"
                         strokeWidth="1.5"
                       />
@@ -108,7 +106,9 @@ export default function DashboardMap() {
                     </svg>
 
                     {/* Hover Tooltip */}
-                    <View style={{
+                    <View 
+                      pointerEvents="none"
+                      style={{
                       position: 'absolute',
                       bottom: 45,
                       left: -70,
@@ -119,7 +119,6 @@ export default function DashboardMap() {
                       shadowColor: '#000',
                       // @ts-ignore
                       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      pointerEvents: 'none',
                       zIndex: 1000,
                       borderWidth: 1,
                       borderColor: '#F1F5F9',

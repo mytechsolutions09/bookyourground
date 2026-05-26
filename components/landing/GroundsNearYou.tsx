@@ -176,16 +176,7 @@ function MultiMarkerMap({
 
   return (
     <View style={{ flex: 1, position: 'relative' }}>
-      {/* Global SVG Definitions to prevent insertBefore errors */}
-      <svg width="0" height="0" style={{ position: 'absolute' }}>
-        <defs>
-          <linearGradient id="neonPinGradientDetail" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
-            <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
-          </linearGradient>
-        </defs>
-      </svg>
+
 
       <Map
         style={{ width: '100%', height: '100%' }}
@@ -231,9 +222,16 @@ function MultiMarkerMap({
                   justifyContent: 'center',
                 }}>
                   <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                    <defs>
+                      <linearGradient id={`neonPinGradientDetail-${g.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
+                        <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
+                      </linearGradient>
+                    </defs>
                     <path 
                       d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" 
-                      fill="url(#neonPinGradientDetail)"
+                      fill={`url(#neonPinGradientDetail-${g.id})`}
                       stroke="#FFFFFF"
                       strokeWidth="1.5"
                     />

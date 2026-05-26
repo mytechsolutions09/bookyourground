@@ -433,7 +433,7 @@ export default function LoginScreen() {
           </View>
 
           {otpError ? (
-            <Text style={{ color: '#ff3564', fontSize: 13, fontWeight: '600', marginBottom: 16, textAlign: 'center' }}>
+            <Text style={{ color: '#ff3564', fontSize: 13, fontWeight: '600', marginBottom: 16, textAlign: 'center', fontFamily: 'Inter' }}>
               {otpError}
             </Text>
           ) : null}
@@ -459,13 +459,13 @@ export default function LoginScreen() {
               onPress={otpTimer === 0 && !sendingOtp ? handleResendOtp : undefined}
               style={{ opacity: otpTimer > 0 || sendingOtp ? 0.5 : 1 }}
             >
-              <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 14, fontFamily: 'Inter' }}>
                 {otpTimer > 0 ? `Resend in ${otpTimer}s` : 'Resend OTP'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleCancelOtp}>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14 }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 14, fontFamily: 'Inter' }}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -492,8 +492,8 @@ export default function LoginScreen() {
               {width >= 768 && (
                 <View style={webStyles.leftPane}>
                   <View>
-                    <Text style={webStyles.leftPaneTitle}>Login</Text>
-                    <Text style={webStyles.leftPaneSubtitle}>
+                    <Text style={[webStyles.leftPaneTitle, { fontFamily: 'Inter' }]}>Login</Text>
+                    <Text style={[webStyles.leftPaneSubtitle, { fontFamily: 'Inter' }]}>
                       Get access to your Bookings,{'\n'}Favorites and Profile
                     </Text>
                   </View>
@@ -804,19 +804,19 @@ export default function LoginScreen() {
                       {loading ? (
                         <ActivityIndicator size="small" color="#06392e" />
                       ) : (
-                        <Text style={{ color: '#06392e', fontWeight: '800', fontSize: 11 }}>SEND OTP</Text>
+                      <Text style={{ color: '#06392e', fontWeight: '800', fontSize: 11, fontFamily: 'Inter' }}>SEND OTP</Text>
                       )}
                     </TouchableOpacity>
                   ) : (
                     <View style={{ marginLeft: 8, paddingHorizontal: 6 }}>
-                      <Text style={{ color: '#00ea6b', fontWeight: '800', fontSize: 11 }}>SENT</Text>
+                      <Text style={{ color: '#00ea6b', fontWeight: '800', fontSize: 11, fontFamily: 'Inter' }}>SENT</Text>
                     </View>
                   )}
                 </Pressable>
               </View>
 
               {!phoneOtpSent ? (
-                <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, marginTop: 8, marginBottom: 10, width: '100%' }}>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, marginTop: 8, marginBottom: 10, width: '100%', fontFamily: 'Inter' }}>
                   Enter your phone number and tap SEND OTP to receive your 6-digit verification code.
                 </Text>
               ) : (
@@ -831,7 +831,7 @@ export default function LoginScreen() {
                       marginTop: 12,
                       width: '100%',
                     }}>
-                      <Text style={{ color: '#00ea6b', fontSize: 12, fontWeight: '600', lineHeight: 16 }}>
+                      <Text style={{ color: '#00ea6b', fontSize: 12, fontWeight: '600', lineHeight: 16, fontFamily: 'Inter' }}>
                         ✓ {otpSuccessMessage}
                       </Text>
                     </View>
@@ -871,13 +871,13 @@ export default function LoginScreen() {
                       onPress={phoneOtpTimer === 0 && !loading ? sendPhoneOtp : undefined}
                       style={{ opacity: phoneOtpTimer > 0 ? 0.6 : 1 }}
                     >
-                      <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 13 }}>
+                      <Text style={{ color: '#00ea6b', fontWeight: '700', fontSize: 13, fontFamily: 'Inter' }}>
                         {phoneOtpTimer > 0 ? `Resend in ${phoneOtpTimer}s` : 'Resend OTP'}
                       </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => setPhoneOtpSent(false)}>
-                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 13 }}>
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600', fontSize: 13, fontFamily: 'Inter' }}>
                         Change Phone
                       </Text>
                     </TouchableOpacity>

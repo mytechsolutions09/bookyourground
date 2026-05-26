@@ -220,35 +220,52 @@ export default function ShopScreen() {
     // Search Query Filter
     if (searchQuery) {
       result = result.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Category Filter
     if (activeCategory !== 'all') {
-      const catId = categories.find(c => c.name === activeCategory)?.id;
-      if (catId) result = result.filter(p => p.category_id === catId);
+      const catId = categories.find(c => c.name?.toLowerCase() === activeCategory.toLowerCase())?.id;
+      if (catId) {
+        result = result.filter(p => p.category_id === catId);
+      } else {
+        // Fallback matching if categories are not fully loaded or matched
+        result = result.filter(p => p.category?.name?.toLowerCase() === activeCategory.toLowerCase());
+      }
     }
 
     // Price Range Filter
     if (priceRange) {
       result = result.filter(p => {
-        const price = Number(p.price);
+        const price = typeof p.price === 'string' ? Number(p.price.replace(/[^0-9.]/g, '')) : Number(p.price);
         return price >= priceRange[0] && price <= priceRange[1];
       });
     }
 
     // Sorting
     if (sortBy === 'price_low') {
-      result.sort((a, b) => Number(a.price) - Number(b.price));
+      result.sort((a, b) => {
+        const pA = typeof a.price === 'string' ? Number(a.price.replace(/[^0-9.]/g, '')) : Number(a.price);
+        const pB = typeof b.price === 'string' ? Number(b.price.replace(/[^0-9.]/g, '')) : Number(b.price);
+        return pA - pB;
+      });
     } else if (sortBy === 'price_high') {
-      result.sort((a, b) => Number(b.price) - Number(a.price));
+      result.sort((a, b) => {
+        const pA = typeof a.price === 'string' ? Number(a.price.replace(/[^0-9.]/g, '')) : Number(a.price);
+        const pB = typeof b.price === 'string' ? Number(b.price.replace(/[^0-9.]/g, '')) : Number(b.price);
+        return pB - pA;
+      });
     } else if (sortBy === 'rating') {
       result.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
     } else {
       // newest - already default from Supabase but ensuring consistency
-      result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      result.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
     }
 
     return result;
@@ -266,6 +283,7 @@ export default function ShopScreen() {
     setSortBy('newest');
     setPriceRange(null);
     setActiveCategory('all');
+    setIsFilterVisible(false);
   };
 
   const featuredProduct = useMemo(() => 
@@ -1045,7 +1063,7 @@ const styles = StyleSheet.create({
   },
   toggleButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
     fontFamily: 'Inter',
     letterSpacing: -0.2,
@@ -1302,8 +1320,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '80%',
-    paddingTop: 24,
-    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.1,
@@ -1314,7 +1332,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 22,
@@ -1331,7 +1349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalSection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   modalSectionTitle: {
     fontSize: 14,
@@ -1339,18 +1357,18 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 16,
+    marginBottom: 8,
     fontFamily: 'Inter',
   },
   modalGrid: {
-    gap: 12,
+    gap: 8,
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     backgroundColor: '#F8FAFC',
     borderRadius: 16,
     borderWidth: 1,
@@ -1372,11 +1390,11 @@ const styles = StyleSheet.create({
   modalFooter: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 20,
+    marginTop: 16,
   },
   resetBtn: {
     flex: 1,
-    height: 56,
+    height: 48,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1390,7 +1408,7 @@ const styles = StyleSheet.create({
   },
   applyBtn: {
     flex: 2,
-    height: 56,
+    height: 48,
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',

@@ -3,12 +3,15 @@
 #0f4235 #dark-green
 #00ea6b #green
 #06392e #dark-green
+#0c5746 #green 
 #134d40 #dark-green
 #01e669 #green
 #02c259 #green
 #01b854 #green
-#a5ff8a #lime-green
-#dcc093 #warm-beige
+#a5ff8a
+#57ff24 #lime-green
+#dcc093
+#FFD700 #warm-beige
 #2d3450 #dark-navy
 #f8688a #pink
 #ff3564 #pink
