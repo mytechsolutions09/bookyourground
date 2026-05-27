@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Animated,
-  PanResponder, Platform
+  PanResponder, Platform, useWindowDimensions, Pressable
 } from 'react-native';
 
 interface SlideToConfirmProps {
@@ -19,6 +19,9 @@ export default function SlideToConfirm({
   color = '#01b854',
   disabled = false,
 }: SlideToConfirmProps) {
+  const { width } = useWindowDimensions();
+  const isWebBigScreen = Platform.OS === 'web' && width > 768;
+
   const [confirmed, setConfirmed] = useState(false);
   const fillAnim = useRef(new Animated.Value(0)).current;
   const trackWidth = useRef(0);
@@ -51,6 +54,25 @@ export default function SlideToConfirm({
       },
     })
   ).current;
+
+  if (isWebBigScreen) {
+    return (
+      <Pressable
+        onPress={onConfirm}
+        disabled={disabled}
+        style={({ pressed }) => [
+          styles.track,
+          { backgroundColor: color, borderColor: color },
+          disabled && styles.disabled,
+          pressed && { opacity: 0.85 }
+        ]}
+      >
+        <Text style={[styles.label, styles.confirmedLabel]}>
+          {label.replace(/Slide to /i, '')}
+        </Text>
+      </Pressable>
+    );
+  }
 
   const fillWidth = fillAnim.interpolate({
     inputRange: [0, 1],
@@ -129,9 +151,15 @@ const styles = StyleSheet.create({
     zIndex: 2,
     letterSpacing: 0.3,
     position: 'absolute',
+    left: 56,
+    right: 16,
+    textAlign: 'center',
   },
   confirmedLabel: {
     color: '#FFFFFF',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
   },
   arrow: {
     position: 'absolute',
