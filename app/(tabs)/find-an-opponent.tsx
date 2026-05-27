@@ -256,7 +256,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
           const dow = getDayOfWeek(dateObj);
           
-          const isBox = String(m.ground.pitch_type ?? '').toLowerCase().includes('box');
+          const isBox = String(m.ground?.pitch_type ?? '').toLowerCase().includes('box');
 
           // Find matching slot in our pre-fetched list
           const slotData = slotDataList?.find(s => 
@@ -265,7 +265,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             s.start_time === m.start_time
           );
 
-          let currentSlotPrice = slotData?.custom_price ?? m.ground.base_price_per_hour;
+          let currentSlotPrice = slotData?.custom_price ?? m.ground?.base_price_per_hour ?? 0;
 
           const hours = m.total_hours || 1;
           const fullPrice = isBox ? currentSlotPrice * hours : currentSlotPrice;
@@ -301,8 +301,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
       const matchesSearch = searchFields.includes(searchQuery.toLowerCase());
 
-      const matchesCity = selectedCity === 'All' || match.ground.city === selectedCity;
-      const matchesPitch = selectedPitch === 'All' || match.ground.pitch_type === selectedPitch;
+      const matchesCity = selectedCity === 'All' || match.ground?.city === selectedCity;
+      const matchesPitch = selectedPitch === 'All' || match.ground?.pitch_type === selectedPitch;
 
       let matchesDate = true;
       if (selectedDateFilter === 'Today') {
@@ -324,16 +324,17 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   }, [matches, searchQuery, selectedCity, selectedPitch, selectedDateFilter, activeTab, user]);
 
   const cities = useMemo(() => {
-    const set = new Set(matches.map(m => m.ground.city).filter(Boolean));
+    const set = new Set(matches.map(m => m.ground?.city).filter(Boolean));
     return ['All', ...Array.from(set)].sort() as string[];
   }, [matches]);
 
   const pitches = useMemo(() => {
-    const set = new Set(matches.map(m => m.ground.pitch_type).filter(Boolean));
+    const set = new Set(matches.map(m => m.ground?.pitch_type).filter(Boolean));
     return ['All', ...Array.from(set)].sort() as string[];
   }, [matches]);
 
   const handleJoinMatch = (match: BookingWithDetails) => {
+    if (!match.ground) return;
     const citySlug = slugifyGroundSegment(match.ground.city);
     const groundSlug = slugifyGroundSegment(match.ground.name);
 
