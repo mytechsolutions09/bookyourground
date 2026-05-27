@@ -180,32 +180,23 @@ export default function BookMyGroundPage() {
             </View>
           </Animated.View>
         )}
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          onScroll={onScrollWeb}
-          scrollEventThrottle={16}
-        >
-          <View style={[
-            styles.page,
-            width < 900 && { paddingTop: 150 + insets.top, paddingHorizontal: 0 }
-          ]}>
-
-            {activeTab === 'book' ? (
-              <LandingBookingForm
-                fullWidth
-                separateSearchResults
-                noCard={width < 900}
-                hideTitle={width < 900}
-                premiumCards={true}
-                {...initialProps}
-              />
-            ) : (
-              renderFavorites()
-            )}
-          </View>
-        </ScrollView>
+        <View style={[
+          styles.page,
+          width < 900 && { paddingTop: 150 + insets.top, paddingHorizontal: 0 }
+        ]}>
+          {activeTab === 'book' ? (
+            <LandingBookingForm
+              fullWidth
+              separateSearchResults
+              noCard={width < 900}
+              hideTitle={width < 900}
+              premiumCards={true}
+              {...initialProps}
+            />
+          ) : (
+            renderFavorites()
+          )}
+        </View>
       </WebLayout>
     );
   }

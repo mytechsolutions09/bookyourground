@@ -1145,10 +1145,10 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const webColumnCount =
     !isWeb ? 1 : windowWidth >= 960 ? 3 : windowWidth >= 640 ? 2 : 1;
-  const isSearchTwoColumn = isWeb && windowWidth >= 900;
+  const isSearchTwoColumn = isWeb && windowWidth >= 600;
 
   const webGridSectionStyle = useMemo(() => {
-    if (!isWeb || webColumnCount <= 1) return undefined;
+    if (!isWeb || webColumnCount <= 1 || isCompact) return undefined;
     return {
       flexGrow: 1,
       flexShrink: 1,
@@ -1156,27 +1156,27 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       maxWidth: '100%' as const,
       flexBasis: (webColumnCount === 3 ? '31%' : '48%') as `${number}%`,
     };
-  }, [isWeb, webColumnCount]);
+  }, [isWeb, webColumnCount, isCompact]);
 
   const webFullSpanStyle = useMemo(() => {
-    if (!isWeb || webColumnCount <= 1) return undefined;
+    if (!isWeb || webColumnCount <= 1 || isCompact) return undefined;
     return { width: '100%' as const, flexBasis: '100%' as const };
-  }, [isWeb, webColumnCount]);
+  }, [isWeb, webColumnCount, isCompact]);
 
   const webGridHalfWidthStyle = useMemo(() => {
-    if (!isWeb || windowWidth < 900) return undefined;
+    if (!isWeb || windowWidth < 900 || isCompact) return undefined;
     return {
       flexGrow: 1,
       flexShrink: 1,
       flexBasis: '48.5%',
       maxWidth: '50%',
     };
-  }, [isWeb, windowWidth]);
+  }, [isWeb, windowWidth, isCompact]);
 
   const webSingleColumnStyle = useMemo(() => {
-    if (!isWeb || webColumnCount > 1) return undefined;
+    if (!isWeb || (webColumnCount > 1 && !isCompact)) return undefined;
     return { width: '100%' as const };
-  }, [isWeb, webColumnCount]);
+  }, [isWeb, webColumnCount, isCompact]);
 
   const upcomingDates = useMemo(() => {
     const today = new Date();
@@ -1921,6 +1921,15 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const showSearchResults = useLandingSearchFlow && hasSearched;
 
+  const searchResultTileStyle = useMemo(() => {
+    if (!isWeb) return styles.searchResultTile;
+    if (windowWidth < 600) return { width: '100%' as const };
+    if (separateSearchResults && !isScrolled && windowWidth >= 900) {
+      return { width: 'calc(50% - 12px)' as any };
+    }
+    return { width: 'calc(25% - 12px)' as any };
+  }, [isWeb, windowWidth, separateSearchResults, isScrolled]);
+
   const searchResultsBody = showSearchResults ? (
     <>
       {searching ? (
@@ -1984,7 +1993,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   key={g.id}
                   style={[
                     styles.searchResultTile,
-                    isSearchTwoColumn && (separateSearchResults && !isScrolled ? styles.searchResultTileHalf : styles.searchResultTileWeb),
+                    searchResultTileStyle,
                   ]}
                 >
                    <GroundCard

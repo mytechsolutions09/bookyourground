@@ -529,6 +529,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       if (Platform.OS !== 'web') return;
       
       const y = window.scrollY;
+      DeviceEventEmitter.emit('mainScroll', { y });
       
       const isScrolled = y > 50;
       if (isScrolled !== isScrolledRef.current) {
@@ -1540,6 +1541,13 @@ const styles = StyleSheet.create({
   },
   containerLanding: {
     backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: {
+        overflow: 'auto' as any,
+        height: 'auto' as any,
+        minHeight: '100vh' as any,
+      }
+    })
   },
   header: {
     height: 84,
@@ -1799,9 +1807,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
-        overflow: 'hidden' as any,
-        scrollbarWidth: 'none' as any,
-        msOverflowStyle: 'none' as any,
+        overflow: 'visible' as any,
       }
     })
   },
