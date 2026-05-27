@@ -32,6 +32,7 @@ import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CheckoutSkeleton from '@/components/landing/CheckoutSkeleton';
 import UIModal from '@/components/ui/Modal';
+import SlideToConfirm from '@/components/SlideToConfirm';
 
 // Platform settings fetched from database
 
@@ -1791,21 +1792,15 @@ export default function CheckoutScreen() {
                         </View>
 
                         {/* Confirm & Pay Button */}
-                        <TouchableOpacity
-                            style={[styles.confirmBtnNew, processing && { opacity: 0.7 }]}
-                            onPress={() => {
-                                if (selectedGateway === 'wallet') handleWalletPayment();
-                                else if (selectedGateway === 'cash') handleCashPayment();
-                                else handleRazorpay();
-                            }}
-                            disabled={processing}
-                        >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' }}>
-                                <RNText style={styles.confirmBtnTextNew}>
-                                    Confirm
-                                </RNText>
-                            </View>
-                        </TouchableOpacity>
+                        <View style={{ marginTop: 8 }}>
+                            <SlideToConfirm
+                                onConfirm={handlePayment}
+                                label="Slide to Confirm Booking"
+                                confirmLabel="Booking Confirmed!"
+                                color="#01b854"
+                                disabled={!selectedGateway || processing}
+                            />
+                        </View>
 
 
                     </SummaryContainer>
