@@ -24,7 +24,7 @@ export default function RainRefundBlog() {
         </View>
 
         <Image 
-          source={require('@/assets/images/rain-refund.png')} 
+          source={require('@/assets/images/rain-refund.jpg')} 
           style={styles.heroImage} 
         />
 

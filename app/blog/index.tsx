@@ -12,7 +12,7 @@ const ARTICLES = [
     date: 'May 21, 2026',
     author: 'Admin',
     readTime: '3 min read',
-    image: require('@/assets/images/rain-refund.png')
+    image: require('@/assets/images/rain-refund.jpg')
   },
   {
     id: 'mvp-calculation',

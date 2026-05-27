@@ -414,7 +414,7 @@ export default function CricketHubScreen() {
               <View style={styles.heroRight}>
                 <View style={styles.graphicWrapper}>
                   <Image
-                    source={require('@/assets/hero_cricket.png')}
+                    source={require('@/assets/hero_cricket.jpg')}
                     style={styles.heroGraphic}
                     resizeMode="cover"
                   />
