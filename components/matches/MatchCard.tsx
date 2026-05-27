@@ -20,14 +20,10 @@ export default function MatchCard({
   teamsCount = '1/2 Teams',
   lightMode,
 }: MatchCardProps) {
-  const primaryImage =
-    match.ground.ground_images?.[0]?.image_url ||
-    'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
-
   const { latitude: userLat, longitude: userLng } = useLocation();
 
   const distance = useMemo(() => {
-    if (userLat != null && userLng != null && match.ground.latitude != null && match.ground.longitude != null) {
+    if (userLat != null && userLng != null && match.ground?.latitude != null && match.ground?.longitude != null) {
       const lat1 = userLat;
       const lon1 = userLng;
       const lat2 = Number(match.ground.latitude);
@@ -46,9 +42,17 @@ export default function MatchCard({
         return d.toFixed(1);
       }
     }
-    const seed = match.ground.id ? match.ground.id.charCodeAt(0) + match.ground.id.charCodeAt(match.ground.id.length - 1) : 47;
+    const seed = match.ground?.id ? match.ground.id.charCodeAt(0) + match.ground.id.charCodeAt(match.ground.id.length - 1) : 47;
     return (1.2 + (seed % 89) * 0.1).toFixed(1);
-  }, [userLat, userLng, match.ground.latitude, match.ground.longitude, match.ground.id]);
+  }, [userLat, userLng, match.ground?.latitude, match.ground?.longitude, match.ground?.id]);
+
+  if (!match.ground) {
+    return null;
+  }
+
+  const primaryImage =
+    match.ground.ground_images?.[0]?.image_url ||
+    'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
   const formattedDateTime = (() => {
     let datePart = match.booking_date;
