@@ -3014,6 +3014,7 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
         backgroundColor: '#00ea6b',
+        margin: 'auto',
     },
     splitSectionNew: {
         marginBottom: 24,
