@@ -554,6 +554,28 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   // DB end_time per slot start_time, so we can support custom slot durations.
   const [endTimeByStartTime, setEndTimeByStartTime] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    // Smart Sync: Only auto-update the cart if exactly ONE slot is selected.
+    // If multiple slots are selected, we assume the user is using the global toggle
+    // to choose a type for their *next* selection or update, rather than overwriting all.
+    if (selectedNetsSlots.length === 1) {
+      setSelectedNetsSlots(prev => prev.map(s => {
+        const parts = s.split('__');
+        if (parts.length < 2) return s;
+        const date = parts[0];
+        const time = parts[1];
+        const slotTeamType = parts[2] || 'both';
+        if (slotTeamType === teamType) return s;
+        
+        let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+        const factor = isNets ? 1.0 : (teamType === 'one' ? 0.5 : 1.0);
+        price = price * factor;
+        
+        return `${date}__${time}__${teamType}__${price}`;
+      }));
+    }
+  }, [teamType, isNets, pricesByDate, slotPriceByStartTime, selectedGround, selectedNetsSlots.length]);
+
   const derivedEndTime = useMemo(() => {
     const fromDb = startTime ? endTimeByStartTime[startTime] : undefined;
     if (fromDb) return fromDb;
@@ -2940,8 +2962,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           const time = parts[1];
                           const slotTeamType = parts[2] || teamType;
                           
-                          const isCurrentDate = date === bookingDate;
-                          const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
+                          const label = `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
                           
                           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
                           // Apply team type factor per slot if calculating from base (skip for Nets)
@@ -3072,8 +3093,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       const time = parts[1];
                       const slotTeamType = parts[2] || teamType;
                       
-                      const isCurrentDate = date === bookingDate;
-                      const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
+                      const label = `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
                       
                       let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
                       const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);

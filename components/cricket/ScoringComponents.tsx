@@ -215,13 +215,13 @@ export const QrModal = ({ isVisible, onClose, user, styles }) => (
           <View style={styles.qrWrapper}>
             <QrCode size={180} color="#06392e" />
           </View>
-          <Text style={styles.qrPlayerName}>{user?.full_name || 'Player'}</Text>
+          <Text style={styles.qrPlayerName}>{user?.full_name ? user.full_name.split(' ').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ') : 'Player'}</Text>
           <Text style={styles.qrSubtext}>Scan to view profile</Text>
         </View>
 
         <TouchableOpacity 
           style={styles.shareQrBtn}
-          onPress={() => Share.share({ message: `Check out my cricket profile: https://bookyourground.com/player/${user?.id}` })}
+          onPress={() => Share.share({ message: `Check out my cricket profile: https://bookyourground.com/players/${user?.id}` })}
         >
           <Share2 size={20} color="#FFFFFF" />
           <Text style={styles.shareQrBtnText}>Share Profile</Text>

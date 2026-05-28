@@ -660,7 +660,7 @@ export default function CricketLayout() {
           <View style={styles.qrContent}>
             <View style={styles.qrWrapper}>
               <QRCode
-                value={`https://bookyourground.com/players/${user?.id}`}
+                value={`https://bookyourground.com/players/${profile?.id || user?.id}`}
                 size={200}
                 color="#06392e"
                 backgroundColor="white"
@@ -672,7 +672,7 @@ export default function CricketLayout() {
                 ecl="H"
               />
             </View>
-            <Text style={styles.qrPlayerName}>{profile?.full_name}</Text>
+            <Text style={styles.qrPlayerName}>{formatName(profile?.full_name || '')}</Text>
             <Text style={styles.qrSubtext}>Scan to view profile</Text>
           </View>
 
@@ -680,7 +680,7 @@ export default function CricketLayout() {
             style={styles.shareQrBtn}
             onPress={() => {
               Share.share({
-                message: `Check out my cricket profile on Book Your Ground: https://bookyourground.com/players/${user?.id}`,
+                message: `Check out my cricket profile on Book Your Ground: https://bookyourground.com/players/${profile?.id || user?.id}`,
               });
             }}
           >
@@ -920,7 +920,7 @@ export default function CricketLayout() {
               <QrCode size={20} color="#FFFFFF" />
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => Share.share({ message: `Check out my profile: https://bookyourground.com/players/${user?.id}` })} 
+              onPress={() => Share.share({ message: `Check out my profile: https://bookyourground.com/players/${profile?.id || user?.id}` })} 
               style={styles.actionCircleBtn}
             >
               <Share2 size={20} color="#FFFFFF" />

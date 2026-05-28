@@ -1,24 +1,24 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { 
-  View, 
-  Text as RNText, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  Platform, 
-  TextInput as RNTextInput, 
-  useWindowDimensions, 
+import {
+  View,
+  Text as RNText,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Platform,
+  TextInput as RNTextInput,
+  useWindowDimensions,
   ActivityIndicator,
   Pressable,
   Modal
 } from 'react-native';
-import { 
-  ShoppingBag, 
-  Search, 
-  Filter, 
-  ArrowRight, 
-  Star, 
+import {
+  ShoppingBag,
+  Search,
+  Filter,
+  ArrowRight,
+  Star,
   ShoppingCart,
   Heart,
   ChevronRight,
@@ -32,11 +32,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing, 
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
   useAnimatedScrollHandler,
   runOnJS,
   withRepeat,
@@ -72,12 +72,12 @@ const Skeleton = ({ width, height, style }: any) => {
   }));
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
-        { width, height, backgroundColor: '#E2E8F0', borderRadius: 12 }, 
-        animatedStyle, 
+        { width, height, backgroundColor: '#E2E8F0', borderRadius: 12 },
+        animatedStyle,
         style
-      ]} 
+      ]}
     />
   );
 };
@@ -151,7 +151,7 @@ export default function ShopScreen() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
-  
+
   // Filter States
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
@@ -185,7 +185,7 @@ export default function ShopScreen() {
         .from('shop_cart')
         .select('quantity')
         .eq('user_id', user.id);
-      
+
       if (!error && data) {
         const total = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
         setCartCount(total);
@@ -219,7 +219,7 @@ export default function ShopScreen() {
 
     // Search Query Filter
     if (searchQuery) {
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -286,9 +286,9 @@ export default function ShopScreen() {
     setIsFilterVisible(false);
   };
 
-  const featuredProduct = useMemo(() => 
-    products.find(p => p.is_featured) || products[0], 
-  [products]);
+  const featuredProduct = useMemo(() =>
+    products.find(p => p.is_featured) || products[0],
+    [products]);
 
   const addToCart = async (productId: string) => {
     if (!user) {
@@ -308,7 +308,7 @@ export default function ShopScreen() {
 
       if (fetchError) throw fetchError;
 
-      const existingItem = existingItems?.find(item => 
+      const existingItem = existingItems?.find(item =>
         !item.selected_attributes || Object.keys(item.selected_attributes).length === 0
       );
 
@@ -321,15 +321,15 @@ export default function ShopScreen() {
       } else {
         const { error: insertError } = await supabase
           .from('shop_cart')
-          .insert({ 
-            user_id: user.id, 
+          .insert({
+            user_id: user.id,
             product_id: productId,
             selected_attributes,
             quantity: 1
           });
         if (insertError) throw insertError;
       }
-      
+
       loadCartCount();
       if (Platform.OS === 'web') alert('Added to cart!');
       else router.push('/shop/cart');
@@ -342,12 +342,12 @@ export default function ShopScreen() {
     onScroll: (event) => {
       const currentY = event.contentOffset.y;
       scrollY.value = currentY;
-      
+
       const diff = currentY - lastScrollY.value;
-      
+
       if (diff > 10 && currentY > 100) {
         if (headerTranslateY.value === 0) {
-          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, {
             duration: 400,
             easing: Easing.out(Easing.quad)
           });
@@ -355,7 +355,7 @@ export default function ShopScreen() {
         }
       } else if (diff < -15 || currentY < 50) {
         if (headerTranslateY.value < 0) {
-          headerTranslateY.value = withTiming(0, { 
+          headerTranslateY.value = withTiming(0, {
             duration: 400,
             easing: Easing.out(Easing.quad)
           });
@@ -380,8 +380,8 @@ export default function ShopScreen() {
   const renderProductCard = (product: any) => {
     const category = categories.find(c => c.id === product.category_id)?.name || 'Equipment';
     return (
-      <Pressable 
-        key={product.id} 
+      <Pressable
+        key={product.id}
         style={({ pressed }) => [
           styles.productCard,
           { width: cardWidth },
@@ -393,16 +393,16 @@ export default function ShopScreen() {
         }}
       >
         <View style={[styles.imageWrapper, width < 600 && { height: 280 }]}>
-          <Image 
-            source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
-            style={styles.productImage} 
+          <Image
+            source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }}
+            style={styles.productImage}
           />
           {product.tag && (
             <View style={styles.tagBadge}>
               <RNText style={styles.tagText}>{product.tag}</RNText>
             </View>
           )}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.favoriteBtn}
             onPress={() => {
               const isFav = favorites.includes(product.id);
@@ -413,23 +413,23 @@ export default function ShopScreen() {
               }
             }}
           >
-            <Heart 
-              size={18} 
-              color={favorites.includes(product.id) ? "#ff3564" : "#64748B"} 
-              fill={favorites.includes(product.id) ? "#ff3564" : "transparent"} 
+            <Heart
+              size={18}
+              color={favorites.includes(product.id) ? "#ff3564" : "#64748B"}
+              fill={favorites.includes(product.id) ? "#ff3564" : "transparent"}
             />
           </TouchableOpacity>
         </View>
         <View style={styles.productInfo}>
           <RNText style={styles.productCategory}>{category}</RNText>
           <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
-          
+
           <View style={styles.ratingRow}>
             <Star size={14} color="#ff3564" fill="#ff3564" />
             <RNText style={styles.ratingText}>{Number(product.rating || 4.5).toFixed(1)}</RNText>
             <RNText style={styles.reviewCount}>({product.review_count || 12})</RNText>
           </View>
-          
+
           <View style={styles.priceRow}>
             <View>
               <RNText style={styles.productPrice}>₹{Number(product.price).toLocaleString('en-IN')}</RNText>
@@ -447,9 +447,9 @@ export default function ShopScreen() {
     if (loading) return <HeroSkeleton />;
     return (
       <Animated.View style={[styles.heroWrapper, bannerAnimatedStyle, isSmall && { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0 }]}>
-        <Image 
-          source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')} 
-          style={styles.heroImageBg} 
+        <Image
+          source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')}
+          style={styles.heroImageBg}
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
@@ -486,15 +486,15 @@ export default function ShopScreen() {
     return (
       <View style={{ flex: 1 }}>
         {isSmall && renderHero()}
-        <ScrollComponent 
+        <ScrollComponent
           onScroll={Platform.OS === 'web' ? (e: any) => {
             const currentY = e.nativeEvent.contentOffset.y;
             const diff = currentY - lastScrollY.value;
-            
+
             if (diff > 10 && currentY > 100) {
               setTabBarVisible(false);
               if (headerTranslateY.value === 0) {
-                headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+                headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, {
                   duration: 400,
                   easing: Easing.out(Easing.quad)
                 });
@@ -502,20 +502,20 @@ export default function ShopScreen() {
             } else if (diff < -15 || currentY < 50) {
               setTabBarVisible(true);
               if (headerTranslateY.value < 0) {
-                headerTranslateY.value = withTiming(0, { 
+                headerTranslateY.value = withTiming(0, {
                   duration: 400,
                   easing: Easing.out(Easing.quad)
                 });
               }
             }
             lastScrollY.value = currentY;
-            
+
             DeviceEventEmitter.emit('mainScroll', { y: currentY });
             if (onScroll) onScroll(e);
           } : onScroll}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
-          style={[styles.container, isSmall && { backgroundColor: 'transparent' }]} 
+          style={[styles.container, isSmall && { backgroundColor: 'transparent' }]}
           contentContainerStyle={[styles.scrollContent]}
           stickyHeaderIndices={isSmall ? [1] : undefined}
         >
@@ -529,14 +529,14 @@ export default function ShopScreen() {
                 <View style={[styles.searchSection, { marginTop: 15 }, width < 350 && { marginTop: -20 }]}>
                   <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
                     <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
-                    <RNTextInput 
+                    <RNTextInput
                       style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
                       placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
                       placeholderTextColor="#94A3B8"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
                       onPress={() => {
                         setTempSortBy(sortBy);
@@ -557,13 +557,13 @@ export default function ShopScreen() {
                   {loading ? (
                     <CategorySkeleton />
                   ) : (
-                    <ScrollView 
-                      horizontal 
-                      showsHorizontalScrollIndicator={false} 
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ paddingHorizontal: 20 }}
                     >
                       <View style={styles.toggleButtonGroup}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={[styles.toggleButton, activeCategory === 'all' && styles.toggleButtonActive]}
                           onPress={() => setActiveCategory('all')}
                         >
@@ -572,10 +572,10 @@ export default function ShopScreen() {
                           </RNText>
                         </TouchableOpacity>
                         {categories.map((cat, index) => (
-                          <TouchableOpacity 
-                            key={cat.id} 
+                          <TouchableOpacity
+                            key={cat.id}
                             style={[
-                              styles.toggleButton, 
+                              styles.toggleButton,
                               activeCategory === cat.name && styles.toggleButtonActive,
                               index === categories.length - 1 && { borderRightWidth: 0 }
                             ]}
@@ -593,9 +593,9 @@ export default function ShopScreen() {
               </>
             ) : (
               // Desktop Layout: 1 row
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
                 gap: 16,
                 paddingHorizontal: 20,
                 marginBottom: 24,
@@ -604,14 +604,14 @@ export default function ShopScreen() {
                 {/* Search Bar */}
                 <View style={[styles.searchBar, { flex: 1 }]}>
                   <Search size={20} color="#94A3B8" />
-                  <RNTextInput 
+                  <RNTextInput
                     style={styles.searchInput}
                     placeholder="Search gear, brands, accessories..."
                     placeholderTextColor="#94A3B8"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.filterBtn}
                     onPress={() => {
                       setTempSortBy(sortBy);
@@ -633,7 +633,7 @@ export default function ShopScreen() {
                   ) : (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={styles.toggleButtonGroup}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={[styles.toggleButton, activeCategory === 'all' && styles.toggleButtonActive]}
                           onPress={() => setActiveCategory('all')}
                         >
@@ -642,10 +642,10 @@ export default function ShopScreen() {
                           </RNText>
                         </TouchableOpacity>
                         {categories.map((cat, index) => (
-                          <TouchableOpacity 
-                            key={cat.id} 
+                          <TouchableOpacity
+                            key={cat.id}
                             style={[
-                              styles.toggleButton, 
+                              styles.toggleButton,
                               activeCategory === cat.name && styles.toggleButtonActive,
                               index === categories.length - 1 && { borderRightWidth: 0 }
                             ]}
@@ -666,44 +666,44 @@ export default function ShopScreen() {
 
           {/* Products Grid */}
           <View style={[styles.productsSection, isSmall && { backgroundColor: '#F8FAFC', minHeight: 1000 }]}>
-          <View style={styles.sectionHeader}>
-            <RNText style={styles.sectionTitle}>
-              {activeCategory === 'all' ? 'Featured Items' : activeCategory}
-            </RNText>
-            <TouchableOpacity 
-              style={styles.viewAllRow}
-              onPress={() => {
-                setActiveCategory('all');
-                setSearchQuery('');
-                setPriceRange(null);
-                setSortBy('newest');
-              }}
-            >
-              <RNText style={styles.viewAllText}>View All</RNText>
-              <ChevronRight size={16} color="#ff3564" />
-            </TouchableOpacity>
-          </View>
-          
-          {loading ? (
-            <View style={styles.productGrid}>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <ProductSkeleton key={i} />)}
-            </View>
-          ) : filteredProducts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <ShoppingBag size={48} color="#CBD5E1" />
-              <RNText style={styles.emptyText}>No matches for your search.</RNText>
-              <TouchableOpacity onPress={() => {setSearchQuery(''); setActiveCategory('all');}}>
-                <RNText style={styles.resetText}>Clear filters</RNText>
+            <View style={styles.sectionHeader}>
+              <RNText style={styles.sectionTitle}>
+                {activeCategory === 'all' ? 'Featured Items' : activeCategory}
+              </RNText>
+              <TouchableOpacity
+                style={styles.viewAllRow}
+                onPress={() => {
+                  setActiveCategory('all');
+                  setSearchQuery('');
+                  setPriceRange(null);
+                  setSortBy('newest');
+                }}
+              >
+                <RNText style={styles.viewAllText}>View All</RNText>
+                <ChevronRight size={16} color="#ff3564" />
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.productGrid}>
-              {filteredProducts.map(product => renderProductCard(product))}
-            </View>
-          )}
-        </View>
-      </ScrollComponent>
-    </View>
+
+            {loading ? (
+              <View style={styles.productGrid}>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <ProductSkeleton key={i} />)}
+              </View>
+            ) : filteredProducts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <ShoppingBag size={48} color="#CBD5E1" />
+                <RNText style={styles.emptyText}>No matches for your search.</RNText>
+                <TouchableOpacity onPress={() => { setSearchQuery(''); setActiveCategory('all'); }}>
+                  <RNText style={styles.resetText}>Clear filters</RNText>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.productGrid}>
+                {filteredProducts.map(product => renderProductCard(product))}
+              </View>
+            )}
+          </View>
+        </ScrollComponent>
+      </View>
     );
   };
 
@@ -715,10 +715,10 @@ export default function ShopScreen() {
       onRequestClose={() => setIsFilterVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity 
-          style={styles.modalBackdrop} 
-          activeOpacity={1} 
-          onPress={() => setIsFilterVisible(false)} 
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setIsFilterVisible(false)}
         />
         <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
           <View style={styles.modalHeader}>
@@ -738,7 +738,7 @@ export default function ShopScreen() {
                   { id: 'price_high', label: 'Price: High to Low' },
                   { id: 'rating', label: 'Best Rating' }
                 ].map(option => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={option.id}
                     style={[styles.modalOption, tempSortBy === option.id && styles.modalOptionActive]}
                     onPress={() => setTempSortBy(option.id)}
@@ -762,16 +762,16 @@ export default function ShopScreen() {
                   { label: '₹2000 - ₹5000', range: [2000, 5000] },
                   { label: '₹5000+', range: [5000, 100000] }
                 ].map((option, idx) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={idx}
                     style={[
-                      styles.modalOption, 
+                      styles.modalOption,
                       JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionActive
                     ]}
                     onPress={() => setTempPriceRange(option.range as [number, number] | null)}
                   >
                     <RNText style={[
-                      styles.modalOptionText, 
+                      styles.modalOptionText,
                       JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionTextActive
                     ]}>
                       {option.label}
@@ -802,7 +802,7 @@ export default function ShopScreen() {
         <View style={styles.screen}>
           {isSmall && (
             <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cartIcon}
                 onPress={() => router.push('/shop/cart')}
               >
@@ -825,7 +825,7 @@ export default function ShopScreen() {
   return (
     <View style={styles.screen}>
       <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cartIcon}
           onPress={() => router.push('/shop/cart')}
         >
@@ -1204,7 +1204,7 @@ const styles = StyleSheet.create({
   },
   productInfo: {
     paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
   },
   productCategory: {
     fontSize: 10,
