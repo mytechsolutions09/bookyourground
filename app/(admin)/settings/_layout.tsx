@@ -8,6 +8,7 @@ export default function AdminSettingsLayout() {
       <Stack.Screen name="locations" />
       <Stack.Screen name="ground-types" />
       <Stack.Screen name="contract-submissions" />
+      <Stack.Screen name="skills" />
     </Stack>
   );
 }

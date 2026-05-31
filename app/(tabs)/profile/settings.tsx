@@ -506,8 +506,9 @@ const styles = StyleSheet.create({
   inner: {
     width: '100%',
     maxWidth: 1000,
-    alignSelf: 'center',
-    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    paddingLeft: 0,
+    paddingRight: 16,
     paddingTop: 16,
     paddingBottom: 24,
   },

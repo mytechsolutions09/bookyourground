@@ -61,6 +61,7 @@ export default function AdminLayout() {
       <Stack.Screen name="cricketdata/stats" />
       <Stack.Screen name="cricketdata/players" />
       <Stack.Screen name="cricketdata/import-profile" />
+      <Stack.Screen name="cricketdata/posts" />
     </Stack>
   );
 }

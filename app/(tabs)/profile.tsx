@@ -984,10 +984,11 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     width: '100%',
     maxWidth: 1000,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     ...Platform.select({
       web: {
-        paddingHorizontal: 16,
+        paddingLeft: 0,
+        paddingRight: 16,
         paddingTop: 16,
       },
       default: {

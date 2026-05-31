@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText, UserX } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText, UserX, Zap } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 
 const BASE = '/(admin)/settings';
@@ -39,6 +39,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isPlatformFees = pathname.includes('/settings/platform-fees');
   const isContracts = pathname.includes('/settings/contract-submissions');
   const isDeletions = pathname.includes('/settings/deletion-requests');
+  const isSkills = pathname.includes('/settings/skills');
 
   return (
     <View style={styles.shell}>
@@ -144,6 +145,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
                 <Text style={styles.badgeText}>{pendingDeletionsCount}</Text>
               </View>
             )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/skills') as any)}
+            style={[styles.subLink, isSkills && styles.subLinkActive]}
+          >
+            <Zap size={16} color={isSkills ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isSkills && styles.subLinkTextActive]}>
+              Skills
+            </Text>
           </Pressable>
         </ScrollView>
       </View>

@@ -626,6 +626,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/locations',
     '/manage-ground-owners',
     '/manage-users',
+    '/cricketdata/posts',
+    '/(admin)/cricketdata/posts',
     '/messages',
     '/settings',
     '/settings/coupons',
@@ -807,7 +809,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
-              style={styles.logo}
+              style={[styles.logo, { zIndex: 10 }]}
               accessibilityRole="link"
               accessibilityLabel="Book my venues — home"
             >
@@ -822,7 +824,21 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            <View style={styles.headerRight}>
+            {!isCompact && isLanding && (
+              <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
+                <TouchableOpacity onPress={() => router.push('/list-venue' as any)} style={{ padding: 10 }}>
+                  <Text style={[
+                    styles.headerPrimaryButtonText,
+                    scrolled && styles.headerPrimaryButtonTextScrolled,
+                    { color: '#00ea6b' }
+                  ]}>
+                    HOST YOUR VENUE
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={[styles.headerRight, { zIndex: 10 }]}>
               <>
                 {!isCompact ? (
                   <>
@@ -1059,7 +1075,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
-              style={styles.logo}
+              style={[styles.logo, { zIndex: 10 }]}
               accessibilityRole="link"
               accessibilityLabel="Book My Venues - home"
             >
@@ -1074,13 +1090,27 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
+            {!isCompact && !headerContent && isLanding && (
+              <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
+                <TouchableOpacity onPress={() => router.push('/list-venue' as any)} style={{ padding: 10 }}>
+                  <Text style={[
+                    styles.headerNavLink,
+                    cleanPath === '/list-venue' && styles.headerNavLinkActive,
+                    (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { color: '#00ea6b' }
+                  ]}>
+                    HOST YOUR VENUE
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {headerContent && (
-              <View style={{ flex: 1, paddingHorizontal: 16, alignItems: 'center' }}>
+              <View style={{ flex: 1, paddingHorizontal: 16, alignItems: 'center', zIndex: 5 }}>
                 {headerContent}
               </View>
             )}
 
-            <View style={styles.headerRight}>
+            <View style={[styles.headerRight, { zIndex: 10 }]}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
                   {cleanPath !== '/search' && (

@@ -20,6 +20,8 @@ import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import GroundsNearYou from '@/components/landing/GroundsNearYou';
 import Features from '@/components/landing/Features';
 import CallToAction from '@/components/landing/CallToAction';
+import HostVenueAd from '@/components/landing/HostVenueAd';
+import OwnerTestimonials from '@/components/landing/OwnerTestimonials';
 import SiteFooter from '@/components/web/SiteFooter';
 import FindOpposition from '@/components/landing/FindOpposition';
 import {
@@ -121,12 +123,14 @@ export default function LandingScrollContent({
               </View>
 
               <GroundsNearYou />
+              <HostVenueAd />
               <FindOpposition />
               <HowItWorks />
               <CalendarTabs />
               <PopularGrounds />
               <Features />
               <CallToAction />
+              <OwnerTestimonials />
               <SiteFooter />
             </View>
           ) : (
@@ -143,6 +147,7 @@ export default function LandingScrollContent({
                 }}
               >
                 <GroundsNearYou />
+                <HostVenueAd />
                 <FindOpposition />
               </View>
 
@@ -181,6 +186,7 @@ export default function LandingScrollContent({
                 <PopularGrounds />
                 <Features />
                 <CallToAction />
+                <OwnerTestimonials />
                 <SiteFooter />
               </View>
             </>
