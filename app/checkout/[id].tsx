@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter, router as expoRouter } from 'expo-router';
+import Head from 'expo-router/head';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Image as RNImage } from 'react-native';
@@ -2611,11 +2612,27 @@ export default function CheckoutScreen() {
         );
     }
 
+    const groundName = (booking?.grounds || booking?.ground)?.name || 'Ground';
+    
+    const pageMeta = (
+        <Head>
+            <title>Checkout {groundName} - BookYourGround</title>
+            <meta name="description" content={`Securely book ${groundName} for your next match on BookYourGround.`} />
+            <meta property="og:title" content={`Book ${groundName} on BookYourGround`} />
+            <meta property="og:description" content={`Securely book ${groundName} for your next match on BookYourGround.`} />
+        </Head>
+    );
+
     if (Platform.OS === 'web') {
-        return <WebLayout noCard>{content}</WebLayout>;
+        return <WebLayout noCard>{pageMeta}{content}</WebLayout>;
     }
 
-    return (content);
+    return (
+        <>
+            {pageMeta}
+            {content}
+        </>
+    );
 }
 
 const styles = StyleSheet.create({

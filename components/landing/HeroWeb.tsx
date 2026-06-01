@@ -323,12 +323,20 @@ export default function HeroWeb() {
             alignItems: 'center',
             zIndex: 100,
           }}>
-            <Text style={[styles.title, { fontSize: 28, lineHeight: 36, marginBottom: 0, textAlign: 'center' }]}>
+            <Text 
+              accessibilityRole="header" 
+              aria-level={1} 
+              style={[styles.title, { fontSize: 28, lineHeight: 36, marginBottom: 0, textAlign: 'center' }]}
+            >
               Play Hard. Book Easy.
             </Text>
           </View>
         ) : (
-          <Text style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}>
+          <Text 
+            accessibilityRole="header" 
+            aria-level={1} 
+            style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}
+          >
             Play Hard. Book Easy.
           </Text>
         )}

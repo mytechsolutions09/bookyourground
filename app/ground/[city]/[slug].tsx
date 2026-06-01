@@ -16,6 +16,7 @@ import {
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import Head from 'expo-router/head';
 import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon, Waves, SlidersHorizontal, ArrowUpDown, ChevronDown, Lightbulb, Car, Shirt, Home, Bath, Users, Circle, ClipboardList, Target } from 'lucide-react-native';
 import { 
   APIProvider, 
@@ -515,7 +516,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <View style={styles.webInfoGrid}>
                     <View style={styles.webInfoMain}>
                       <View style={styles.webInfoSectionFlat}>
-                        <Text style={styles.webGroundNameLarge}>{ground.name}</Text>
+                        <Text accessibilityRole="header" aria-level={1} style={styles.webGroundNameLarge}>{ground.name}</Text>
                         <View style={[styles.webLocationRowLarge, { marginTop: 8 }]}>
                           <MapPin size={16} color="#64748B" />
                           <Text style={styles.webLocationTextLarge}>
@@ -655,7 +656,7 @@ export default function GroundDetailsPrettyUrlScreen() {
               )}
 
               <View style={styles.section}>
-                <Text style={styles.name}>{ground.name}</Text>
+                <Text accessibilityRole="header" aria-level={1} style={styles.name}>{ground.name}</Text>
                 <View style={styles.locationRow}>
                   <Text style={styles.location}>
                     {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
@@ -891,8 +892,16 @@ export default function GroundDetailsPrettyUrlScreen() {
               </View>
             ) : null
           )
-        }} 
       />
+      {ground && (
+        <Head>
+          <title>{ground.name} - BookYourGround</title>
+          <meta name="description" content={ground.description || `Book ${ground.name} on BookYourGround.`} />
+          <meta property="og:title" content={`${ground.name} - BookYourGround`} />
+          <meta property="og:description" content={ground.description || `Book ${ground.name} on BookYourGround.`} />
+          {ground.ground_images?.[0]?.image_url && <meta property="og:image" content={ground.ground_images[0].image_url} />}
+        </Head>
+      )}
       {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
     </>
   );

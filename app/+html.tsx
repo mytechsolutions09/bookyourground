@@ -32,6 +32,21 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <title>Cricket Ground Booking - BookYourGround</title>
         <meta name="description" content="Instantly book cricket, football, and other sports grounds online." />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://bookyourground.com/" />
+        <meta property="og:title" content="Cricket Ground Booking - BookYourGround" />
+        <meta property="og:description" content="Instantly book cricket, football, and other sports grounds online." />
+        <meta property="og:image" content="https://bookyourground.com/logo.png" />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://bookyourground.com/" />
+        <meta property="twitter:title" content="Cricket Ground Booking - BookYourGround" />
+        <meta property="twitter:description" content="Instantly book cricket, football, and other sports grounds online." />
+        <meta property="twitter:image" content="https://bookyourground.com/logo.png" />
+        
         <base href="/" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
