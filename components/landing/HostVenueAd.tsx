@@ -1,15 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, ImageBackground, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { Building2, ArrowRight, ShieldCheck, TrendingUp, CalendarClock } from 'lucide-react-native';
+import { Building2, ArrowRight, ShieldCheck, TrendingUp, CalendarClock, Trophy, MapPin, CalendarPlus, Users } from 'lucide-react-native';
 import { useIsCompact } from '@/hooks/useIsCompact';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HostVenueAd() {
   const isCompact = useIsCompact();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const { user, profile } = useAuth();
 
   return (
-    <View style={[styles.container, isCompact && styles.containerCompact]}>
+    <View style={[styles.container, { minHeight: height }, isCompact && styles.containerCompact]}>
       <View style={[styles.card, isCompact && styles.cardCompact]}>
         <View style={styles.content}>
           <View style={styles.badgeWrapper}>
@@ -44,24 +46,41 @@ export default function HostVenueAd() {
 
           <TouchableOpacity 
             style={styles.ctaButton}
-            onPress={() => router.push('/list-venue')}
+            onPress={() => {
+              if (!user) {
+                router.push('/(auth)/login' as any);
+              } else if (profile?.role === 'ground_owner') {
+                router.push('/(owner)/owner-dashboard' as any);
+              } else {
+                router.push('/list-venue' as any);
+              }
+            }}
             {...(Platform.OS === 'web' && { 
               onMouseEnter: (e: any) => e.target.style.opacity = '0.9',
               onMouseLeave: (e: any) => e.target.style.opacity = '1'
             } as any)}
           >
             <Text style={styles.ctaText}>List Your Venue Now</Text>
-            <ArrowRight size={18} color="#06392e" />
+            <ArrowRight size={18} color="#0c5746" />
           </TouchableOpacity>
         </View>
 
         {!isCompact && (
           <View style={styles.imageWrapper}>
-            {/* We use a colored gradient/block or abstract shapes as placeholder since we don't have a specific host image. */}
             <View style={styles.graphic}>
               <View style={styles.circle1} />
               <View style={styles.circle2} />
-              <Building2 size={120} color="rgba(0, 234, 107, 0.15)" style={styles.graphicIcon} />
+              <View style={styles.circle3} />
+              <Trophy size={140} color="rgba(0, 234, 107, 0.2)" style={styles.mainIcon} />
+              <View style={styles.floatingIcon1}>
+                <CalendarPlus size={48} color="rgba(0, 234, 107, 0.4)" />
+              </View>
+              <View style={styles.floatingIcon2}>
+                <MapPin size={56} color="rgba(0, 234, 107, 0.5)" />
+              </View>
+              <View style={styles.floatingIcon3}>
+                <Users size={40} color="rgba(0, 234, 107, 0.3)" />
+              </View>
             </View>
           </View>
         )}
@@ -73,29 +92,18 @@ export default function HostVenueAd() {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    backgroundColor: '#0c5746',
     zIndex: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   containerCompact: {
-    paddingHorizontal: 16,
-    paddingVertical: 32,
   },
   card: {
-    backgroundColor: '#06392e',
-    borderRadius: 24,
-    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
     flexDirection: 'row',
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 10,
-    ...(Platform.OS === 'web' && {
-      backgroundImage: 'linear-gradient(135deg, #06392e 0%, #04241d 100%)',
-    } as any),
   },
   cardCompact: {
     flexDirection: 'column',
@@ -189,14 +197,13 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' && { transition: 'opacity 0.2s ease' } as any),
   },
   ctaText: {
-    color: '#06392e',
+    color: '#0c5746',
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter',
   },
   imageWrapper: {
     width: 400,
-    backgroundColor: '#04241d',
     overflow: 'hidden',
     position: 'relative',
     alignItems: 'center',
@@ -226,7 +233,38 @@ const styles = StyleSheet.create({
     bottom: -20,
     left: -20,
   },
-  graphicIcon: {
+  circle3: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(0, 234, 107, 0.06)',
+    top: 40,
+    left: 20,
+  },
+  mainIcon: {
+    transform: [{ rotate: '-5deg' }],
+    zIndex: 2,
+  },
+  floatingIcon1: {
+    position: 'absolute',
+    top: 60,
+    right: 40,
+    transform: [{ rotate: '15deg' }],
+    zIndex: 3,
+  },
+  floatingIcon2: {
+    position: 'absolute',
+    bottom: 50,
+    left: 50,
     transform: [{ rotate: '-10deg' }],
+    zIndex: 3,
+  },
+  floatingIcon3: {
+    position: 'absolute',
+    bottom: 80,
+    right: 60,
+    transform: [{ rotate: '5deg' }],
+    zIndex: 3,
   },
 });

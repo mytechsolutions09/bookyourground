@@ -13,6 +13,8 @@ import {
   ScrollView,
   DeviceEventEmitter,
   Pressable,
+  Modal,
+  Switch,
 } from 'react-native';
 import { router, usePathname, useSegments, useLocalSearchParams } from 'expo-router';
 import {
@@ -196,7 +198,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   isNotFoundPage = false,
 }: WebLayoutProps) {
   const isCompact = useIsCompact();
-  const { profile, signOut, user } = useAuth();
+  const { profile, signOut, user, updateProfile } = useAuth();
   const params = useLocalSearchParams();
   const pathname = usePathname();
   const segments = useSegments();
@@ -209,6 +211,30 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   }
 
   const [scrolled, setScrolled] = useState(false);
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [isOwnerToggle, setIsOwnerToggle] = useState(false);
+
+  const handleHostVenuePress = () => {
+    if (!user) {
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (profile?.role === 'ground_owner') {
+      router.push('/(owner)/owner-dashboard' as any);
+    } else {
+      setShowOwnerModal(true);
+    }
+  };
+
+  const handleConfirmOwner = async () => {
+    if (isOwnerToggle) {
+      await updateProfile({ role: 'ground_owner' });
+      setShowOwnerModal(false);
+      router.push('/(owner)/owner-dashboard' as any);
+    } else {
+      setShowOwnerModal(false);
+    }
+  };
   const [startX, setStartX] = useState(0);
   const [isSidebarOpenOnSmallScreen, setIsSidebarOpenOnSmallScreen] = useState(false);
 
@@ -826,11 +852,24 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
             {!isCompact && isLanding && (
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
-                <TouchableOpacity onPress={() => router.push('/list-venue' as any)} style={{ padding: 10 }}>
+                <TouchableOpacity 
+                  onPress={handleHostVenuePress} 
+                  style={{ 
+                    paddingHorizontal: 20, 
+                    paddingVertical: 8, 
+                    borderRadius: 24, 
+                    borderWidth: 1.5, 
+                    borderColor: '#00ea6b', 
+                    backgroundColor: 'rgba(0, 234, 107, 0.15)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
                   <Text style={[
                     styles.headerPrimaryButtonText,
                     scrolled && styles.headerPrimaryButtonTextScrolled,
-                    { color: '#00ea6b' }
+                    { color: '#00ea6b', letterSpacing: 1, fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }
                   ]}>
                     HOST YOUR VENUE
                   </Text>
@@ -900,7 +939,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         {isSearching ? (
                           <Text style={styles.searchDropdownText}>Searching...</Text>
                         ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
-                          <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
+                          <Text style={styles.searchDropdownText}>No results found for &quot;{searchQuery}&quot;</Text>
                         ) : (
                           <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
                             {searchResults.grounds.length > 0 && (
@@ -1023,7 +1062,15 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                       <TouchableOpacity
                         style={styles.profileChip}
-                        onPress={() => router.push('/profile')}
+                        onPress={() => {
+                          if (isSuperAdmin) {
+                            router.push('/(admin)/dashboard');
+                          } else if (isGroundOwner) {
+                            router.push('/(owner)/owner-dashboard');
+                          } else {
+                            router.push('/dashboard');
+                          }
+                        }}
                       >
                         <Image
                           source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
@@ -1045,7 +1092,15 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     ) : (
                       <TouchableOpacity
                         style={styles.profileChipCompact}
-                        onPress={() => router.push('/profile')}
+                        onPress={() => {
+                          if (isSuperAdmin) {
+                            router.push('/(admin)/dashboard');
+                          } else if (isGroundOwner) {
+                            router.push('/(owner)/owner-dashboard');
+                          } else {
+                            router.push('/dashboard');
+                          }
+                        }}
                       >
                         <Image
                           source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
@@ -1092,11 +1147,23 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
             {!isCompact && !headerContent && isLanding && (
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
-                <TouchableOpacity onPress={() => router.push('/list-venue' as any)} style={{ padding: 10 }}>
+                <TouchableOpacity 
+                  onPress={handleHostVenuePress} 
+                  style={{ 
+                    paddingHorizontal: 20, 
+                    paddingVertical: 8, 
+                    borderRadius: 24, 
+                    borderWidth: 1.5, 
+                    borderColor: '#00ea6b', 
+                    backgroundColor: 'rgba(0, 234, 107, 0.15)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
                   <Text style={[
                     styles.headerNavLink,
-                    cleanPath === '/list-venue' && styles.headerNavLinkActive,
-                    (cleanPath === '/search' || cleanPath === '/cricket' || cleanPath.startsWith('/blog') || isNotFoundPage) && { color: '#00ea6b' }
+                    { color: '#00ea6b', letterSpacing: 1, fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }
                   ]}>
                     HOST YOUR VENUE
                   </Text>
@@ -1157,7 +1224,15 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                       <TouchableOpacity
                         style={styles.userProfilePill}
-                        onPress={() => router.push('/(tabs)/profile' as any)}
+                        onPress={() => {
+                          if (isSuperAdmin) {
+                            router.push('/(admin)/dashboard');
+                          } else if (isGroundOwner) {
+                            router.push('/(owner)/owner-dashboard');
+                          } else {
+                            router.push('/dashboard');
+                          }
+                        }}
                       >
                         <Image
                           source={
@@ -1550,11 +1625,107 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           })}
         </View>
       )}
+
+      <Modal visible={showOwnerModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Host Your Venue</Text>
+            <View style={styles.modalToggleRow}>
+              <Text style={styles.modalToggleText}>Are you a venue owner?</Text>
+              <Switch
+                value={isOwnerToggle}
+                onValueChange={setIsOwnerToggle}
+                trackColor={{ false: '#767577', true: '#00ea6b' }}
+                thumbColor={isOwnerToggle ? '#FFFFFF' : '#f4f3f4'}
+              />
+            </View>
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowOwnerModal(false)}>
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={handleConfirmOwner}>
+                <Text style={styles.modalConfirmButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({ web: { zIndex: 1000 } as any })
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 20,
+    fontFamily: 'Inter',
+    textAlign: 'center',
+  },
+  modalToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#f1f5f9',
+    marginBottom: 24,
+  },
+  modalToggleText: {
+    fontSize: 16,
+    color: '#475569',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  modalCancelButtonText: {
+    color: '#64748b',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  modalConfirmButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#00ea6b',
+  },
+  modalConfirmButtonText: {
+    color: '#043529',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -1580,7 +1751,7 @@ const styles = StyleSheet.create({
     })
   },
   header: {
-    height: 84,
+    height: 60,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     zIndex: 100,
@@ -1609,7 +1780,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 84,
+    height: 60,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,

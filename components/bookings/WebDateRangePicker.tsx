@@ -277,9 +277,7 @@ export default function WebDateRangePicker({
                   <Text style={styles.navBtnText}>{'>'}</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.instructionRow}>
-                 <Text style={styles.instructionText}>Select range from the sidebar or click a date to begin</Text>
-              </View>
+
             </View>
           </View>
 

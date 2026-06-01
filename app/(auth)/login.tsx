@@ -359,7 +359,7 @@ export default function LoginScreen() {
       if (profile.role === 'super_admin') {
         router.replace('/(admin)/dashboard');
       } else {
-        router.replace('/');
+        router.replace('/(tabs)/home_tab');
       }
     } else {
       // On mobile, everyone (including admins) lands on the home discovery screen
@@ -479,7 +479,7 @@ export default function LoginScreen() {
   if (os === 'web') {
     return (
       <LinearGradient 
-        colors={['#00ea6b', '#134d40', '#06392e']}
+        colors={['#0c5746', '#0c5746']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={webStyles.container}

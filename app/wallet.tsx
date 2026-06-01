@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#043529',
     marginBottom: 8,
     fontFamily: 'Inter',
@@ -989,7 +989,7 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontSize: Platform.OS === 'web' ? 24 : 20,
-    fontWeight: '400',
+    fontWeight: '700',
     color: '#043529',
     marginBottom: 12,
     fontFamily: 'Inter',

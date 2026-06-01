@@ -479,7 +479,7 @@ function DashboardContent() {
 
                 <View style={styles.contentCardSmall}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
+                    <Text style={styles.cardHeaderTitle}>Recent Venue</Text>
                     <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
                       <Text style={styles.cardActionText}>View</Text>
                     </TouchableOpacity>
@@ -615,7 +615,7 @@ function DashboardContent() {
                 {/* Recent Ground */}
                 <View style={[styles.contentCardSmall, styles.noContainer, width > 768 && styles.contentCardWide]}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
+                    <Text style={styles.cardHeaderTitle}>Recent Venue</Text>
                     <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
                       <Text style={styles.cardActionText}>View</Text>
                     </TouchableOpacity>

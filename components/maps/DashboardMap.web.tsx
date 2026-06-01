@@ -106,54 +106,64 @@ export default function DashboardMap() {
                     </svg>
 
                     {/* Hover Tooltip */}
-                    <View 
-                      pointerEvents="none"
-                      style={{
-                      position: 'absolute',
-                      bottom: 45,
-                      left: -70,
-                      width: 140,
-                      backgroundColor: '#FFFFFF',
-                      padding: 10,
-                      borderRadius: 12,
-                      shadowColor: '#000',
-                      // @ts-ignore
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      zIndex: 1000,
-                      borderWidth: 1,
-                      borderColor: '#F1F5F9',
-                      opacity: (hoveredGroundId === g.id && openInfoWindowId !== g.id) ? 1 : 0,
-                    }}>
-                      <Text style={{ 
-                        fontWeight: '800', 
-                        fontSize: 13, 
-                        color: '#0F172A', 
-                        fontFamily: 'Inter', 
-                        marginBottom: 4 
-                      }}>
-                        {g.name}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={10} color="#00ea6b" />
-
-                        <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
-                          {g.city}
-                        </Text>
-                      </View>
-                      {/* Arrow */}
-                      <View style={{
+                    {(hoveredGroundId === g.id && openInfoWindowId !== g.id) && (
+                      <View 
+                        pointerEvents="none"
+                        style={{
                         position: 'absolute',
-                        bottom: -6,
-                        left: 70 - 6,
-                        width: 12,
-                        height: 12,
+                        bottom: 45,
+                        left: -50,
+                        width: 140,
                         backgroundColor: '#FFFFFF',
-                        transform: [{ rotate: '45deg' }],
-                        borderRightWidth: 1,
-                        borderBottomWidth: 1,
+                        padding: 10,
+                        borderRadius: 12,
+                        shadowColor: '#000',
+                        // @ts-ignore
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        zIndex: 1000,
+                        borderWidth: 1,
                         borderColor: '#F1F5F9',
-                      }} />
-                    </View>
+                      }}>
+                        <Text style={{ 
+                          fontWeight: '800', 
+                          fontSize: 13, 
+                          color: '#0F172A', 
+                          fontFamily: 'Inter', 
+                          marginBottom: 4,
+                          // @ts-ignore
+                          WebkitFontSmoothing: 'antialiased'
+                        }}>
+                          {g.name}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MapPin size={10} color="#00ea6b" />
+
+                          <Text style={{ 
+                            fontSize: 11, 
+                            color: '#64748B', 
+                            fontFamily: 'Inter',
+                            // @ts-ignore
+                            WebkitFontSmoothing: 'antialiased'
+                          }}>
+                            {g.city}
+                          </Text>
+                        </View>
+                        {/* Arrow */}
+                        <View style={{
+                          position: 'absolute',
+                          bottom: -6,
+                          left: '50%',
+                          marginLeft: -6,
+                          width: 12,
+                          height: 12,
+                          backgroundColor: '#FFFFFF',
+                          transform: [{ rotate: '45deg' }],
+                          borderRightWidth: 1,
+                          borderBottomWidth: 1,
+                          borderColor: '#F1F5F9',
+                        }} />
+                      </View>
+                    )}
                   </View>
                 </AdvancedMarker>
 

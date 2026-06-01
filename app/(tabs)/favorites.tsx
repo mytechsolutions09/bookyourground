@@ -208,21 +208,10 @@ export default function FavoritesScreen() {
             style={[styles.toggleBtn, activeTab === 'grounds' && styles.toggleBtnActive]}
             onPress={() => setActiveTab('grounds')}
           >
-            <Text style={[styles.toggleBtnTxt, activeTab === 'grounds' && styles.toggleBtnTxtActive]}>Grounds</Text>
+            <Text style={[styles.toggleBtnTxt, activeTab === 'grounds' && styles.toggleBtnTxtActive]}>Venues</Text>
             {favorites.length > 0 && (
               <View style={[styles.dot, activeTab === 'grounds' && styles.dotActive]}>
                 <Text style={styles.dotTxt}>{favorites.length}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.toggleBtn, activeTab === 'merchandise' && styles.toggleBtnActive]}
-            onPress={() => setActiveTab('merchandise')}
-          >
-            <Text style={[styles.toggleBtnTxt, activeTab === 'merchandise' && styles.toggleBtnTxtActive]}>Merchandise</Text>
-            {shopFavorites.length > 0 && (
-              <View style={[styles.dot, activeTab === 'merchandise' && styles.dotActive]}>
-                <Text style={styles.dotTxt}>{shopFavorites.length}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -245,7 +234,7 @@ export default function FavoritesScreen() {
                   <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
                   <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', fontFamily: 'Inter' }}>No Favorites Yet</Text>
                   <Text style={{ fontSize: 15, color: '#6B7280', fontFamily: 'Inter', marginTop: 8 }}>
-                    Items you heart in {activeTab === 'grounds' ? 'Grounds' : 'Merchandise'} will appear here.
+                    Items you heart in {activeTab === 'grounds' ? 'Venues' : 'Merchandise'} will appear here.
                   </Text>
                 </View>
               ) : (
