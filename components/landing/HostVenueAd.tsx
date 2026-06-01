@@ -26,7 +26,7 @@ export default function HostVenueAd() {
           </Text>
           
           <Text style={[styles.subtitle, isCompact && styles.subtitleCompact]}>
-            Partner with BookYourGround. List your sports venue, manage bookings efficiently, and fill your unused slots effortlessly with our AI-driven matchmaking.
+            Partner with BookYourGround. List your sports venue, manage bookings efficiently, and fill your unused slots effortlessly.
           </Text>
 
           <View style={[styles.features, isCompact && styles.featuresCompact]}>

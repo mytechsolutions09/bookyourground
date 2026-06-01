@@ -122,8 +122,8 @@ export default function LandingScrollContent({
 
               </View>
 
-              <GroundsNearYou />
               <HostVenueAd />
+              <GroundsNearYou />
               <FindOpposition />
               <HowItWorks />
               <CalendarTabs />
@@ -146,8 +146,8 @@ export default function LandingScrollContent({
                   marginTop: 0,
                 }}
               >
-                <GroundsNearYou />
                 <HostVenueAd />
+                <GroundsNearYou />
                 <FindOpposition />
               </View>
 

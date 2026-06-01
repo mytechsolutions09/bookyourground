@@ -406,7 +406,7 @@ export default function LoginScreen() {
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   textAlign: 'center',
                   fontSize: 20,
-                  fontWeight: '700',
+                  fontWeight: '400',
                   color: '#FFFFFF',
                 }}
                 value={val}
@@ -427,7 +427,11 @@ export default function LoginScreen() {
                   if (nativeEvent.key === 'Backspace' && !val && idx > 0) {
                     otpRefs[idx - 1].current?.focus();
                   }
+                  if (nativeEvent.key === 'Enter') {
+                    handleVerifyOtp();
+                  }
                 }}
+                onSubmitEditing={handleVerifyOtp}
               />
             ))}
           </View>
@@ -564,6 +568,7 @@ export default function LoginScreen() {
                                 padding: 0,
                                 marginTop: 2,
                               } as any}
+                              onSubmitEditing={handleLogin}
                             />
                           </View>
                         </View>
@@ -626,6 +631,9 @@ export default function LoginScreen() {
                                 if (nativeEvent.key === 'Backspace' && !phoneOtpVal[i] && i > 0) {
                                   webOtpRefs[i - 1].current?.focus();
                                 }
+                                if (nativeEvent.key === 'Enter') {
+                                  handleLogin();
+                                }
                               }}
                               keyboardType="number-pad"
                               maxLength={1}
@@ -639,7 +647,7 @@ export default function LoginScreen() {
                                 borderColor: phoneOtpVal[i] ? '#0F172A' : '#cbd5e1',
                                 textAlign: 'center',
                                 fontSize: 24, 
-                                fontWeight: '600',
+                                fontWeight: '400',
                                 color: '#0F172A',
                                 outlineStyle: 'none',
                                 outline: 'none',
@@ -788,6 +796,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     onFocus={() => setPhoneFocused(true)}
                     onBlur={() => setPhoneFocused(false)}
+                    onSubmitEditing={handleLogin}
                   />
                   {!phoneOtpSent ? (
                     <TouchableOpacity
@@ -862,6 +871,7 @@ export default function LoginScreen() {
                         maxLength={6}
                         onFocus={() => setPhoneOtpFocused(true)}
                         onBlur={() => setPhoneOtpFocused(false)}
+                        onSubmitEditing={handleLogin}
                       />
                     </Pressable>
                   </View>

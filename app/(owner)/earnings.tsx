@@ -1670,9 +1670,11 @@ function OwnerEarningsScreenInner() {
           <Pressable 
             style={({ hovered }: { hovered: boolean }) => [
               styles.withdrawBtnInline,
-              hovered && { backgroundColor: 'rgba(255, 255, 255, 0.4)', transform: [{ scale: 1.02 }] }
+              hovered && isBankVerified && { backgroundColor: 'rgba(255, 255, 255, 0.4)', transform: [{ scale: 1.02 }] },
+              !isBankVerified && { opacity: 0.5 }
             ]}
             onPress={() => setShowWithdrawModal(true)}
+            disabled={!isBankVerified}
           >
             <Text style={styles.withdrawBtnTextInline}>Request Payout</Text>
           </Pressable>
