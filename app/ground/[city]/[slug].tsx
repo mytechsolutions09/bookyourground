@@ -892,6 +892,7 @@ export default function GroundDetailsPrettyUrlScreen() {
               </View>
             ) : null
           )
+        }} 
       />
       {ground && (
         <Head>
