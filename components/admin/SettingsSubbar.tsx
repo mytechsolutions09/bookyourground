@@ -156,6 +156,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
               Skills
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/blogs') as any)}
+            style={[styles.subLink, pathname.includes('/settings/blogs') && styles.subLinkActive]}
+          >
+            <FileText size={16} color={pathname.includes('/settings/blogs') ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, pathname.includes('/settings/blogs') && styles.subLinkTextActive]}>
+              Blogs
+            </Text>
+          </Pressable>
         </ScrollView>
       </View>
 

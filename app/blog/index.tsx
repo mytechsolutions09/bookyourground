@@ -1,31 +1,41 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { router, Stack } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import { ChevronRight, Calendar, User, Clock } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 
-const ARTICLES = [
-  {
-    id: 'rain-refund',
-    title: "Rain Playing Spoilsport? We've Got You Covered!",
-    excerpt: 'Discover our new transparent T20 Rain Refund Policy. Find out exactly how much you get back if the weather interrupts your match.',
-    date: 'May 21, 2026',
-    author: 'Admin',
-    readTime: '3 min read',
-    image: require('@/assets/images/rain-refund.jpg')
-  },
-  {
-    id: 'mvp-calculation',
-    title: 'How Most Valuable Player (MVP) is Calculated?',
-    excerpt: 'Ever wondered how we decide who the Player of the Match is? Dive into our advanced scoring algorithm that evaluates batting, bowling, and fielding.',
-    date: 'April 13, 2026',
-    author: 'Admin',
-    readTime: '5 min read',
-    image: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg'
-  }
-];
+interface Blog {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  read_time: string;
+  image_url: string;
+  created_at: string;
+}
 
 export default function BlogIndex() {
+  const [articles, setArticles] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchBlogs() {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setArticles(data);
+      }
+      setLoading(false);
+    }
+    fetchBlogs();
+  }, []);
+
   return (
     <WebLayout>
       <Stack.Screen options={{ title: 'Blog - Book Your Ground' }} />
@@ -36,30 +46,37 @@ export default function BlogIndex() {
         </View>
 
         <View style={styles.list}>
-           {ARTICLES.map(article => (
-             <TouchableOpacity 
-               key={article.id} 
-               style={styles.card}
-               onPress={() => router.push(`/blog/${article.id}` as any)}
-             >
-                <Image 
-                  source={typeof article.image === 'string' ? { uri: article.image } : article.image} 
-                  style={styles.cardImage} 
-                />
-                <View style={styles.cardContent}>
-                   <View style={styles.meta}>
-                      <View style={styles.metaItem}><Calendar size={14} color="#9CA3AF" /><Text style={styles.metaText}>{article.date}</Text></View>
-                      <View style={styles.metaItem}><Clock size={14} color="#9CA3AF" /><Text style={styles.metaText}>{article.readTime}</Text></View>
-                   </View>
-                   <Text style={styles.cardTitle}>{article.title}</Text>
-                   <Text style={styles.cardExcerpt}>{article.excerpt}</Text>
-                   <View style={styles.footer}>
-                      <View style={styles.authorRow}><User size={16} color="#0D9488" /><Text style={styles.authorName}>{article.author}</Text></View>
-                      <Text style={styles.readMore}>Read Article <ChevronRight size={16} color="#0D9488" /></Text>
-                   </View>
-                </View>
-             </TouchableOpacity>
-           ))}
+           {loading ? (
+             <ActivityIndicator size="large" color="#0D9488" style={{ marginTop: 40 }} />
+           ) : articles.length === 0 ? (
+             <Text style={{ textAlign: 'center', marginTop: 40, color: '#6B7280' }}>No articles published yet.</Text>
+           ) : (
+             articles.map(article => (
+               <TouchableOpacity 
+                 key={article.id} 
+                 style={styles.card}
+                 onPress={() => router.push(`/blog/${article.slug}` as any)}
+               >
+                  <Image 
+                    source={{ uri: article.image_url || 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} 
+                    style={styles.cardImage} 
+                    resizeMode="cover"
+                  />
+                  <View style={styles.cardContent}>
+                     <View style={styles.meta}>
+                        <View style={styles.metaItem}><Calendar size={14} color="#9CA3AF" /><Text style={styles.metaText}>{new Date(article.created_at).toLocaleDateString()}</Text></View>
+                        <View style={styles.metaItem}><Clock size={14} color="#9CA3AF" /><Text style={styles.metaText}>{article.read_time}</Text></View>
+                     </View>
+                     <Text style={styles.cardTitle}>{article.title}</Text>
+                     <Text style={styles.cardExcerpt}>{article.excerpt}</Text>
+                     <View style={styles.footer}>
+                        <View style={styles.authorRow}><User size={16} color="#0D9488" /><Text style={styles.authorName}>{article.author}</Text></View>
+                        <Text style={styles.readMore}>Read Article <ChevronRight size={16} color="#0D9488" /></Text>
+                     </View>
+                  </View>
+               </TouchableOpacity>
+             ))
+           )}
         </View>
       </ScrollView>
     </WebLayout>
