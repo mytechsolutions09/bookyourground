@@ -53,7 +53,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }} />
         
         {/* Google tag (gtag.js) */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-2K1150PVEP" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-2K1150PVEP"></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
