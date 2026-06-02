@@ -39,6 +39,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isDeletions = pathname.includes('/settings/deletion-requests');
   const isSkills = pathname.includes('/settings/skills');
   const isBlogs = pathname.includes('/settings/blogs');
+  const isFetchGrounds = pathname.includes('/settings/fetch-grounds');
 
   return (
     <View style={styles.shell}>
@@ -48,13 +49,6 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.subbarScroll}
         >
-          <Pressable
-            onPress={() => router.push(BASE as any)}
-            style={[styles.subLink, isGeneral && styles.subLinkActive]}
-          >
-            <Text style={[styles.subLinkText, isGeneral && styles.subLinkTextActive]}>General</Text>
-          </Pressable>
-
           <Pressable
             onPress={() => router.push((BASE + '/locations') as any)}
             style={[styles.subLink, isLocations && styles.subLinkActive]}
@@ -97,15 +91,6 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           >
             <Text style={[styles.subLinkText, isPlatformFees && styles.subLinkTextActive]}>
               Platform Fees
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push((BASE + '/support') as any)}
-            style={[styles.subLink, isSupport && styles.subLinkActive]}
-          >
-            <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
-              Support
             </Text>
           </Pressable>
 
@@ -156,6 +141,15 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           >
             <Text style={[styles.subLinkText, isBlogs && styles.subLinkTextActive]}>
               Blogs
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/fetch-grounds') as any)}
+            style={[styles.subLink, isFetchGrounds && styles.subLinkActive]}
+          >
+            <Text style={[styles.subLinkText, isFetchGrounds && styles.subLinkTextActive]}>
+              Fetch Grounds
             </Text>
           </Pressable>
         </ScrollView>
