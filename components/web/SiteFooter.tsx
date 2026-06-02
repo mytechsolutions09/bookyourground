@@ -29,6 +29,24 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>Product</Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/cricket-grounds' as any)}
+            >
+              Cricket Grounds
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/football-grounds' as any)}
+            >
+              Football Turfs
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/corporate' as any)}
+            >
+              Corporate Events
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/pricing' as any)}
             >
               Pricing
@@ -106,6 +124,12 @@ export default function SiteFooter() {
               onPress={() => router.push('/about' as any)}
             >
               About Us
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/faq' as any)}
+            >
+              FAQ
             </Text>
             <Text
               style={styles.footerLink}
