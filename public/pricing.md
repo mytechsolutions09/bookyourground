@@ -8,9 +8,9 @@
 ## For Venue Owners — Pro
 - **Price:** Rs 50 / team +gst
 - **Features:** Priority listing, analytics dashboard, multi-ground management
-- **Contact:** partners@bookyourground.com
+- **Contact:** support@bookyourground.com
 
 ## For Venue Owners — Enterprise
 - **Price:** Custom
 - **For:** Multi-venue operators, sports complexes
-- **Contact:** partners@bookyourground.com
+- **Contact:** support@bookyourground.com

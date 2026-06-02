@@ -117,7 +117,7 @@ export default function PricingPage() {
       <View style={styles.infoBox}>
         <Info size={20} color="#64748B" style={{ marginTop: 2 }} />
         <Text style={styles.infoText}>
-          Have questions about which plan is right for your venue? <Text style={styles.linkText} onPress={() => router.push('/contact' as any)}>Reach out to our partner team</Text> at partners@bookyourground.com.
+          Have questions about which plan is right for your venue? <Text style={styles.linkText} onPress={() => router.push('/contact' as any)}>Reach out to our partner team</Text> at support@bookyourground.com.
         </Text>
       </View>
     </ScrollView>
