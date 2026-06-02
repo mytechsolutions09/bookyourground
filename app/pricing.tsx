@@ -15,39 +15,6 @@ export default function PricingPage() {
       </View>
 
       <View style={styles.cardsContainer}>
-        {/* Player Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>For Players</Text>
-            <Text style={styles.cardPrice}>Free</Text>
-            <Text style={styles.cardSubprice}>to use the app</Text>
-          </View>
-          <View style={styles.cardBody}>
-            <View style={styles.featureRow}>
-              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>No booking fees</Text>
-            </View>
-            <View style={styles.featureRow}>
-              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>Pay venue prices directly</Text>
-            </View>
-            <View style={styles.featureRow}>
-              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>Instant booking confirmation</Text>
-            </View>
-            <View style={styles.featureRow}>
-              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>Secure payments</Text>
-            </View>
-          </View>
-          <TouchableOpacity 
-            style={styles.ctaButton}
-            onPress={() => router.push('/book-my-ground' as any)}
-          >
-            <Text style={styles.ctaButtonText}>Find a Venue</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Owner Card */}
         <View style={[styles.card, styles.cardFeatured]}>
           <View style={styles.cardFeaturedBadge}>
