@@ -42,7 +42,7 @@ export default function PricingPage() {
           </View>
           <TouchableOpacity 
             style={styles.ctaButton}
-            onPress={() => router.push('/owner-signup' as any)}
+            onPress={() => router.push('/login' as any)}
           >
             <Text style={styles.ctaButtonText}>Get Started</Text>
           </TouchableOpacity>
