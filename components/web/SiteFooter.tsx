@@ -29,6 +29,18 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>Product</Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/pricing' as any)}
+            >
+              Pricing
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => Platform.OS === 'web' ? window.open('/pricing.md', '_blank') : router.push('/pricing' as any)}
+            >
+              Machine-readable pricing
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/how-it-works' as any)}
             >
               How it works (players)

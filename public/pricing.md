@@ -1,22 +1,17 @@
-# Pricing — BookYourGround
+# BookYourGround Pricing
 
-## For Players / Teams
-- Price: Free to use
-- No booking fees or membership required
-- Pay only the ground fee at time of booking
-- Payment: Upfront, online, at time of booking
+## For Players
+- **App Usage:** Free
+- **Booking Fee:** 0% markup (you pay what the venue charges)
+- **Payment Processing:** Included in venue price
+- **Cancellation Policy:** Varies by venue
 
-## For Venue Owners — Starter
-- Price: Commission per booking (percentage of booking value)
-- Features: Online listing, real-time availability calendar, booking confirmation
-- Payment: Automated payout per booking
+## For Venue Owners
+- **Setup Fee:** ₹0 (Free)
+- **Platform Commission:** 5% per successful booking
+- **Payout Schedule:** Weekly (Every Monday)
+- **Dashboard & Analytics:** Included
+- **Support:** 24/7 Partner Support
 
-## For Venue Owners — [Tier Name / Pro]
-- Price: [Insert]
-- Features: Priority listing, analytics dashboard, multi-ground management
-- Contact: [Insert contact email]
-
-## For Venue Owners — Enterprise
-- Price: Custom
-- For: Multi-venue operators, sports complexes
-- Contact: [Insert contact]
+## Contact
+For enterprise or multi-venue deals, contact us at partners@bookyourground.com
