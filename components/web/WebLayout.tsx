@@ -850,7 +850,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            {!isCompact && isLanding && (
+            {!isCompact && isLanding && !isGroundOwner && (
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
                 <TouchableOpacity 
                   onPress={handleHostVenuePress} 
@@ -1132,7 +1132,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            {!isCompact && !headerContent && isLanding && (
+            {!isCompact && !headerContent && isLanding && !isGroundOwner && (
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
                 <TouchableOpacity 
                   onPress={handleHostVenuePress} 
