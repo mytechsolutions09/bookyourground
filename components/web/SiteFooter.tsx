@@ -29,6 +29,12 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>Product</Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/how-it-works' as any)}
+            >
+              How it works (players)
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/book-my-ground' as any)}
             >
               Browse venues
