@@ -18,7 +18,8 @@ function FetchGroundsInner() {
   const [progressText, setProgressText] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [fetchCompleted, setFetchCompleted] = useState(false);
-  const [paginationObj, setPaginationObj] = useState<any>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const paginationRef = useRef<any>(null);
   
   const isPaginatingRef = useRef(false);
 
@@ -84,7 +85,8 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
     if (!isPaginatingRef.current) {
       setFetchCompleted(false);
       setResults([]);
-      setPaginationObj(null);
+      setHasNextPage(false);
+      paginationRef.current = null;
     }
     setProgressText('Searching Google Places...');
 
@@ -96,7 +98,8 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       service.textSearch(
         { query: searchQuery },
         async (places, status, pagination) => {
-          setPaginationObj(pagination || null);
+          paginationRef.current = pagination || null;
+          setHasNextPage(!!(pagination && pagination.hasNextPage));
 
           if (status === google.maps.places.PlacesServiceStatus.OK && places) {
             const totalCount = places.length;
@@ -178,11 +181,11 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
   };
 
   const handleLoadMore = () => {
-    if (paginationObj && paginationObj.hasNextPage) {
+    if (paginationRef.current && paginationRef.current.hasNextPage) {
       isPaginatingRef.current = true;
       setLoading(true);
       setProgressText('Fetching next page of venues...');
-      paginationObj.nextPage();
+      paginationRef.current.nextPage();
     }
   };
 
@@ -386,7 +389,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
           </ScrollView>
 
           {/* Pagination Load More Button */}
-          {paginationObj?.hasNextPage && (
+          {hasNextPage && (
             <TouchableOpacity
               onPress={handleLoadMore}
               disabled={loading}
