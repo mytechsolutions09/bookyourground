@@ -41,6 +41,12 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/list-your-venue' as any)}
+            >
+              List your venue
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/book-my-ground' as any)}
             >
               Browse venues
