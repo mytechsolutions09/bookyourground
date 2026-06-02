@@ -1323,6 +1323,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1.2,
     minHeight: 44,
+    minWidth: 0,
+    overflow: 'hidden',
   },
   filterSearchInput: {
     flex: 1,
@@ -1330,6 +1332,7 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
     fontWeight: '600',
     fontFamily: 'Inter',
+    minWidth: 0,
     ...Platform.select({
       web: { outlineStyle: 'none' }
     }) as any,

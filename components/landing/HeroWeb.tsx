@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 28,
     paddingVertical: 12,
-    borderRadius: 100,
+    borderRadius: 8,
     marginLeft: 8,
     minWidth: 170,
     height: 48,
@@ -855,10 +855,10 @@ const styles = StyleSheet.create({
   },
   searchButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter',
-    fontWeight: '600',
-    letterSpacing: -0.2,
+    fontWeight: '500',
+    textTransform: 'uppercase',
   },
   dropdown: {
     position: 'absolute',

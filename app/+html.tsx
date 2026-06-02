@@ -18,7 +18,7 @@ const schemaMarkup = {
       "@id": "https://bookyourground.com/#organization",
       "name": "BookYourGround",
       "url": "https://bookyourground.com/",
-      "logo": "https://bookyourground.com/logo.png"
+      "logo": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png"
     }
   ]
 };
@@ -38,14 +38,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta property="og:url" content="https://bookyourground.com/" />
         <meta property="og:title" content="Cricket Ground Booking - BookYourGround" />
         <meta property="og:description" content="Instantly book cricket, football, and other sports grounds online." />
-        <meta property="og:image" content="https://bookyourground.com/logo.png" />
+        <meta property="og:image" content="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" />
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content="https://bookyourground.com/" />
         <meta property="twitter:title" content="Cricket Ground Booking - BookYourGround" />
         <meta property="twitter:description" content="Instantly book cricket, football, and other sports grounds online." />
-        <meta property="twitter:image" content="https://bookyourground.com/logo.png" />
+        <meta property="twitter:image" content="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" />
         
         <base href="/" />
         <ScrollViewStyleReset />
@@ -75,5 +75,24 @@ body {
 }
 *::-webkit-scrollbar {
   display: none !important;
+}
+.admin-sidebar-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 234, 107, 0.4) transparent !important;
+}
+.admin-sidebar-scroll::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+  height: 6px !important;
+}
+.admin-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.admin-sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 234, 107, 0.4) !important;
+  border-radius: 3px !important;
+}
+.admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 234, 107, 0.7) !important;
 }
 `;

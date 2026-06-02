@@ -854,22 +854,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
                 <TouchableOpacity 
                   onPress={handleHostVenuePress} 
-                  style={{ 
-                    paddingHorizontal: 20, 
-                    paddingVertical: 8, 
-                    borderRadius: 24, 
-                    borderWidth: 1.5, 
-                    borderColor: '#00ea6b', 
-                    backgroundColor: 'rgba(0, 234, 107, 0.15)',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
+                  style={styles.headerSecondaryButton}
                 >
                   <Text style={[
-                    styles.headerPrimaryButtonText,
-                    scrolled && styles.headerPrimaryButtonTextScrolled,
-                    { color: '#00ea6b', letterSpacing: 1, fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }
+                    styles.headerSecondaryButtonText,
+                    scrolled && styles.headerSecondaryButtonTextScrolled
                   ]}>
                     HOST YOUR VENUE
                   </Text>
@@ -1051,7 +1040,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {!isAuthenticated ? (
                       <TouchableOpacity 
-                        style={styles.headerSecondaryButton}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
                         <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled, cleanPath === '/book-my-ground' && { color: '#00ea6b' }]}>
@@ -1085,7 +1073,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     {!isAuthenticated ? (
                       <TouchableOpacity
                         onPress={() => router.push('/(auth)/login' as any)}
-                        style={[styles.headerSecondaryButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
                       >
                         <Text style={[styles.headerSecondaryButtonText, { fontSize: 13 }]}>SIGN IN</Text>
                       </TouchableOpacity>
@@ -1149,21 +1136,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
                 <TouchableOpacity 
                   onPress={handleHostVenuePress} 
-                  style={{ 
-                    paddingHorizontal: 20, 
-                    paddingVertical: 8, 
-                    borderRadius: 24, 
-                    borderWidth: 1.5, 
-                    borderColor: '#00ea6b', 
-                    backgroundColor: 'rgba(0, 234, 107, 0.15)',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
+                  style={styles.headerSecondaryButton}
                 >
                   <Text style={[
-                    styles.headerNavLink,
-                    { color: '#00ea6b', letterSpacing: 1, fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }
+                    styles.headerSecondaryButtonText,
+                    scrolled && styles.headerSecondaryButtonTextScrolled
                   ]}>
                     HOST YOUR VENUE
                   </Text>
@@ -1294,12 +1271,13 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 </TouchableOpacity>
               )}
               <ScrollView
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={Platform.OS === 'web' ? !sidebarCollapsed : false}
                 showsHorizontalScrollIndicator={false}
                 overScrollMode="never"
                 bounces={false}
                 contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }, Platform.OS === 'web' && { overflowX: 'visible' } as any]}
-                style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
+                style={Platform.OS === 'web' ? (sidebarCollapsed ? { overflow: 'visible' } : { flex: 1, overflowY: 'auto' } as any) : undefined}
+                {...(Platform.OS === 'web' && !sidebarCollapsed ? { className: 'admin-sidebar-scroll' } as any : {})}
               >
                 {isAuthenticated && !isPublicNoSidebar && (
                   <>

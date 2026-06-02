@@ -894,15 +894,34 @@ export default function GroundDetailsPrettyUrlScreen() {
           )
         }} 
       />
-      {ground && (
-        <Head>
-          <title>{ground.name} - BookYourGround</title>
-          <meta name="description" content={ground.description || `Book ${ground.name} on BookYourGround.`} />
-          <meta property="og:title" content={`${ground.name} - BookYourGround`} />
-          <meta property="og:description" content={ground.description || `Book ${ground.name} on BookYourGround.`} />
-          {ground.ground_images?.[0]?.image_url && <meta property="og:image" content={ground.ground_images[0].image_url} />}
-        </Head>
-      )}
+      {ground && (() => {
+        const venueImg = ground.ground_images?.[0]?.image_url || 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png';
+        const venueDesc = ground.description || `Book ${ground.name} on BookYourGround. Compare slots, pricing, and amenities online.`;
+        return (
+          <Head>
+            <title>{ground.name} - BookYourGround</title>
+            <meta name="description" content={venueDesc} />
+            <link rel="canonical" href={`https://bookyourground.com/ground/${cityParam}/${slugParam}`} />
+            
+            {/* Open Graph / Facebook / WhatsApp */}
+            <meta property="og:type" content="website" />
+            <meta property="og:title" content={`${ground.name} | BookYourGround`} />
+            <meta property="og:description" content={venueDesc} />
+            <meta property="og:image" content={venueImg} />
+            <meta property="og:image:secure_url" content={venueImg} />
+            <meta property="og:image:type" content="image/jpeg" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta itemprop="image" content={venueImg} />
+
+            {/* Twitter */}
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={`${ground.name} | BookYourGround`} />
+            <meta name="twitter:description" content={venueDesc} />
+            <meta name="twitter:image" content={venueImg} />
+          </Head>
+        );
+      })()}
       {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
     </>
   );

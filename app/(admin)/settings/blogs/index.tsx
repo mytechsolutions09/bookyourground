@@ -159,24 +159,23 @@ export default function AdminBlogsList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12.5,
     color: '#6B7280',
     marginTop: 4,
   },
@@ -184,19 +183,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
-    gap: 8,
+    gap: 6,
   },
   createBtnText: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 12.5,
   },
   listContainer: {
     flex: 1,
-    padding: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
   },
   emptyState: {
     alignItems: 'center',
@@ -208,14 +208,14 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
     marginBottom: 8,
   },
   emptyText: {
     color: '#6B7280',
-    fontSize: 14,
+    fontSize: 13,
   },
   table: {
     backgroundColor: '#FFFFFF',
@@ -230,10 +230,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   th: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#374151',
     textTransform: 'uppercase',
@@ -244,20 +244,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   td: {
     justifyContent: 'center',
   },
   blogTitle: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   blogSlug: {
-    fontSize: 13,
+    fontSize: 11.5,
     color: '#6B7280',
   },
   statusBadge: {
@@ -276,11 +276,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 12.5,
     color: '#4B5563',
   },
 });

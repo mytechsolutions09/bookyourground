@@ -65,14 +65,61 @@ export default function DynamicBlogPage() {
     );
   }
 
+  const schemaMarkup = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": blog.title,
+    "description": blog.excerpt,
+    "image": blog.image_url ? [blog.image_url] : ["https://bookyourground.com/assets/images/ground-booking-for-cricket.png"],
+    "datePublished": blog.created_at,
+    "dateModified": blog.created_at,
+    "author": [{
+      "@type": "Person",
+      "name": blog.author
+    }],
+    "publisher": {
+      "@type": "Organization",
+      "name": "BookYourGround",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://bookyourground.com/logo.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://bookyourground.com/blog/${blog.slug}`
+    }
+  };
+
   return (
     <>
       <Head>
         <title>{blog.title} | BookYourGround</title>
         <meta name="description" content={blog.excerpt} />
-        <meta property="og:title" content={blog.title} />
+        <meta name="keywords" content={`cricket, ${blog.title.toLowerCase().split(' ').join(', ')}, bookyourground`} />
+        <link rel="canonical" href={`https://bookyourground.com/blog/${blog.slug}`} />
+        <meta name="robots" content="index, follow" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://bookyourground.com/blog/${blog.slug}`} />
+        <meta property="og:title" content={`${blog.title} | BookYourGround`} />
         <meta property="og:description" content={blog.excerpt} />
-        {blog.image_url && <meta property="og:image" content={blog.image_url} />}
+        <meta property="og:image" content={blog.image_url || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+        <meta property="article:published_time" content={blog.created_at} />
+        <meta property="article:author" content={blog.author} />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={`https://bookyourground.com/blog/${blog.slug}`} />
+        <meta property="twitter:title" content={`${blog.title} | BookYourGround`} />
+        <meta property="twitter:description" content={blog.excerpt} />
+        <meta property="twitter:image" content={blog.image_url || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+        />
       </Head>
       <WebLayout>
         <Stack.Screen options={{ title: blog.title }} />
@@ -83,7 +130,7 @@ export default function DynamicBlogPage() {
                 <Text style={styles.backText}>Back to Blog</Text>
              </TouchableOpacity>
              <Text style={styles.category}>ARTICLE</Text>
-             <Text style={styles.title}>{blog.title}</Text>
+             <Text accessibilityRole="header" aria-level={1} style={styles.title}>{blog.title}</Text>
              <View style={styles.meta}>
                 <Text style={styles.metaItem}>{new Date(blog.created_at).toLocaleDateString()}</Text>
                 <Text style={styles.dot}>•</Text>
@@ -91,15 +138,17 @@ export default function DynamicBlogPage() {
              </View>
           </View>
 
-          {blog.image_url ? (
-            <Image 
-              source={{ uri: blog.image_url }} 
-              style={styles.heroImage} 
-              resizeMode="cover"
-            />
-          ) : null}
-
           <View style={styles.content}>
+            {blog.image_url ? (
+              <Image 
+                source={{ uri: blog.image_url }} 
+                style={styles.articleImage} 
+                resizeMode="cover"
+                alt={blog.title}
+                accessibilityLabel={blog.title}
+              />
+            ) : null}
+
             <Markdown style={markdownStyles}>
               {blog.content || ''}
             </Markdown>
@@ -190,12 +239,12 @@ const styles = StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginBottom: 32 },
   backText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
   category: { fontSize: 12, fontWeight: '800', color: '#0D9488', letterSpacing: 1.2, marginBottom: 12 },
-  title: { fontSize: 36, fontWeight: '900', color: '#111827', textAlign: 'center', lineHeight: 44, maxWidth: 800 },
+  title: { fontSize: 36, fontWeight: '900', color: '#111827', textAlign: 'center', lineHeight: 44, maxWidth: 1000 },
   meta: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
   metaItem: { fontSize: 13, color: '#6B7280' },
   dot: { marginHorizontal: 8, color: '#E5E7EB' },
-  heroImage: { width: '100%', height: 400 },
-  content: { padding: 40, maxWidth: 800, alignSelf: 'center', width: '100%' },
+  articleImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, marginBottom: 32, backgroundColor: 'transparent' },
+  content: { padding: 40, maxWidth: 1000, alignSelf: 'center', width: '100%' },
   footer: { padding: 60, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   footerText: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
   ctaBtn: { backgroundColor: '#0D9488', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },

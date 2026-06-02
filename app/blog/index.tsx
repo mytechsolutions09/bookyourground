@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { router, Stack } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import { ChevronRight, Calendar, User, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import Head from 'expo-router/head';
 
 interface Blog {
   id: string;
@@ -19,6 +20,8 @@ interface Blog {
 export default function BlogIndex() {
   const [articles, setArticles] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   useEffect(() => {
     async function fetchBlogs() {
@@ -36,16 +39,69 @@ export default function BlogIndex() {
     fetchBlogs();
   }, []);
 
-  return (
-    <WebLayout>
-      <Stack.Screen options={{ title: 'Blog - Book Your Ground' }} />
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-           <Text style={styles.title}>Cricket Blog</Text>
-           <Text style={styles.subtitle}>Insights, strategies, and platform updates from the world of cricket.</Text>
-        </View>
+  const schemaMarkup = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "BookYourGround Sports & Venue Blog",
+    "description": "Insights, expert strategies, and updates for sports grounds, venue bookings, and multi-sports play.",
+    "url": "https://bookyourground.com/blog",
+    "publisher": {
+      "@type": "Organization",
+      "name": "BookYourGround",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://bookyourground.com/logo.png"
+      }
+    },
+    "blogPost": articles.map(article => ({
+      "@type": "BlogPosting",
+      "headline": article.title,
+      "url": `https://bookyourground.com/blog/${article.slug}`,
+      "datePublished": article.created_at,
+      "description": article.excerpt,
+      "author": {
+        "@type": "Person",
+        "name": article.author
+      }
+    }))
+  };
 
-        <View style={styles.list}>
+  return (
+    <>
+      <Head>
+        <title>Sports & Venue Blog - Tips, Strategies & Ground Booking Updates | BookYourGround</title>
+        <meta name="description" content="Read the latest sports tips, venue guides, ground booking strategies, and multi-sport play insights on the BookYourGround blog." />
+        <meta name="keywords" content="sports blog, venue booking, book sports ground, football turf booking, box cricket ground, sports strategies, sports pitch booking, bookyourground" />
+        <link rel="canonical" href="https://bookyourground.com/blog" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://bookyourground.com/blog" />
+        <meta property="og:title" content="Sports & Venue Blog - Tips, Strategies & Ground Booking Updates | BookYourGround" />
+        <meta property="og:description" content="Read the latest sports tips, venue guides, ground booking strategies, and multi-sport play insights on the BookYourGround blog." />
+        <meta property="og:image" content="https://bookyourground.com/assets/images/ground-booking-for-sports.png" />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://bookyourground.com/blog" />
+        <meta property="twitter:title" content="Sports & Venue Blog - Tips, Strategies & Ground Booking Updates | BookYourGround" />
+        <meta property="twitter:description" content="Read the latest sports tips, venue guides, ground booking strategies, and multi-sport play insights on the BookYourGround blog." />
+        <meta property="twitter:image" content="https://bookyourground.com/assets/images/ground-booking-for-sports.png" />
+        
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+        />
+      </Head>
+      <WebLayout>
+        <Stack.Screen options={{ title: 'Blog - Book Your Ground' }} />
+        <ScrollView style={styles.container}>
+          <View style={[styles.header, { padding: isMobile ? 24 : 40 }]}>
+             <Text accessibilityRole="header" aria-level={1} style={[styles.title, isMobile && { fontSize: 24, textAlign: 'center' }]}>Sports & Venue Blog</Text>
+             <Text style={styles.subtitle}>Insights, expert strategies, and platform updates from the world of multi-sports and venue bookings.</Text>
+          </View>
+
+        <View style={[styles.list, { padding: isMobile ? 16 : 40 }]}>
            {loading ? (
              <ActivityIndicator size="large" color="#0D9488" style={{ marginTop: 40 }} />
            ) : articles.length === 0 ? (
@@ -54,13 +110,15 @@ export default function BlogIndex() {
              articles.map(article => (
                <TouchableOpacity 
                  key={article.id} 
-                 style={styles.card}
+                 style={[styles.card, isMobile && styles.cardMobile]}
                  onPress={() => router.push(`/blog/${article.slug}` as any)}
                >
                   <Image 
                     source={{ uri: article.image_url || 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} 
-                    style={styles.cardImage} 
+                    style={[styles.cardImage, isMobile && styles.cardImageMobile]} 
                     resizeMode="cover"
+                    alt={article.title}
+                    accessibilityLabel={article.title}
                   />
                   <View style={styles.cardContent}>
                      <View style={styles.meta}>
@@ -80,6 +138,7 @@ export default function BlogIndex() {
         </View>
       </ScrollView>
     </WebLayout>
+  </>
   );
 }
 
@@ -90,7 +149,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: '#4B5563', textAlign: 'center', maxWidth: 600 },
   list: { padding: 40, maxWidth: 1000, alignSelf: 'center', width: '100%' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#F3F4F6', marginBottom: 32, flexDirection: 'row' },
+  cardMobile: { flexDirection: 'column' },
   cardImage: { width: 300, height: '100%' },
+  cardImageMobile: { width: '100%', height: 200, aspectRatio: 16 / 9 },
   cardContent: { flex: 1, padding: 24 },
   meta: { flexDirection: 'row', gap: 16, marginBottom: 12 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },

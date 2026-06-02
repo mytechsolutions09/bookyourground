@@ -496,7 +496,7 @@ export default function LoginScreen() {
               {width >= 768 && (
                 <View style={webStyles.leftPane}>
                   <View>
-                    <Text style={[webStyles.leftPaneTitle, { fontFamily: 'Inter' }]}>Login</Text>
+                    <Text style={[webStyles.leftPaneTitle, { fontFamily: 'Inter' }]}>Sign In / Sign Up</Text>
                     <Text style={[webStyles.leftPaneSubtitle, { fontFamily: 'Inter' }]}>
                       Get access to your Bookings,{'\n'}Favorites and Profile
                     </Text>
@@ -1228,7 +1228,7 @@ const webStyles = StyleSheet.create({
   },
   leftPaneTitle: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Inter',
     marginBottom: 16,

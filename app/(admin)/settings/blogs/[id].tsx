@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Platform, Switch, Image } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Save, ArrowLeft, Image as ImageIcon, Wand2, Upload, Bold } from 'lucide-react-native';
@@ -30,6 +30,567 @@ export default function AdminBlogEdit() {
   const [isPublished, setIsPublished] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [focusKeyphrase, setFocusKeyphrase] = useState('');
+  const [yoastTab, setYoastTab] = useState<'analysis' | 'google' | 'social'>('analysis');
+  const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
+  const [isCornerstone, setIsCornerstone] = useState(false);
+  const [aiOptimized, setAiOptimized] = useState(false);
+
+  const [allBlogs, setAllBlogs] = useState<{ id: string; title: string; slug: string; excerpt: string; content: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchAllBlogs() {
+      const { data } = await supabase.from('blogs').select('id, title, slug, excerpt, content');
+      if (data) {
+        setAllBlogs(data);
+      }
+    }
+    fetchAllBlogs();
+  }, []);
+
+  const getSeoAnalysis = () => {
+    const checks: { label: string; status: 'green' | 'orange' | 'red'; desc: string }[] = [];
+    const kp = focusKeyphrase.trim().toLowerCase();
+    
+    if (!kp) {
+      return {
+        overall: 'red' as const,
+        checks: [{
+          label: 'Focus Keyphrase',
+          status: 'red' as const,
+          desc: 'Enter a Focus Keyphrase to activate live Yoast SEO optimization.'
+        }]
+      };
+    }
+
+    // Stop words list for "Keyphrase consists only of function words"
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'in', 'of', 'to', 'by', 'from',
+      'with', 'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
+      'does', 'did', 'that', 'this', 'these', 'those', 'it', 'its', 'about', 'above', 'after',
+      'against', 'along', 'among', 'around', 'before', 'behind', 'below', 'between', 'during',
+      'into', 'through', 'under', 'over', 'again', 'further', 'then', 'once'
+    ]);
+
+    const kpWords = kp.split(/\s+/).filter(Boolean);
+
+    // 1. Keyphrase consists only of function words
+    const onlyStopWords = kpWords.every(w => stopWords.has(w));
+    if (onlyStopWords) {
+      checks.push({
+        label: 'Keyphrase Function Words Only',
+        status: 'red' as const,
+        desc: 'Your focus keyphrase consists only of function words (stop words). Search engines might ignore it.'
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase Function Words Only',
+        status: 'green' as const,
+        desc: 'Good! Your keyphrase contains content-rich words.'
+      });
+    }
+
+    // 2. Keyphrase length
+    if (kpWords.length === 0) {
+      checks.push({
+        label: 'Keyphrase Length',
+        status: 'red' as const,
+        desc: 'No keyphrase entered.'
+      });
+    } else if (kpWords.length === 1) {
+      checks.push({
+        label: 'Keyphrase Length',
+        status: 'orange' as const,
+        desc: 'Keyphrase is a single generic word. Consider adding specific words for better targeting.'
+      });
+    } else if (kpWords.length > 5) {
+      checks.push({
+        label: 'Keyphrase Length',
+        status: 'orange' as const,
+        desc: 'Keyphrase is too long (over 5 words). Try to make it a concise topic phrase.'
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase Length',
+        status: 'green' as const,
+        desc: `Good keyphrase length (${kpWords.length} words).`
+      });
+    }
+
+    // 3. Keyphrase in SEO Title
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes(kp)) {
+      const index = titleLower.indexOf(kp);
+      const isNearBeginning = index <= (titleLower.length / 2);
+      if (isNearBeginning) {
+        checks.push({
+          label: 'Keyphrase in SEO Title',
+          status: 'green' as const,
+          desc: 'The focus keyphrase is present in the SEO Title, ideally near the beginning!'
+        });
+      } else {
+        checks.push({
+          label: 'Keyphrase in SEO Title',
+          status: 'orange' as const,
+          desc: 'The focus keyphrase is in the SEO Title, but not at the beginning. Move it forward.'
+        });
+      }
+    } else {
+      checks.push({
+        label: 'Keyphrase in SEO Title',
+        status: 'red' as const,
+        desc: 'Your focus keyphrase does not appear in the SEO Title.'
+      });
+    }
+
+    // 4. Title width/length
+    if (title.length >= 40 && title.length <= 70) {
+      checks.push({
+        label: 'Title Width (Length)',
+        status: 'green' as const,
+        desc: `Perfect visual title length (${title.length} characters).`
+      });
+    } else {
+      checks.push({
+        label: 'Title Width (Length)',
+        status: 'orange' as const,
+        desc: `SEO Title is ${title.length} characters. Recommended range is 40–70 characters for optimal display width.`
+      });
+    }
+
+    // 5. Meta description (Excerpt) Length
+    if (excerpt.length >= 120 && excerpt.length <= 160) {
+      checks.push({
+        label: 'Meta Description Length',
+        status: 'green' as const,
+        desc: `Perfect meta description length (${excerpt.length} characters).`
+      });
+    } else {
+      checks.push({
+        label: 'Meta Description Length',
+        status: 'orange' as const,
+        desc: `Meta description is ${excerpt.length} characters. Recommended length is 120–160 characters.`
+      });
+    }
+
+    // 6. Keyphrase in Meta Description
+    const excerptLower = excerpt.toLowerCase();
+    if (excerptLower.includes(kp)) {
+      checks.push({
+        label: 'Keyphrase in Meta Description',
+        status: 'green' as const,
+        desc: 'The focus keyphrase is present in the Meta Description!'
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase in Meta Description',
+        status: 'orange' as const,
+        desc: 'The focus keyphrase was not found in the Meta Description.'
+      });
+    }
+
+    // 7. Keyphrase in Slug
+    const slugClean = slug.toLowerCase().replace(/-/g, ' ');
+    if (slugClean.includes(kp)) {
+      checks.push({
+        label: 'Keyphrase in Slug',
+        status: 'green' as const,
+        desc: 'The focus keyphrase is present in the URL slug!'
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase in Slug',
+        status: 'red' as const,
+        desc: 'Your focus keyphrase does not appear in the URL slug.'
+      });
+    }
+
+    // 8. Text length
+    const words = contentForm.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    const requiredLength = isCornerstone ? 900 : 300;
+    if (wordCount >= requiredLength) {
+      checks.push({
+        label: 'Text Length',
+        status: 'green' as const,
+        desc: `Your text contains ${wordCount} words, exceeding the minimum of ${requiredLength} words.`
+      });
+    } else {
+      checks.push({
+        label: 'Text Length',
+        status: 'red' as const,
+        desc: `Your text contains ${wordCount} words, which is below the recommended minimum of ${requiredLength} words.`
+      });
+    }
+
+    // 9. Keyphrase density
+    const contentLower = contentForm.toLowerCase();
+    if (wordCount > 0) {
+      const escapedKp = kp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const occurrences = (contentLower.match(new RegExp(escapedKp, 'g')) || []).length;
+      const density = ((occurrences / wordCount) * 100).toFixed(1);
+      
+      if (occurrences === 0) {
+        checks.push({
+          label: 'Keyphrase Density',
+          status: 'red' as const,
+          desc: 'The focus keyphrase was found 0 times in body content.'
+        });
+      } else if (occurrences >= 1 && occurrences <= Math.max(2, Math.floor(wordCount / 100) * 2.5)) {
+        checks.push({
+          label: 'Keyphrase Density',
+          status: 'green' as const,
+          desc: `The focus keyphrase density is ${density}% (${occurrences} occurrences), which is perfect!`
+        });
+      } else {
+        checks.push({
+          label: 'Keyphrase Density',
+          status: 'orange' as const,
+          desc: `Keyphrase density is high (${density}% - ${occurrences} times). Avoid keyword stuffing.`
+        });
+      }
+    }
+
+    // 10. Keyphrase in introduction
+    const paragraphs = contentForm.split(/\n+/).filter(p => p.trim().length > 0);
+    if (paragraphs.length > 0) {
+      const firstPara = paragraphs[0];
+      const firstParaLower = firstPara.toLowerCase();
+      
+      if (firstParaLower.includes(kp)) {
+        checks.push({
+          label: 'Keyphrase in Introduction',
+          status: 'green' as const,
+          desc: 'The focus keyphrase appears in the first paragraph.'
+        });
+      } else {
+        checks.push({
+          label: 'Keyphrase in Introduction',
+          status: 'orange' as const,
+          desc: 'Your focus keyphrase does not appear in the first paragraph (introduction).'
+        });
+      }
+    } else {
+      checks.push({
+        label: 'Keyphrase in Introduction',
+        status: 'red' as const,
+        desc: 'The article has no content introduction.'
+      });
+    }
+
+    // 11. Keyphrase in subheadings (H2/H3)
+    const subheadingRegex = /^(##|###)\s+(.+)$/gm;
+    let subheadingMatch;
+    let subheadingCount = 0;
+    let kpInSubheadingCount = 0;
+    while ((subheadingMatch = subheadingRegex.exec(contentForm)) !== null) {
+      subheadingCount++;
+      if (subheadingMatch[2].toLowerCase().includes(kp)) {
+        kpInSubheadingCount++;
+      }
+    }
+    
+    if (subheadingCount === 0) {
+      checks.push({
+        label: 'Keyphrase in Subheadings',
+        status: 'orange' as const,
+        desc: 'No H2 or H3 subheadings found in the content.'
+      });
+    } else if (kpInSubheadingCount > 0) {
+      checks.push({
+        label: 'Keyphrase in Subheadings',
+        status: 'green' as const,
+        desc: `Good job! The keyphrase appears in ${kpInSubheadingCount} subheading(s).`
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase in Subheadings',
+        status: 'orange' as const,
+        desc: 'Your focus keyphrase does not appear in any H2 or H3 subheadings.'
+      });
+    }
+
+    // 12. Single H1 assessment
+    const h1HeadingRegex = /^#\s+(.+)$/gm;
+    const h1Matches = contentForm.match(h1HeadingRegex) || [];
+    if (h1Matches.length > 1) {
+      checks.push({
+        label: 'Single H1 Assessment',
+        status: 'red' as const,
+        desc: `Multiple H1 headings found (${h1Matches.length}). Use only one H1 (usually the post title) to keep hierarchy clear.`
+      });
+    } else {
+      checks.push({
+        label: 'Single H1 Assessment',
+        status: 'green' as const,
+        desc: 'Excellent! You have only one H1 or none in body content.'
+      });
+    }
+
+    // 13. Images present
+    const inlineImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const inlineImages = contentForm.match(inlineImageRegex) || [];
+    const hasImages = imageUrl || inlineImages.length > 0;
+    
+    if (hasImages) {
+      checks.push({
+        label: 'Images Present',
+        status: 'green' as const,
+        desc: `Images are present (${inlineImages.length} inline plus featured image).`
+      });
+    } else {
+      checks.push({
+        label: 'Images Present',
+        status: 'red' as const,
+        desc: 'No images found. Add at least one image to support readers visually.'
+      });
+    }
+
+    // 14. Keyphrase in image alt attributes
+    let hasAltMatch = false;
+    let imageMatch;
+    inlineImageRegex.lastIndex = 0;
+    while ((imageMatch = inlineImageRegex.exec(contentForm)) !== null) {
+      const altText = imageMatch[1].toLowerCase();
+      if (altText.includes(kp)) {
+        hasAltMatch = true;
+        break;
+      }
+    }
+    
+    // Also count featured image
+    if (imageUrl && titleLower.includes(kp)) {
+      hasAltMatch = true;
+    }
+
+    if (hasAltMatch) {
+      checks.push({
+        label: 'Keyphrase in Image Alts',
+        status: 'green' as const,
+        desc: 'Great! The focus keyphrase was found in image alt attributes.'
+      });
+    } else if (hasImages) {
+      checks.push({
+        label: 'Keyphrase in Image Alts',
+        status: 'orange' as const,
+        desc: 'Images are present, but their alt attributes do not contain the focus keyphrase.'
+      });
+    } else {
+      checks.push({
+        label: 'Keyphrase in Image Alts',
+        status: 'red' as const,
+        desc: 'No images to check for alt attributes.'
+      });
+    }
+
+    // 15. Internal links (Crosslinking)
+    const internalLinkRegex = /\[([^\]]+)\]\((?:\/|https?:\/\/(?:www\.)?bookyourground\.com)[^)]*\)/gi;
+    const hasInternalLinks = internalLinkRegex.test(contentForm);
+    if (hasInternalLinks) {
+      checks.push({
+        label: 'Internal Links (Crosslinking)',
+        status: 'green' as const,
+        desc: 'Internal links are present on your page.'
+      });
+    } else {
+      checks.push({
+        label: 'Internal Links (Crosslinking)',
+        status: 'orange' as const,
+        desc: 'No internal links found. Consider linking internally to pages on BookYourGround.'
+      });
+    }
+
+    // 16. Outbound links
+    const externalLinkRegex = /\[([^\]]+)\]\((https?:\/\/(?!(?:www\.)?bookyourground\.com)[^)]+)\)/gi;
+    const outboundMatches = contentForm.match(externalLinkRegex) || [];
+    if (outboundMatches.length > 0) {
+      checks.push({
+        label: 'Outbound Links',
+        status: 'green' as const,
+        desc: `Excellent! You have ${outboundMatches.length} outbound link(s) to external resources.`
+      });
+    } else {
+      checks.push({
+        label: 'Outbound Links',
+        status: 'orange' as const,
+        desc: 'No outbound links found. Add links to trusted external websites for context.'
+      });
+    }
+
+    // 17. Competing links
+    let hasCompetingLink = false;
+    let linkMatch;
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    linkRegex.lastIndex = 0;
+    while ((linkMatch = linkRegex.exec(contentForm)) !== null) {
+      const anchorText = linkMatch[1].toLowerCase().trim();
+      if (anchorText === kp) {
+        hasCompetingLink = true;
+        break;
+      }
+    }
+    
+    if (hasCompetingLink) {
+      checks.push({
+        label: 'Competing Links',
+        status: 'orange' as const,
+        desc: 'You linked out using anchor text that is identical to your focus keyphrase. This causes internal competition.'
+      });
+    } else {
+      checks.push({
+        label: 'Competing Links',
+        status: 'green' as const,
+        desc: 'Good! No competing links found with your focus keyphrase as anchor text.'
+      });
+    }
+
+    // 18. Previously used keyphrase
+    const previouslyUsed = allBlogs.some(b => b.id !== id && (
+      b.title.toLowerCase().includes(kp) || 
+      b.excerpt.toLowerCase().includes(kp) ||
+      (b.content && b.content.toLowerCase().split(/\s+/).filter(Boolean).filter(w => w === kp).length > 5)
+    ));
+
+    if (previouslyUsed) {
+      checks.push({
+        label: 'Previously Used Keyphrase',
+        status: 'orange' as const,
+        desc: 'You have used this focus keyphrase on another post. Try to avoid cannibalization.'
+      });
+    } else {
+      checks.push({
+        label: 'Previously Used Keyphrase',
+        status: 'green' as const,
+        desc: 'You have not used this focus keyphrase before. Perfect!'
+      });
+    }
+
+    // Extra: Introduction Hook (No "Introduction" Heading name)
+    const hasIntroductionHeading = contentLower.match(/^#+\s+introduction\b/m);
+    if (hasIntroductionHeading) {
+      checks.push({
+        label: 'Introduction Heading Title',
+        status: 'red' as const,
+        desc: 'Do not use "Introduction" as a heading name. Hook the reader naturally!'
+      });
+    }
+
+    // Extra: Product context integration
+    const productMentions = (contentLower.match(/bookyourground/g) || []).length;
+    if (productMentions > 0 && productMentions <= 4) {
+      checks.push({
+        label: 'Product Context Integration',
+        status: 'green' as const,
+        desc: `BookYourGround integrated naturally (${productMentions} mentions).`
+      });
+    }
+
+    if (aiOptimized) {
+      checks.push({
+        label: 'AI SEO Optimization',
+        status: 'green' as const,
+        desc: 'Gemini AI successfully optimized this post to meet all Yoast guidelines!'
+      });
+    }
+
+    // Overall Score
+    const redCount = checks.filter(c => c.status === 'red').length;
+    const orangeCount = checks.filter(c => c.status === 'orange').length;
+    let overall = 'green' as const;
+    if (redCount > 0) overall = 'red' as const;
+    else if (orangeCount > 2) overall = 'orange' as const;
+
+    return { overall, checks };
+  };
+
+  const seo = getSeoAnalysis();
+
+  const [fixing, setFixing] = useState(false);
+
+  const autoFixWithAI = async () => {
+    if (!API_KEY) {
+      const msg = 'EXPO_PUBLIC_GEMINI_API_KEY is not configured';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+    
+    if (!focusKeyphrase) {
+      const msg = 'Please enter a Focus Keyphrase first so the AI knows what to optimize for.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
+    try {
+      setFixing(true);
+      const genAI = new GoogleGenerativeAI(API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+
+      const failedChecks = seo.checks.filter(c => c.status !== 'green');
+      const wordCount = contentForm.trim().split(/\s+/).filter(Boolean).length;
+
+      const prompt = `You are an expert SEO copywriter and optimizer for BookYourGround.
+      
+We are editing a blog post with the target Focus Keyphrase: "${focusKeyphrase}".
+Current Post Details:
+- Title: "${title}"
+- Slug: "${slug}"
+- Excerpt: "${excerpt}"
+- Content: "${contentForm}"
+
+Our live Yoast SEO analysis flagged these errors/warnings that must be resolved:
+${failedChecks.map(c => `- ${c.label}: ${c.desc}`).join('\n')}
+${isCornerstone ? `- Cornerstone Content Length: Cornerstone articles require in-depth content (currently ${wordCount} words, 900+ words recommended).` : ''}
+
+Please rewrite and optimize the Title, Slug, Excerpt (meta description), and Markdown Body Content to resolve ALL of the issues listed above, adhering strictly to these premium Yoast SEO criteria:
+
+YOAST SEO CHECKLIST & RULES:
+1. **Keyphrase in SEO Title**: Include the focus keyphrase "${focusKeyphrase}" in the title, keeping it near the very beginning of the title. Title length must be strictly between 40 to 70 characters (Title Width/Length rule).
+2. **Keyphrase in Slug**: Ensure the slug contains the exact focus keyphrase (lowercased, hyphenated).
+3. **Meta Description**: Keep the excerpt strictly between 120 and 160 characters, and it must contain the focus keyphrase "${focusKeyphrase}" naturally.
+4. **Keyphrase in Introduction**: The very first paragraph of the markdown body must contain the focus keyphrase "${focusKeyphrase}" in the first couple of sentences. The introduction must be 150 to 200 words long to hook the reader naturally. Never use the word "Introduction" as a heading title.
+5. **Keyphrase in Subheadings**: The focus keyphrase "${focusKeyphrase}" must appear in at least one subheading (H2 or H3 heading, e.g. ## Heading or ### Heading). Structure headings cleanly.
+6. **Keyphrase Density**: Maintain a natural keyphrase frequency of 1% to 2.5% throughout the text body.
+7. **Single H1 Assessment**: Do NOT use H1 headers (# Heading) in the body content. Only use H2 (##) or H3 (###) to avoid multiple H1 issues.
+8. **Internal Links (Crosslinking)**: You must include at least one internal link using markdown to a page on the BookYourGround website (e.g. [book sports ground](/cricket) or [box cricket booking](/cricket) or [view grounds](/)).
+9. **Outbound Links**: You must include at least one relevant outbound link to a high-quality external sports resource or trusted guide using standard markdown (e.g., [ICC rules](https://www.icc-cricket.com) or external stats site).
+10. **Competing Links**: Never use the exact focus keyphrase "${focusKeyphrase}" as the clickable anchor text for any hyperlink. Use different, descriptive words as anchor text to avoid internal competition.
+11. **Keyphrase Alts**: If you write inline markdown images like ![Alt Text](url), make sure the Alt Text contains the focus keyphrase "${focusKeyphrase}".
+12. **Content Context**: Highlight the BookYourGround platform contextually as the booking solution 1 to 3 times maximum. Do not be overly salesy.
+
+Please provide the output in strict JSON format with the following keys exactly:
+- title: The optimized SEO-friendly title
+- slug: The optimized URL-friendly slug
+- excerpt: The optimized 120-160 character excerpt
+- content: The full body of the blog post written in GitHub Flavored Markdown format.
+
+Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      
+      const cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJsonStr);
+
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.slug) setSlug(parsed.slug);
+      if (parsed.excerpt) setExcerpt(parsed.excerpt);
+      if (parsed.content) setContentForm(parsed.content);
+      
+      setAiOptimized(true);
+
+      if (Platform.OS === 'web') alert('AI SEO Auto-Fix applied successfully!');
+      else Alert.alert('Success', 'AI SEO Auto-Fix applied successfully!');
+
+    } catch (err: any) {
+      console.error(err);
+      if (Platform.OS === 'web') alert('SEO optimization failed: ' + err.message);
+      else Alert.alert('Error', 'SEO optimization failed: ' + err.message);
+    } finally {
+      setFixing(false);
+    }
+  };
 
   useEffect(() => {
     if (!isNew) {
@@ -146,16 +707,33 @@ export default function AdminBlogEdit() {
     try {
       setGenerating(true);
       const genAI = new GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
       const prompt = `You are an expert SEO content writer for a platform called BookYourGround, a website that helps people book sports grounds online (cricket, football, box cricket, etc.).
       
 Write a highly engaging, SEO-optimized blog post about the following topic: "${aiTopic}".
 
+Adhere strictly to these premium Yoast SEO criteria:
+
+YOAST SEO CHECKLIST & RULES:
+1. **Focus Keyphrase Selection**: Infer a highly relevant, content-rich Focus Keyphrase for the topic (do not use generic single words or only function/stop words).
+2. **Keyphrase in SEO Title**: Include the focus keyphrase near the beginning of the title. Title length must be strictly between 40 to 70 characters.
+3. **Keyphrase in Slug**: The slug must include the exact focus keyphrase (lowercased, hyphenated).
+4. **Meta Description**: Write an excerpt strictly between 120 and 160 characters containing the focus keyphrase.
+5. **Keyphrase in Introduction**: The very first paragraph of the markdown body must be between 150 to 200 words and must contain the focus keyphrase in the first couple of sentences. Never use "Introduction" as a heading.
+6. **Keyphrase in Subheadings**: The focus keyphrase must appear in at least one H2 or H3 subheading. Use headings (## or ###) cleanly.
+7. **Keyphrase Density**: Maintain a keyphrase frequency between 1% to 2.5% in the markdown body.
+8. **Single H1 Assessment**: Do NOT write H1 (#) headings in the markdown body. Only use H2 (##) and H3 (###) to keep hierarchy perfect.
+9. **Internal Links (Crosslinking)**: Automatically include at least one internal link using standard markdown (e.g. linking to [book sports ground](/cricket) or [box cricket booking](/cricket) or [view grounds](/)).
+10. **Outbound Links**: Include at least one relevant outbound link using standard markdown to a high-quality external sports resource or official guidelines (e.g., [ICC rules](https://www.icc-cricket.com)).
+11. **Competing Links**: Never use the exact focus keyphrase as the anchor text for any hyperlink in the content to avoid internal competition.
+12. **Keyphrase Alts**: Include at least one inline markdown image with alt text containing the focus keyphrase (e.g. ![focus keyphrase](unsplash_image_url)).
+13. **Content Context**: Naturally mention the solution provider BookYourGround 1 to 3 times maximum. Do not make it overly sales-oriented.
+
 Please provide the output in strict JSON format with the following keys exactly:
 - title: A catchy, SEO-friendly title
 - slug: A URL-friendly slug based on the title (e.g. how-to-book-a-cricket-ground)
-- excerpt: A short 1-2 sentence meta description/excerpt
+- excerpt: A short 120-160 character meta description/excerpt
 - content: The full body of the blog post written in GitHub Flavored Markdown format. Make it engaging, structured with headings (##), bullet points, and actionable advice.
 - read_time: Estimated read time (e.g. "4 min read")
 - image_search_query: A short 2-3 word search query to find a good stock image on Unsplash for this post.
@@ -200,7 +778,12 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
         setLoading(true);
         
         let fileExt = 'jpeg';
-        let fileName = `${Date.now()}.${fileExt}`;
+        const cleanSlug = slug 
+          ? slug.trim().toLowerCase() 
+          : title 
+            ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') 
+            : 'blog-post';
+        let fileName = `${cleanSlug}-${Math.floor(1000 + Math.random() * 9000)}.${fileExt}`;
         
         if (Platform.OS === 'web') {
           // Web environment upload
@@ -277,140 +860,382 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
           {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Save size={20} color="#FFFFFF" />}
           <Text style={styles.saveBtnText}>Save</Text>
         </Pressable>
-      </View>
+      </View>      <ScrollView style={styles.content}>
+        <View style={styles.splitLayout}>
+          {/* Left Column: Yoast SEO settings & AI generator */}
+          <View style={styles.leftColumn}>
+            {/* Gemini AI Generator Section */}
+            <View style={styles.aiSection}>
+              <View style={styles.aiHeader}>
+                <Wand2 size={20} color="#8B5CF6" />
+                <Text style={styles.aiTitle}>Generate with Gemini AI</Text>
+              </View>
+              <Text style={styles.aiDesc}>Enter a topic and let AI draft an SEO-optimized blog post, title, slug, and suggest an image for you.</Text>
+              <View style={styles.aiInputRow}>
+                <TextInput 
+                  style={styles.aiInput}
+                  placeholder="e.g. Top 5 Cricket Grounds in Hyderabad"
+                  placeholderTextColor="#9CA3AF"
+                  value={aiTopic}
+                  onChangeText={setAiTopic}
+                />
+                <Pressable 
+                  style={[styles.aiBtn, generating && { opacity: 0.7 }]}
+                  onPress={generateWithAI}
+                  disabled={generating}
+                >
+                  {generating ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.aiBtnText}>Generate</Text>}
+                </Pressable>
+              </View>
+            </View>
 
-      <ScrollView style={styles.content}>
-        {/* Gemini AI Generator Section */}
-        <View style={styles.aiSection}>
-          <View style={styles.aiHeader}>
-            <Wand2 size={20} color="#8B5CF6" />
-            <Text style={styles.aiTitle}>Generate with Gemini AI</Text>
-          </View>
-          <Text style={styles.aiDesc}>Enter a topic and let AI draft an SEO-optimized blog post, title, slug, and suggest an image for you.</Text>
-          <View style={styles.aiInputRow}>
-            <TextInput 
-              style={styles.aiInput}
-              placeholder="e.g. Top 5 Cricket Grounds in Hyderabad"
-              placeholderTextColor="#9CA3AF"
-              value={aiTopic}
-              onChangeText={setAiTopic}
-            />
-            <Pressable 
-              style={[styles.aiBtn, generating && { opacity: 0.7 }]}
-              onPress={generateWithAI}
-              disabled={generating}
-            >
-              {generating ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.aiBtnText}>Generate</Text>}
-            </Pressable>
-          </View>
-        </View>
+            {/* Yoast SEO Live Analysis Section */}
+            <View style={[
+              styles.yoastSection,
+              seo.overall === 'red' && { borderLeftColor: '#EF4444' },
+              seo.overall === 'orange' && { borderLeftColor: '#F59E0B' },
+              seo.overall === 'green' && { borderLeftColor: '#10B981' }
+            ]}>
+              {/* Yoast Section Header */}
+              <View style={styles.yoastHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={[
+                    styles.trafficLight,
+                    seo.overall === 'red' && { backgroundColor: '#EF4444' },
+                    seo.overall === 'orange' && { backgroundColor: '#F59E0B' },
+                    seo.overall === 'green' && { backgroundColor: '#10B981' }
+                  ]} />
+                  <Text style={styles.yoastTitle}>Yoast SEO Live Analysis</Text>
+                </View>
+                <View style={[
+                  styles.yoastBadge,
+                  seo.overall === 'red' && { backgroundColor: '#FEE2E2' },
+                  seo.overall === 'orange' && { backgroundColor: '#FEF3C7' },
+                  seo.overall === 'green' && { backgroundColor: '#D1FAE5' }
+                ]}>
+                  <Text style={[
+                    styles.yoastBadgeText,
+                    seo.overall === 'red' && { color: '#EF4444' },
+                    seo.overall === 'orange' && { color: '#D97706' },
+                    seo.overall === 'green' && { color: '#059669' }
+                  ]}>
+                    {seo.overall === 'red' && 'Action Required'}
+                    {seo.overall === 'orange' && 'Needs Improvement'}
+                    {seo.overall === 'green' && 'SEO Optimized!'}
+                  </Text>
+                </View>
+              </View>
 
-        <View style={styles.formRow}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Title</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={(val) => {
-                setTitle(val);
-                if (isNew && !slug) {
-                  setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-                }
-              }}
-              placeholder="Post title"
-            />
-          </View>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Slug</Text>
-            <TextInput
-              style={styles.input}
-              value={slug}
-              onChangeText={setSlug}
-              placeholder="url-friendly-slug"
-            />
-          </View>
-        </View>
+              {/* Cornerstone Content Toggle Switch */}
+              <View style={styles.cornerstoneRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cornerstoneLabel}>Cornerstone Content</Text>
+                  <Text style={styles.cornerstoneDesc}>Flag this post as an essential, high-quality, high-volume article representing your core topic.</Text>
+                </View>
+                <Switch 
+                  value={isCornerstone}
+                  onValueChange={setIsCornerstone}
+                  trackColor={{ false: '#D1D5DB', true: '#8B5CF6' }}
+                />
+              </View>
+              
+              {/* Yoast Sub-Tabs Selector */}
+              <View style={styles.yoastTabs}>
+                <Pressable 
+                  style={[styles.yoastTabBtn, yoastTab === 'analysis' && styles.yoastTabBtnActive]} 
+                  onPress={() => setYoastTab('analysis')}
+                >
+                  <Text style={[styles.yoastTabBtnText, yoastTab === 'analysis' && styles.yoastTabBtnTextActive]}>SEO Analysis</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.yoastTabBtn, yoastTab === 'google' && styles.yoastTabBtnActive]} 
+                  onPress={() => setYoastTab('google')}
+                >
+                  <Text style={[styles.yoastTabBtnText, yoastTab === 'google' && styles.yoastTabBtnTextActive]}>Google Preview</Text>
+                </Pressable>
+                <Pressable 
+                  style={[styles.yoastTabBtn, yoastTab === 'social' && styles.yoastTabBtnActive]} 
+                  onPress={() => setYoastTab('social')}
+                >
+                  <Text style={[styles.yoastTabBtnText, yoastTab === 'social' && styles.yoastTabBtnTextActive]}>Social Share Preview</Text>
+                </Pressable>
+              </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Excerpt</Text>
-          <TextInput
-            style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-            value={excerpt}
-            onChangeText={setExcerpt}
-            placeholder="Short description for SEO and previews"
-            multiline
-          />
-        </View>
+              {/* Tab Content 1: Live SEO Analysis Checklist */}
+              {yoastTab === 'analysis' && (
+                <View style={{ marginTop: 16 }}>
+                  <View style={[styles.formGroup, { marginBottom: 16 }]}>
+                    <Text style={styles.label}>Focus Keyphrase</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="e.g. cricket pitch maintenance"
+                      placeholderTextColor="#9CA3AF"
+                      value={focusKeyphrase}
+                      onChangeText={setFocusKeyphrase}
+                    />
+                    <Text style={styles.helperText}>Live suggestions will appear as you write your post content, title, and excerpt.</Text>
+                  </View>
 
-        <View style={styles.formGroup}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Content (Markdown)</Text>
-            <View style={styles.toolbar}>
-              <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
-                <Bold size={16} color="#4B5563" />
-              </Pressable>
+                  <View style={styles.analysisList}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <Text style={styles.analysisTitle}>Analysis Results</Text>
+                      {seo.checks.some(c => c.status !== 'green') && focusKeyphrase.trim().length > 0 && (
+                        <Pressable 
+                          style={[styles.yoastAiBtn, fixing && { opacity: 0.7 }]} 
+                          onPress={autoFixWithAI}
+                          disabled={fixing}
+                        >
+                          {fixing ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Wand2 size={12} color="#FFFFFF" />
+                              <Text style={styles.yoastAiBtnText}>Auto-Fix with AI</Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      )}
+                    </View>
+                    
+                    {/* Cornerstone validation inject */}
+                    {isCornerstone && (
+                      <View style={styles.checkItem}>
+                        <View style={[
+                          styles.bullet,
+                          contentForm.trim().split(/\s+/).filter(Boolean).length >= 900 ? { backgroundColor: '#10B981' } : { backgroundColor: '#F59E0B' }
+                        ]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.checkLabel}>Cornerstone Content length check</Text>
+                          <Text style={styles.checkDesc}>
+                            {contentForm.trim().split(/\s+/).filter(Boolean).length >= 900 
+                              ? `Good length! ${contentForm.trim().split(/\s+/).filter(Boolean).length} words exceeds the 900-word standard.`
+                              : `Cornerstone posts must be extensive. Currently ${contentForm.trim().split(/\s+/).filter(Boolean).length} words (900+ words recommended).`
+                            }
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {[...seo.checks]
+                      .sort((a, b) => {
+                        const score = { red: 3, orange: 2, green: 1 };
+                        return score[b.status] - score[a.status];
+                      })
+                      .map((check, idx) => (
+                        <View key={idx} style={styles.checkItem}>
+                          <View style={[
+                            styles.bullet,
+                            check.status === 'red' && { backgroundColor: '#EF4444' },
+                            check.status === 'orange' && { backgroundColor: '#F59E0B' },
+                            check.status === 'green' && { backgroundColor: '#10B981' }
+                          ]} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.checkLabel}>{check.label}</Text>
+                            <Text style={styles.checkDesc}>{check.desc}</Text>
+                          </View>
+                        </View>
+                      ))
+                    }
+                  </View>
+                </View>
+              )}
+
+              {/* Tab Content 2: Google Search Snippet Preview */}
+              {yoastTab === 'google' && (
+                <View style={styles.previewContainer}>
+                  <View style={styles.previewControls}>
+                    <Text style={styles.previewTitle}>Google Search Result Mockup</Text>
+                    <View style={styles.deviceRow}>
+                      <Pressable 
+                        style={[styles.deviceBtn, previewDevice === 'mobile' && styles.deviceBtnActive]}
+                        onPress={() => setPreviewDevice('mobile')}
+                      >
+                        <Text style={[styles.deviceBtnText, previewDevice === 'mobile' && styles.deviceBtnTextActive]}>Mobile</Text>
+                      </Pressable>
+                      <Pressable 
+                        style={[styles.deviceBtn, previewDevice === 'desktop' && styles.deviceBtnActive]}
+                        onPress={() => setPreviewDevice('desktop')}
+                      >
+                        <Text style={[styles.deviceBtnText, previewDevice === 'desktop' && styles.deviceBtnTextActive]}>Desktop</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {previewDevice === 'mobile' ? (
+                    <View style={styles.googleMobileCard}>
+                      <View style={styles.googleMobileMeta}>
+                        <Image 
+                          source={{ uri: 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png' }}
+                          style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', marginRight: 8 }}
+                          resizeMode="contain"
+                          alt="BookYourGround Logo"
+                        />
+                        <View>
+                          <Text style={styles.googleSiteName}>BookYourGround</Text>
+                          <Text style={styles.googleMobileUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.googleMobileTitle}>{title || 'Please Write a Catchy Title...'} | BookYourGround</Text>
+                      <Text style={styles.googleMobileDesc}>
+                        {excerpt ? (excerpt.length > 155 ? `${excerpt.substring(0, 155)}...` : excerpt) : 'Please write a meta description in the excerpt field to optimize search results view...'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.googleDesktopCard}>
+                      <Text style={styles.googleDesktopUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
+                      <Text style={styles.googleDesktopTitle}>{title || 'Please Write a Catchy Title...'} | BookYourGround</Text>
+                      <Text style={styles.googleDesktopDesc}>
+                        {excerpt ? (excerpt.length > 165 ? `${excerpt.substring(0, 165)}...` : excerpt) : 'Please write a meta description in the excerpt field to optimize search results view...'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Tab Content 3: Social Media Previews */}
+              {yoastTab === 'social' && (
+                <View style={styles.previewContainer}>
+                  <Text style={styles.previewTitle}>Facebook Share Preview</Text>
+                  <View style={styles.facebookCard}>
+                    <View style={styles.facebookImgMock}>
+                      {imageUrl ? (
+                        <img 
+                          src={imageUrl} 
+                          style={{ width: '100%', height: 200, objectFit: 'cover' }} 
+                          alt="Preview"
+                          onError={(e) => {
+                            (e.target as any).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
+                          <Text style={{ color: '#9CA3AF', fontSize: 13 }}>No Featured Image Selected</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.facebookMeta}>
+                      <Text style={styles.facebookSiteName}>BOOKYOURGROUND.COM</Text>
+                      <Text style={styles.facebookTitle}>{title || 'Catchy Blog Headline'}</Text>
+                      <Text style={styles.facebookDesc} numberOfLines={2}>
+                        {excerpt || 'Short summary of the blog post to capture readers attention when shared on social timelines.'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
-          <TextInput
-            style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-            value={contentForm}
-            onChangeText={setContentForm}
-            onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-            placeholder="Write your content here using markdown..."
-            multiline
-          />
-        </View>
 
-        <View style={styles.formRow}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Author</Text>
-            <TextInput
-              style={styles.input}
-              value={author}
-              onChangeText={setAuthor}
-              placeholder="e.g. Admin"
-            />
-          </View>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Read Time</Text>
-            <TextInput
-              style={styles.input}
-              value={readTime}
-              onChangeText={setReadTime}
-              placeholder="e.g. 5 min read"
-            />
-          </View>
-        </View>
+          {/* Right Column: Blog Composition Fields */}
+          <View style={styles.rightColumn}>
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={(val) => {
+                    setTitle(val);
+                    if (isNew && !slug) {
+                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+                    }
+                  }}
+                  placeholder="Post title"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Slug</Text>
+                <TextInput
+                  style={styles.input}
+                  value={slug}
+                  onChangeText={setSlug}
+                  placeholder="url-friendly-slug"
+                />
+              </View>
+            </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Image URL</Text>
-          <View style={styles.imageInputRow}>
-            <View style={styles.imageInputWrapper}>
-              <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Excerpt</Text>
               <TextInput
-                style={[styles.input, { paddingLeft: 40, flex: 1 }]}
-                value={imageUrl}
-                onChangeText={setImageUrl}
-                placeholder="https://..."
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                value={excerpt}
+                onChangeText={setExcerpt}
+                placeholder="Short description for SEO and previews"
+                multiline
               />
             </View>
-            <Pressable style={styles.uploadBtn} onPress={pickImage}>
-              <Upload size={18} color="#4B5563" />
-              <Text style={styles.uploadBtnText}>Upload</Text>
-            </Pressable>
-          </View>
-        </View>
 
-        <View style={styles.publishRow}>
-          <View>
-            <Text style={styles.label}>Publish Status</Text>
-            <Text style={styles.helperText}>Published posts are visible to the public</Text>
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Content (Markdown)</Text>
+                <View style={styles.toolbar}>
+                  <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
+                    <Bold size={16} color="#4B5563" />
+                  </Pressable>
+                </View>
+              </View>
+              <TextInput
+                style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                value={contentForm}
+                onChangeText={setContentForm}
+                onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                placeholder="Write your content here using markdown..."
+                multiline
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Author</Text>
+                <TextInput
+                  style={styles.input}
+                  value={author}
+                  onChangeText={setAuthor}
+                  placeholder="e.g. Admin"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Read Time</Text>
+                <TextInput
+                  style={styles.input}
+                  value={readTime}
+                  onChangeText={setReadTime}
+                  placeholder="e.g. 5 min read"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Image URL</Text>
+              <View style={styles.imageInputRow}>
+                <View style={styles.imageInputWrapper}>
+                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
+                  <TextInput
+                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
+                    value={imageUrl}
+                    onChangeText={setImageUrl}
+                    placeholder="https://..."
+                  />
+                </View>
+                <Pressable style={styles.uploadBtn} onPress={pickImage}>
+                  <Upload size={18} color="#4B5563" />
+                  <Text style={styles.uploadBtnText}>Upload</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.publishRow}>
+              <View>
+                <Text style={styles.label}>Publish Status</Text>
+                <Text style={styles.helperText}>Published posts are visible to the public</Text>
+              </View>
+              <Switch 
+                value={isPublished}
+                onValueChange={setIsPublished}
+                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
+              />
+            </View>
           </View>
-          <Switch 
-            value={isPublished}
-            onValueChange={setIsPublished}
-            trackColor={{ false: '#D1D5DB', true: '#10b981' }}
-          />
         </View>
         
         <View style={{ height: 100 }} />
@@ -444,9 +1269,60 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: '#111827' },
   saveBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 8 },
   saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  content: { padding: 24, maxWidth: 900, alignSelf: 'center', width: '100%' },
+  content: { paddingVertical: 24, paddingHorizontal: 0, width: '100%' },
+  splitLayout: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 24, width: '100%' },
+  leftColumn: { flex: Platform.OS === 'web' ? 1 : undefined, minWidth: Platform.OS === 'web' ? 420 : '100%' },
+  rightColumn: { flex: Platform.OS === 'web' ? 1.3 : undefined, minWidth: Platform.OS === 'web' ? 500 : '100%' },
   
   aiSection: { backgroundColor: '#F3E8FF', padding: 24, borderRadius: 12, marginBottom: 32, borderWidth: 1, borderColor: '#E9D5FF' },
+  yoastSection: { backgroundColor: '#FFFFFF', padding: 24, borderRadius: 12, marginBottom: 32, borderLeftWidth: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  yoastHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12 },
+  trafficLight: { width: 14, height: 14, borderRadius: 7 },
+  yoastTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  yoastBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  yoastBadgeText: { fontSize: 12, fontWeight: '700' },
+  analysisList: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16 },
+  analysisTitle: { fontSize: 15, fontWeight: '700', color: '#374151' },
+  yoastAiBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, gap: 6 },
+  yoastAiBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+  checkItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
+  bullet: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
+  checkLabel: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
+  checkDesc: { fontSize: 12, color: '#4B5563', marginTop: 2 },
+  cornerstoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F8FF', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF', marginBottom: 16 },
+  cornerstoneLabel: { fontSize: 14, fontWeight: '700', color: '#6B21A8' },
+  cornerstoneDesc: { fontSize: 12, color: '#7E22CE', marginTop: 4, paddingRight: 12 },
+  yoastTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', gap: 16, marginBottom: 16 },
+  yoastTabBtn: { paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  yoastTabBtnActive: { borderBottomColor: '#10B981' },
+  yoastTabBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  yoastTabBtnTextActive: { color: '#10B981' },
+  previewContainer: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 16, marginTop: 12 },
+  previewControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 8 },
+  previewTitle: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  deviceRow: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 6, padding: 2, gap: 2 },
+  deviceBtn: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
+  deviceBtnActive: { backgroundColor: '#FFFFFF' },
+  deviceBtnText: { fontSize: 11, fontWeight: '600', color: '#4B5563' },
+  deviceBtnTextActive: { color: '#111827' },
+  googleMobileCard: { backgroundColor: '#FFFFFF', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  googleMobileMeta: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
+  googleMobileFavicon: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  googleFaviconText: { fontSize: 12 },
+  googleSiteName: { fontSize: 11, fontWeight: '700', color: '#202124' },
+  googleMobileUrl: { fontSize: 10, color: '#4d5156' },
+  googleMobileTitle: { fontSize: 17, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
+  googleMobileDesc: { fontSize: 12, color: '#4d5156', lineHeight: 18 },
+  googleDesktopCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  googleDesktopUrl: { fontSize: 12, color: '#202124', marginBottom: 4 },
+  googleDesktopTitle: { fontSize: 20, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
+  googleDesktopDesc: { fontSize: 14, color: '#4d5156', lineHeight: 22 },
+  facebookCard: { backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#DDD' },
+  facebookImgMock: { width: '100%', height: 200, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  facebookMeta: { padding: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', backgroundColor: '#F2F3F5' },
+  facebookSiteName: { fontSize: 11, color: '#606770', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  facebookTitle: { fontSize: 14, fontWeight: '700', color: '#1d2129', marginBottom: 4 },
+  facebookDesc: { fontSize: 12, color: '#606770', lineHeight: 16 },
   aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   aiTitle: { fontSize: 18, fontWeight: '700', color: '#6B21A8' },
   aiDesc: { fontSize: 14, color: '#7E22CE', marginBottom: 16 },
@@ -456,7 +1332,7 @@ const styles = StyleSheet.create({
   aiBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 15 },
   
   formRow: { flexDirection: 'row', gap: 24 },
-  formGroup: { flex: 1, marginBottom: 24 },
+  formGroup: { marginBottom: 24 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   toolbar: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   toolbarBtn: { padding: 4, borderRadius: 4, backgroundColor: '#F3F4F6' },

@@ -33,7 +33,7 @@ export default function CallToAction() {
               <>
                 <Pressable
                   style={styles.primaryButton}
-                  onPress={() => router.push('/(auth)/signup')}
+                  onPress={() => router.push('/(auth)/login')}
                 >
                   <Text style={styles.primaryButtonText}>Create Free Account</Text>
                   <ArrowRight size={20} color="#043529" strokeWidth={2.5} />
