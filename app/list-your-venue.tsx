@@ -88,7 +88,7 @@ export default function ListYourVenue() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
   }
 
   return content;
