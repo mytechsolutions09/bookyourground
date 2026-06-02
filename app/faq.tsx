@@ -1,7 +1,49 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
-import { HelpCircle, CalendarCheck, ShieldCheck, RefreshCcw } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, LayoutAnimation, UIManager } from 'react-native';
+import { HelpCircle, CalendarCheck, ShieldCheck, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const FAQItem = ({ question, answer, icon: Icon }: { question: string, answer: string, icon: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleOpen = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <TouchableOpacity 
+      style={[styles.faqItem, isOpen && styles.faqItemOpen]} 
+      onPress={toggleOpen}
+      activeOpacity={0.7}
+    >
+      <View style={styles.faqHeader}>
+        <View style={styles.iconContainer}>
+          <Icon size={24} color="#00ea6b" />
+        </View>
+        <Text style={styles.question}>{question}</Text>
+        <View style={styles.chevronContainer}>
+          {isOpen ? (
+            <ChevronUp size={20} color="#64748B" />
+          ) : (
+            <ChevronDown size={20} color="#64748B" />
+          )}
+        </View>
+      </View>
+      
+      {isOpen && (
+        <View style={styles.faqBody}>
+          <Text style={styles.answer}>{answer}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default function FAQPage() {
   const content = (
@@ -15,44 +57,23 @@ export default function FAQPage() {
 
       <View style={styles.faqList}>
         
-        {/* Availability FAQ */}
-        <View style={styles.faqItem}>
-          <View style={styles.iconContainer}>
-            <CalendarCheck size={28} color="#00ea6b" />
-          </View>
-          <View style={styles.faqContent}>
-            <Text style={styles.question}>Is the slot actually available or will the venue cancel?</Text>
-            <Text style={styles.answer}>
-              Every slot shown on BookYourGround is 100% accurate and instantly confirmed. Our real-time syncing technology connects directly to the venue's master calendar. When you book a slot online, it is automatically locked in the venue's system. There is absolutely zero risk of double-booking, and venue owners cannot manually cancel a confirmed, paid booking without violating our service guarantee.
-            </Text>
-          </View>
-        </View>
+        <FAQItem 
+          icon={CalendarCheck}
+          question="Is the slot actually available or will the venue cancel?"
+          answer="Every slot shown on BookYourGround is 100% accurate and instantly confirmed. Our real-time syncing technology connects directly to the venue's master calendar. When you book a slot online, it is automatically locked in the venue's system. There is absolutely zero risk of double-booking, and venue owners cannot manually cancel a confirmed, paid booking without violating our service guarantee."
+        />
 
-        {/* Payment FAQ */}
-        <View style={styles.faqItem}>
-          <View style={styles.iconContainer}>
-            <ShieldCheck size={28} color="#00ea6b" />
-          </View>
-          <View style={styles.faqContent}>
-            <Text style={styles.question}>How do I pay for a ground booking?</Text>
-            <Text style={styles.answer}>
-              You pay directly through our secure platform at the time of booking. We accept UPI, Credit/Debit cards, and Net Banking. By paying upfront, you secure your spot instantly without needing to transfer cash informally or worrying about "cash on arrival" mix-ups. We hold the payment securely and handle the venue settlement for you—with 0% markup or hidden booking fees for players.
-            </Text>
-          </View>
-        </View>
+        <FAQItem 
+          icon={ShieldCheck}
+          question="How do I pay for a ground booking?"
+          answer="You pay directly through our secure platform at the time of booking. We accept UPI, Credit/Debit cards, and Net Banking. By paying upfront, you secure your spot instantly without needing to transfer cash informally or worrying about 'cash on arrival' mix-ups. We hold the payment securely and handle the venue settlement for you—with 0% markup or hidden booking fees for players."
+        />
 
-        {/* Cancellation FAQ */}
-        <View style={styles.faqItem}>
-          <View style={styles.iconContainer}>
-            <RefreshCcw size={28} color="#00ea6b" />
-          </View>
-          <View style={styles.faqContent}>
-            <Text style={styles.question}>What happens if I need to cancel my booking?</Text>
-            <Text style={styles.answer}>
-              We offer transparent, standardized cancellation policies. If you cancel your booking before the venue's cut-off period (usually 24-48 hours prior to the slot), your refund is automatically processed back to your original payment method. The exact cancellation window is clearly displayed on the checkout page before you finalize your payment, ensuring there are no surprises.
-            </Text>
-          </View>
-        </View>
+        <FAQItem 
+          icon={RefreshCcw}
+          question="What happens if I need to cancel my booking?"
+          answer="We offer transparent, standardized cancellation policies. If you cancel your booking before the venue's cut-off period (usually 24-48 hours prior to the slot), your refund is automatically processed back to your original payment method. The exact cancellation window is clearly displayed on the checkout page before you finalize your payment, ensuring there are no surprises."
+        />
 
       </View>
 
@@ -109,37 +130,48 @@ const styles = StyleSheet.create({
   },
   faqList: {
     width: '100%',
-    gap: 20,
+    gap: 16,
     marginBottom: 40,
   },
   faqItem: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    alignItems: 'flex-start',
     backgroundColor: '#F8FAFC',
-    padding: 20,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  faqItemOpen: {
+    borderColor: '#00ea6b',
+    backgroundColor: '#FFFFFF',
+  },
+  faqHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0, 234, 107, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Platform.OS === 'web' ? 0 : 12,
-    marginRight: Platform.OS === 'web' ? 20 : 0,
-  },
-  faqContent: {
-    flex: 1,
+    marginRight: 16,
   },
   question: {
-    fontSize: 18,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 8,
     fontFamily: 'Inter',
+  },
+  chevronContainer: {
+    marginLeft: 16,
+  },
+  faqBody: {
+    padding: 20,
+    paddingTop: 0,
+    paddingLeft: 76, // Align with text
   },
   answer: {
     fontSize: 14,
