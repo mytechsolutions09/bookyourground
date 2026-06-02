@@ -1,11 +1,16 @@
 # BookYourGround Pricing
 
-## For Venue Owners
-- **Setup Fee:** ₹0 (Free)
-- **Platform Commission:** 5% per successful booking
-- **Payout Schedule:** Weekly (Every Monday)
-- **Dashboard & Analytics:** Included
-- **Support:** 24/7 Partner Support
+## For Venue Owners — Starter
+- **Price:** free
+- **Features:** Online listing, real-time availability calendar, booking confirmation
+- **Payment:** Automated payout per booking
 
-## Contact
-For enterprise or multi-venue deals, contact us at partners@bookyourground.com
+## For Venue Owners — Pro
+- **Price:** Rs 50 / team +gst
+- **Features:** Priority listing, analytics dashboard, multi-ground management
+- **Contact:** partners@bookyourground.com
+
+## For Venue Owners — Enterprise
+- **Price:** Custom
+- **For:** Multi-venue operators, sports complexes
+- **Contact:** partners@bookyourground.com

@@ -10,44 +10,106 @@ export default function PricingPage() {
       <View style={styles.header}>
         <Text style={styles.title}>Simple, Transparent Pricing</Text>
         <Text style={styles.subtitle}>
-          No hidden fees, no surprises. Whether you're a player looking for a game, or a venue owner looking for players.
+          Choose the plan that fits your venue's needs. From getting started to managing multiple complexes.
         </Text>
       </View>
 
       <View style={styles.cardsContainer}>
-        {/* Owner Card */}
-        <View style={[styles.card, styles.cardFeatured]}>
-          <View style={styles.cardFeaturedBadge}>
-            <Text style={styles.cardFeaturedBadgeText}>POPULAR</Text>
-          </View>
+        {/* Starter Card */}
+        <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>For Venue Owners</Text>
-            <Text style={styles.cardPrice}>5%</Text>
+            <Text style={styles.cardTitle}>Starter</Text>
+            <Text style={styles.cardPrice}>Free</Text>
             <Text style={styles.cardSubprice}>per successful booking</Text>
           </View>
           <View style={styles.cardBody}>
             <View style={styles.featureRow}>
               <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>₹0 Setup fee</Text>
+              <Text style={styles.featureText}>Online listing</Text>
             </View>
             <View style={styles.featureRow}>
               <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>Weekly payouts</Text>
+              <Text style={styles.featureText}>Real-time availability calendar</Text>
             </View>
             <View style={styles.featureRow}>
               <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>Comprehensive dashboard</Text>
+              <Text style={styles.featureText}>Booking confirmation</Text>
             </View>
             <View style={styles.featureRow}>
               <Check size={18} color="#00ea6b" style={styles.featureIcon} />
-              <Text style={styles.featureText}>24/7 priority support</Text>
+              <Text style={styles.featureText}>Automated payout per booking</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.ctaButton}
+            onPress={() => router.push('/owner-signup' as any)}
+          >
+            <Text style={styles.ctaButtonText}>Get Started</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Pro Card */}
+        <View style={[styles.card, styles.cardFeatured]}>
+          <View style={styles.cardFeaturedBadge}>
+            <Text style={styles.cardFeaturedBadgeText}>POPULAR</Text>
+          </View>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Pro</Text>
+            <Text style={styles.cardPrice}>₹50</Text>
+            <Text style={styles.cardSubprice}>per team + GST</Text>
+          </View>
+          <View style={styles.cardBody}>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>Priority listing</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>Analytics dashboard</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>Multi-ground management</Text>
             </View>
           </View>
           <TouchableOpacity 
             style={[styles.ctaButton, styles.ctaButtonFeatured]}
             onPress={() => router.push('/owner-signup' as any)}
           >
-            <Text style={[styles.ctaButtonText, styles.ctaButtonTextFeatured]}>Partner With Us</Text>
+            <Text style={[styles.ctaButtonText, styles.ctaButtonTextFeatured]}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Enterprise Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Enterprise</Text>
+            <Text style={styles.cardPrice}>Custom</Text>
+            <Text style={styles.cardSubprice}>Tailored for your scale</Text>
+          </View>
+          <View style={styles.cardBody}>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>For Multi-venue operators</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>For Sports complexes</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>Dedicated account manager</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <Check size={18} color="#00ea6b" style={styles.featureIcon} />
+              <Text style={styles.featureText}>Custom integrations</Text>
+            </View>
+          </View>
+          <TouchableOpacity 
+            style={styles.ctaButton}
+            onPress={() => router.push('/contact' as any)}
+          >
+            <Text style={styles.ctaButtonText}>Contact Us</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -55,7 +117,7 @@ export default function PricingPage() {
       <View style={styles.infoBox}>
         <Info size={20} color="#64748B" style={{ marginTop: 2 }} />
         <Text style={styles.infoText}>
-          Are you managing multiple venues or looking for an enterprise solution? <Text style={styles.linkText} onPress={() => router.push('/contact' as any)}>Contact us</Text> for custom pricing.
+          Have questions about which plan is right for your venue? <Text style={styles.linkText} onPress={() => router.push('/contact' as any)}>Reach out to our partner team</Text> at partners@bookyourground.com.
         </Text>
       </View>
     </ScrollView>
@@ -75,7 +137,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    maxWidth: 1000,
+    maxWidth: 1200,
     marginHorizontal: 'auto',
     alignItems: 'center',
     paddingBottom: 60,
@@ -104,19 +166,21 @@ const styles = StyleSheet.create({
   cardsContainer: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'center',
+    alignItems: Platform.OS === 'web' ? 'stretch' : 'center',
     gap: 32,
     marginBottom: 40,
     width: '100%',
-    maxWidth: 800,
+    flexWrap: 'wrap',
   },
   card: {
-    flex: 1,
+    flex: Platform.OS === 'web' ? 1 : 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 32,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    minWidth: Platform.OS === 'web' ? 320 : '100%',
+    minWidth: Platform.OS === 'web' ? 300 : '100%',
+    maxWidth: 360,
   },
   cardFeatured: {
     borderColor: '#00ea6b',
@@ -172,19 +236,22 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     marginBottom: 32,
+    flex: 1,
   },
   featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   featureIcon: {
     marginRight: 12,
+    marginTop: 2,
   },
   featureText: {
     fontSize: 15,
     color: '#475569',
     fontFamily: 'Inter',
+    flex: 1,
   },
   ctaButton: {
     backgroundColor: '#F1F5F9',
