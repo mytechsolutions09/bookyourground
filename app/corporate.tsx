@@ -1,9 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Briefcase, Trophy, Users, Star, CheckCircle2 } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
+import { supabase } from '@/lib/supabase';
 
 export default function CorporateEventsPage() {
+  const [companyName, setCompanyName] = useState('');
+  const [workEmail, setWorkEmail] = useState('');
+  const [requirements, setRequirements] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!companyName.trim() || !workEmail.trim() || !requirements.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('contact_queries').insert({
+      name: companyName.trim(),
+      email: workEmail.trim(),
+      subject: 'Corporate Booking Request',
+      message: requirements.trim()
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      Alert.alert('Error', 'Failed to submit request. Please try again.');
+      console.error('Submission error:', error);
+    } else {
+      setSubmitted(true);
+      setCompanyName('');
+      setWorkEmail('');
+      setRequirements('');
+      if (Platform.OS !== 'web') {
+        Alert.alert('Success', 'Your request has been submitted successfully! We will get back to you within 24 hours.');
+      }
+    }
+  };
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Hero Section */}
@@ -59,33 +95,74 @@ export default function CorporateEventsPage() {
           <Text style={styles.formTitle}>Plan your next event</Text>
           <Text style={styles.formSubtitle}>Tell us what you need and our corporate team will get back to you within 24 hours.</Text>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Company Name</Text>
-            <TextInput style={styles.input} placeholder="e.g. Acme Corp" />
-          </View>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Work Email</Text>
-            <TextInput style={styles.input} placeholder="you@company.com" keyboardType="email-address" />
-          </View>
+          {submitted ? (
+            <View style={styles.successMessage}>
+              <CheckCircle2 size={48} color="#00ea6b" />
+              <Text style={styles.successTitle}>Request Submitted!</Text>
+              <Text style={styles.successText}>Thank you for your interest. Our corporate team will reach out to you within 24 hours.</Text>
+              <TouchableOpacity 
+                style={styles.submitButton}
+                onPress={() => setSubmitted(false)}
+              >
+                <Text style={styles.submitButtonText}>Submit Another Request</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Company Name</Text>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="e.g. Acme Corp" 
+                  value={companyName}
+                  onChangeText={setCompanyName}
+                  editable={!submitting}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Work Email</Text>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="you@company.com" 
+                  keyboardType="email-address" 
+                  autoCapitalize="none"
+                  value={workEmail}
+                  onChangeText={setWorkEmail}
+                  editable={!submitting}
+                />
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Event Type & Requirements</Text>
-            <TextInput 
-              style={[styles.input, styles.textArea]} 
-              placeholder="e.g. 50-person inter-department cricket tournament in Gurgaon..." 
-              multiline={true}
-              numberOfLines={4}
-            />
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Event Type & Requirements</Text>
+                <TextInput 
+                  style={[styles.input, styles.textArea]} 
+                  placeholder="e.g. 50-person inter-department cricket tournament in Gurgaon..." 
+                  multiline={true}
+                  numberOfLines={4}
+                  value={requirements}
+                  onChangeText={setRequirements}
+                  editable={!submitting}
+                />
+              </View>
 
-          <TouchableOpacity style={styles.submitButton}>
-            <Text style={styles.submitButtonText}>Request a Quote</Text>
-          </TouchableOpacity>
-          <View style={styles.secureNote}>
-            <CheckCircle2 size={14} color="#64748B" />
-            <Text style={styles.secureNoteText}>Your information is secure and confidential</Text>
-          </View>
+              <TouchableOpacity 
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Request a Quote</Text>
+                )}
+              </TouchableOpacity>
+              <View style={styles.secureNote}>
+                <CheckCircle2 size={14} color="#64748B" />
+                <Text style={styles.secureNoteText}>Your information is secure and confidential</Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -280,5 +357,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
+  },
+  successMessage: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  successText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: 'Inter',
+    marginBottom: 24,
   },
 });

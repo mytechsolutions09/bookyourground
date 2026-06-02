@@ -40,6 +40,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isSkills = pathname.includes('/settings/skills');
   const isBlogs = pathname.includes('/settings/blogs');
   const isFetchGrounds = pathname.includes('/settings/fetch-grounds');
+  const isCorporate = pathname.includes('/settings/corporate');
 
   return (
     <View style={styles.shell}>
@@ -124,6 +125,15 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
                 </View>
               )}
             </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/corporate') as any)}
+            style={[styles.subLink, isCorporate && styles.subLinkActive]}
+          >
+            <Text style={[styles.subLinkText, isCorporate && styles.subLinkTextActive]}>
+              Corporate
+            </Text>
           </Pressable>
 
           <Pressable
