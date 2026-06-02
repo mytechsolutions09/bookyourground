@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Search, CalendarCheck, CreditCard, PlayCircle } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function HowItWorks() {
+  const { width } = useWindowDimensions();
   const steps = [
     {
       id: 1,
@@ -55,7 +56,7 @@ export default function HowItWorks() {
             <Text style={styles.stepDescription}>{step.description}</Text>
             
             {index < steps.length - 1 && Platform.OS === 'web' && (
-              <View style={styles.connector} />
+              <View style={[styles.connector, { display: width > 1024 ? 'flex' : 'none' }]} />
             )}
           </View>
         ))}
@@ -183,7 +184,6 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#E2E8F0',
     borderStyle: 'dashed',
-    display: Dimensions.get('window').width > 1024 ? 'flex' : 'none',
   },
   ctaContainer: {
     alignItems: 'center',

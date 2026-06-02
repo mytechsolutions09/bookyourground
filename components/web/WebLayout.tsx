@@ -1729,7 +1729,7 @@ const styles = StyleSheet.create({
     })
   },
   header: {
-    height: 60,
+    height: 52,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     zIndex: 100,
@@ -1758,7 +1758,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 52,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
@@ -1769,13 +1769,13 @@ const styles = StyleSheet.create({
     position: 'fixed' as any,
     backgroundColor: '#043529',
     borderBottomWidth: 0,
-    height: 60,
+    height: 52,
   },
   heroHeaderMarketing: {
     position: 'fixed' as any,
     backgroundColor: '#043529',
     borderBottomWidth: 0,
-    height: 60,
+    height: 52,
   },
   heroHeaderScrolled: {
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
@@ -1788,7 +1788,7 @@ const styles = StyleSheet.create({
     maxWidth: 1400,
     marginHorizontal: 'auto',
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 8,
     width: '100%',
   },
   headerContentCompact: {
