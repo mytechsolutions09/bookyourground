@@ -29,24 +29,6 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>Product</Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/cricket-grounds' as any)}
-            >
-              Cricket Grounds
-            </Text>
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.push('/football-grounds' as any)}
-            >
-              Football Turfs
-            </Text>
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.push('/corporate' as any)}
-            >
-              Corporate Events
-            </Text>
-            <Text
-              style={styles.footerLink}
               onPress={() => router.push('/pricing' as any)}
             >
               Pricing
@@ -56,12 +38,6 @@ export default function SiteFooter() {
               onPress={() => router.push('/how-it-works' as any)}
             >
               How it works (players)
-            </Text>
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.push('/list-your-venue' as any)}
-            >
-              List your venue
             </Text>
             <Text
               style={styles.footerLink}
@@ -102,6 +78,40 @@ export default function SiteFooter() {
           </View>
 
           <View style={styles.footerColumn}>
+            <Text style={styles.footerHeading}>Explore</Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/cricket-grounds' as any)}
+            >
+              Cricket Grounds
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/football-grounds' as any)}
+            >
+              Football Turfs
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/corporate' as any)}
+            >
+              Corporate Events
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/list-your-venue' as any)}
+            >
+              List your venue
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/faq' as any)}
+            >
+              FAQ
+            </Text>
+          </View>
+
+          <View style={styles.footerColumn}>
             <Text style={styles.footerHeading}>For venue owners</Text>
             <Text
               style={styles.footerLink}
@@ -127,12 +137,6 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/faq' as any)}
-            >
-              FAQ
-            </Text>
-            <Text
-              style={styles.footerLink}
               onPress={() => router.push('/contact' as any)}
             >
               Contact
@@ -142,12 +146,6 @@ export default function SiteFooter() {
               onPress={() => router.push('/blog' as any)}
             >
               Blog
-            </Text>
-            <Text
-              style={styles.footerLink}
-              onPress={() => router.push('/faq' as any)}
-            >
-              FAQ
             </Text>
           </View>
 
