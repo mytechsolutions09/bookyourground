@@ -1800,14 +1800,15 @@ const styles = StyleSheet.create({
   logo: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingTop: 4,
   },
   logoImage: {
-    height: 52,
-    width: 180,
+    height: 36,
+    width: 125,
   },
   logoImageCompact: {
-    height: 40,
-    width: 140,
+    height: 28,
+    width: 98,
   },
   headerRight: {
     flexDirection: 'row',
