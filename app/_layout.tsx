@@ -57,11 +57,50 @@ export default function RootLayout() {
       document.head.appendChild(link);
     }
 
+    // Google Tag Injection
+    const trackingId = 'G-2K1150PVEP';
+    const tagScriptId = 'google-tag-manager';
+    if (!document.getElementById(tagScriptId)) {
+      const script = document.createElement('script');
+      script.id = tagScriptId;
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${trackingId}`;
+      document.head.appendChild(script);
+
+      const configScript = document.createElement('script');
+      configScript.id = `${tagScriptId}-config`;
+      configScript.innerHTML = `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${trackingId}');
+      `;
+      document.head.appendChild(configScript);
+    }
+
+    // Google Site Verification Meta Tag Injection
+    const verificationCode = process.env.EXPO_PUBLIC_GOOGLE_SITE_VERIFICATION;
+    const verificationMetaId = 'google-site-verification';
+    if (verificationCode && !document.getElementById(verificationMetaId)) {
+      const meta = document.createElement('meta');
+      meta.id = verificationMetaId;
+      meta.name = 'google-site-verification';
+      meta.content = verificationCode;
+      document.head.appendChild(meta);
+    }
+
     const styleId = 'global-app-font';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
       style.innerHTML = `
+        *::-webkit-scrollbar {
+          display: none !important;
+        }
+        * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
         html, body, #root, [data-reactroot], div, span, p, h1, h2, h3, h4, h5, h6, a, label {
           font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
         }
