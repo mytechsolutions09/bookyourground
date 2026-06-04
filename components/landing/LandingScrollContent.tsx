@@ -52,7 +52,7 @@ export default function LandingScrollContent({
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
   const { width, height } = useWindowDimensions();
-  const heroHeight = isCompact ? height : 850;
+  const heroHeight = isCompact ? height : (height ? Math.max(580, height) : 680);
 
   if (isWeb && variant === 'web') {
     return (
@@ -79,8 +79,7 @@ export default function LandingScrollContent({
           */}
           <View
             style={{
-              position: Platform.OS === 'web' ? 'sticky' : 'relative' as any,
-              top: 0,
+              position: 'relative',
               zIndex: 0,
               height: heroHeight,
               width: '100%',

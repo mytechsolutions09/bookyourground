@@ -1,0 +1,40 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Supported Regions (Delhi NCR)"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                76.85,
+                28.30
+              ],
+              [
+                77.45,
+                28.30
+              ],
+              [
+                77.45,
+                28.85
+              ],
+              [
+                76.85,
+                28.85
+              ],
+              [
+                76.85,
+                28.30
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
