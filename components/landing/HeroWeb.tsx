@@ -324,7 +324,7 @@ export default function HeroWeb() {
       onLoad={() => setIsImageLoaded(true)}
       style={[
         styles.root, 
-        { height: isMobile ? 'auto' : (height ? Math.max(580, height) : 680), minHeight: isMobile ? 580 : 580, justifyContent: 'center' },
+        { height: '100%', minHeight: isMobile ? 580 : 580, justifyContent: 'center' },
         isMobile && { paddingTop: 100, paddingBottom: 40 }
       ]}
       resizeMode="cover"
@@ -644,24 +644,143 @@ export default function HeroWeb() {
         ) : (
           /* Mobile Search Form */
           <View ref={formRef} style={[styles.searchFormWrapper, styles.searchFormWrapperMobile]}>
-
             <View style={[styles.searchFormContainer, styles.searchFormContainerMobile]}>
               <View style={[styles.searchForm, styles.searchFormMobile]}>
-                <Pressable style={styles.formField} onPress={() => { setIsLocationOpen(!isLocationOpen); setIsDateOpen(false); setIsTimeOpen(false); }}>
-                  <MapPin size={20} color="#FFFFFF" />
-                  <Text style={styles.fieldText}>{selectedLocation ? selectedLocation.split('__')[0] : 'Location'}</Text>
+                
+                {/* Location Select */}
+                <View style={{ width: '100%', position: 'relative', zIndex: isLocationOpen ? 300 : 1 }}>
+                  <Pressable style={styles.formField} onPress={() => { setIsLocationOpen(!isLocationOpen); setIsDateOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}>
+                    <MapPin size={20} color="#01b854" />
+                    <Text style={styles.fieldText}>{selectedLocation ? selectedLocation.split('__')[0] : 'Location'}</Text>
+                  </Pressable>
+                  {isLocationOpen && (
+                    <View style={styles.gridDropdown}>
+                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                        {locations.map((loc) => (
+                          <Pressable key={loc.key} style={styles.dropdownOption} onPress={() => { setSelectedLocation(loc.key); setIsLocationOpen(false); setSelectedTime(''); }}>
+                            <Text style={styles.dropdownOptionText}>{loc.city}, {loc.state}</Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                {/* Venue Type Select */}
+                <View style={{ width: '100%', position: 'relative', zIndex: isTypeOpen ? 300 : 1 }}>
+                  <Pressable style={styles.formField} onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}>
+                    <Trophy size={20} color="#01b854" />
+                    <Text style={styles.fieldText}>{selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Venue Type'}</Text>
+                  </Pressable>
+                  {isTypeOpen && (
+                    <View style={styles.gridDropdown}>
+                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                        {groundTypes.map((type) => (
+                          <Pressable key={type.name} style={styles.dropdownOption} onPress={() => { setSelectedType(type.name); setIsTypeOpen(false); setSelectedTime(''); }}>
+                            <Text style={styles.dropdownOptionText}>{type.label}</Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                {/* Date Select */}
+                <View style={{ width: '100%', position: 'relative', zIndex: isDateOpen ? 300 : 1 }}>
+                  <Pressable style={styles.formField} onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}>
+                    <CalendarIcon size={20} color="#01b854" />
+                    <Text style={styles.fieldText}>{formatDate(selectedDate)}</Text>
+                  </Pressable>
+                  {isDateOpen && (
+                    <View style={[styles.gridDropdown, { zIndex: 1100 }]}>
+                      <View style={styles.calendarHeader}>
+                        <TouchableOpacity onPress={prevMonth} style={styles.calendarNav}><ChevronLeft size={16} color="#1E293B" /></TouchableOpacity>
+                        <Text style={styles.calendarMonthTitle}>{monthName}</Text>
+                        <TouchableOpacity onPress={nextMonth} style={styles.calendarNav}><ChevronRight size={16} color="#1E293B" /></TouchableOpacity>
+                      </View>
+                      <View style={styles.calendarWeekdays}>
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={styles.weekdayText}>{d}</Text>)}
+                      </View>
+                      <View style={styles.calendarGrid}>
+                        {calendarDays.map((day, idx) => {
+                          const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === viewDate.getMonth() && selectedDate.getFullYear() === viewDate.getFullYear();
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
+                          return (
+                            <Pressable
+                              key={idx}
+                              style={[styles.calendarDay, isSelected && styles.calendarDaySelected, (day === null || isPast) && styles.calendarDayEmpty, isPast && { opacity: 0.3 }]}
+                              onPress={() => { if (day && !isPast) { setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day)); setIsDateOpen(false); setSelectedTime(''); } }}
+                              disabled={!day || isPast}
+                            >
+                              <Text style={[styles.dayText, isSelected && styles.dayTextSelected, isPast && { color: '#CBD5E1' }]}>{day}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Time Select */}
+                <View style={{ width: '100%', position: 'relative', zIndex: isTimeOpen ? 300 : 1 }}>
+                  <Pressable 
+                    style={styles.formField} 
+                    onPress={() => { setIsTimeOpen(!isTimeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTypeOpen(false); }}
+                    disabled={!selectedLocation || !selectedDate}
+                  >
+                    <Clock size={20} color="#01b854" />
+                    <Text style={styles.fieldText}>{selectedTime || 'Select Time'}</Text>
+                    {loadingTimes && <ActivityIndicator size="small" color="#01b854" />}
+                  </Pressable>
+                  {isTimeOpen && (selectedLocation && selectedDate) && (
+                    <View style={styles.gridDropdown}>
+                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                        {availableTimes.length > 0 ? (
+                          availableTimes.map((time) => {
+                            const today = new Date();
+                            const isToday = selectedDate?.toDateString() === today.toDateString();
+                            let isPast = false;
+                            if (isToday) {
+                              const [hours, minutes] = time.split(':').map(Number);
+                              const slotTime = new Date();
+                              slotTime.setHours(hours, minutes, 0, 0);
+                              isPast = slotTime < today;
+                            }
+                            return (
+                              <Pressable key={time} style={styles.dropdownOption} onPress={() => { if (!isPast) { setSelectedTime(time); setIsTimeOpen(false); } }} disabled={isPast}>
+                                <Text style={[styles.dropdownOptionText, isPast && { color: '#94A3B8' }]}>{time} {isPast ? '(Passed)' : ''}</Text>
+                              </Pressable>
+                            );
+                          })
+                        ) : (
+                          <View style={styles.dropdownEmpty}>
+                            <Text style={styles.dropdownEmptyText}>No slots found</Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                {/* Search Submit */}
+                <Pressable 
+                  style={[
+                    styles.formField, 
+                    { 
+                      backgroundColor: isSearchEnabled ? '#01b854' : 'rgba(1, 184, 84, 0.2)', 
+                      borderColor: 'rgba(1, 184, 84, 0.3)', 
+                      justifyContent: 'center',
+                      marginTop: 8
+                    }
+                  ]} 
+                  onPress={handleSearch} 
+                  disabled={!isSearchEnabled}
+                >
+                  <Text style={[styles.searchButtonText, { color: isSearchEnabled ? '#031713' : 'rgba(255,255,255,0.4)' }]}>Search Venues</Text>
                 </Pressable>
-                <Pressable style={styles.formField} onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); }}>
-                  <Trophy size={20} color="#FFFFFF" />
-                  <Text style={styles.fieldText}>{selectedType || 'Venue Type'}</Text>
-                </Pressable>
-                <Pressable style={styles.formField} onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTimeOpen(false); }}>
-                  <CalendarIcon size={20} color="#FFFFFF" />
-                  <Text style={styles.fieldText}>{formatDate(selectedDate)}</Text>
-                </Pressable>
-                <Pressable style={styles.formField} onPress={handleSearch} disabled={!isSearchEnabled}>
-                  <Text style={styles.searchButtonText}>Search</Text>
-                </Pressable>
+
               </View>
             </View>
           </View>
@@ -1073,5 +1192,98 @@ const styles = StyleSheet.create({
   dayTextSelected: {
     color: '#020d0b',
     fontWeight: '700',
+  },
+  title: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    letterSpacing: -1.5,
+    lineHeight: 64,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  dropdownItemText: {
+    fontSize: 13,
+    color: '#E2E8F0',
+  },
+  searchFormWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  searchFormWrapperMobile: {
+    marginTop: 10,
+    width: '100%',
+  },
+  searchFormContainer: {
+    width: '100%',
+  },
+  searchFormContainerMobile: {
+    width: '100%',
+    backgroundColor: 'rgba(3, 23, 19, 0.75)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(1, 184, 84, 0.25)',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }
+    }) as any,
+  },
+  searchForm: {
+    width: '100%',
+    gap: 12,
+  },
+  searchFormMobile: {
+    width: '100%',
+    gap: 12,
+  },
+  formField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+    width: '100%',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }
+    }) as any,
+  },
+  fieldText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  searchButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#031713',
+    letterSpacing: 0.5,
+    width: '100%',
+    textAlign: 'center',
+  },
+  dropdownEmpty: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  dropdownEmptyText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontFamily: 'Inter',
   },
 });
