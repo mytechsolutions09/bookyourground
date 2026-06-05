@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Save, ArrowLeft, Image as ImageIcon, Wand2, Upload, Bold } from 'lucide-react-native';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as ImagePicker from 'expo-image-picker';
+import Markdown from 'react-native-markdown-display';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +32,7 @@ export default function AdminBlogEdit() {
   const [aiTopic, setAiTopic] = useState('');
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [focusKeyphrase, setFocusKeyphrase] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const [yoastTab, setYoastTab] = useState<'analysis' | 'google' | 'social'>('analysis');
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
   const [isCornerstone, setIsCornerstone] = useState(false);
@@ -506,6 +508,7 @@ export default function AdminBlogEdit() {
   const seo = getSeoAnalysis();
 
   const [fixing, setFixing] = useState(false);
+  const [fixingCheck, setFixingCheck] = useState<string | null>(null);
 
   const autoFixWithAI = async () => {
     if (!API_KEY) {
@@ -589,6 +592,73 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       else Alert.alert('Error', 'SEO optimization failed: ' + err.message);
     } finally {
       setFixing(false);
+    }
+  };
+
+  const fixSingleErrorWithAI = async (checkLabel: string, checkDesc: string) => {
+    if (!API_KEY) {
+      const msg = 'EXPO_PUBLIC_GEMINI_API_KEY is not configured';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+    
+    if (!focusKeyphrase) {
+      const msg = 'Please enter a Focus Keyphrase first so the AI knows what to optimize for.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
+    try {
+      setFixingCheck(checkLabel);
+      const genAI = new GoogleGenerativeAI(API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+
+      const prompt = `You are an expert SEO copywriter and optimizer for BookYourGround.
+      
+We are editing a blog post with the target Focus Keyphrase: "${focusKeyphrase}".
+Current Post Details:
+- Title: "${title}"
+- Slug: "${slug}"
+- Excerpt: "${excerpt}"
+- Content: "${contentForm}"
+
+Our live Yoast SEO analysis flagged this specific error/warning that must be resolved:
+- ${checkLabel}: ${checkDesc}
+
+Please rewrite and optimize the specific fields necessary to resolve ONLY the issue listed above. Keep changes minimal and focused to address this specific issue, retaining everything else exactly as is.
+
+Please provide the output in strict JSON format with the following keys exactly:
+- title: The title (optimized if needed, else same)
+- slug: The slug (optimized if needed, else same)
+- excerpt: The excerpt (optimized if needed, else same)
+- content: The full body of the blog post written in GitHub Flavored Markdown format (optimized if needed, else same).
+
+Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      
+      const cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJsonStr);
+
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.slug) setSlug(parsed.slug);
+      if (parsed.excerpt) setExcerpt(parsed.excerpt);
+      if (parsed.content) setContentForm(parsed.content);
+      
+      setAiOptimized(true);
+
+      if (Platform.OS === 'web') alert(`AI SEO Fix applied for: ${checkLabel}`);
+      else Alert.alert('Success', `AI SEO Fix applied for: ${checkLabel}`);
+
+    } catch (err: any) {
+      console.error(err);
+      if (Platform.OS === 'web') alert('SEO optimization failed: ' + err.message);
+      else Alert.alert('Error', 'SEO optimization failed: ' + err.message);
+    } finally {
+      setFixingCheck(null);
     }
   };
 
@@ -1032,6 +1102,22 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                           <View style={{ flex: 1 }}>
                             <Text style={styles.checkLabel}>{check.label}</Text>
                             <Text style={styles.checkDesc}>{check.desc}</Text>
+                            {check.status !== 'green' && focusKeyphrase.trim().length > 0 && (
+                              <Pressable 
+                                style={[styles.yoastAiBtn, { alignSelf: 'flex-start', marginTop: 8 }, fixingCheck === check.label && { opacity: 0.7 }]} 
+                                onPress={() => fixSingleErrorWithAI(check.label, check.desc)}
+                                disabled={fixingCheck !== null || fixing}
+                              >
+                                {fixingCheck === check.label ? (
+                                  <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Wand2 size={12} color="#FFFFFF" />
+                                    <Text style={styles.yoastAiBtnText}>Fix with AI</Text>
+                                  </View>
+                                )}
+                              </Pressable>
+                            )}
                           </View>
                         </View>
                       ))
@@ -1169,19 +1255,43 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Content (Markdown)</Text>
                 <View style={styles.toolbar}>
-                  <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
-                    <Bold size={16} color="#4B5563" />
+                  <Pressable 
+                    style={[styles.toolbarBtn, !showPreview && styles.toolbarBtnActive]} 
+                    onPress={() => setShowPreview(false)}
+                  >
+                    <Text style={[styles.toolbarBtnText, !showPreview && styles.toolbarBtnTextActive]}>Code</Text>
                   </Pressable>
+                  <Pressable 
+                    style={[styles.toolbarBtn, showPreview && styles.toolbarBtnActive]} 
+                    onPress={() => setShowPreview(true)}
+                  >
+                    <Text style={[styles.toolbarBtnText, showPreview && styles.toolbarBtnTextActive]}>Preview</Text>
+                  </Pressable>
+                  {!showPreview && (
+                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
+                      <Bold size={16} color="#4B5563" />
+                    </Pressable>
+                  )}
                 </View>
               </View>
-              <TextInput
-                style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-                value={contentForm}
-                onChangeText={setContentForm}
-                onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-                placeholder="Write your content here using markdown..."
-                multiline
-              />
+              {showPreview ? (
+                <View style={[styles.input, { height: 1000, overflow: 'hidden' }]}>
+                  <ScrollView style={{ flex: 1 }}>
+                    <Markdown style={markdownStyles}>
+                      {contentForm || '*Nothing to preview*'}
+                    </Markdown>
+                  </ScrollView>
+                </View>
+              ) : (
+                <TextInput
+                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  value={contentForm}
+                  onChangeText={setContentForm}
+                  onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                  placeholder="Write your content here using markdown..."
+                  multiline
+                />
+              )}
             </View>
 
             <View style={styles.formRow}>
@@ -1338,6 +1448,9 @@ const styles = StyleSheet.create({
   toolbarBtn: { padding: 4, borderRadius: 4, backgroundColor: '#F3F4F6' },
   label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
   input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: '#111827' },
+  toolbarBtnActive: { backgroundColor: '#E5E7EB' },
+  toolbarBtnText: { fontSize: 13, color: '#4B5563', fontWeight: '500' },
+  toolbarBtnTextActive: { color: '#111827', fontWeight: '600' },
   
   imageInputRow: { flexDirection: 'row', gap: 12 },
   imageInputWrapper: { flex: 1, position: 'relative', justifyContent: 'center' },
@@ -1348,3 +1461,17 @@ const styles = StyleSheet.create({
   publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginTop: 12 },
   helperText: { fontSize: 13, color: '#6B7280', marginTop: 4 },
 });
+
+const markdownStyles = {
+  body: { fontSize: 15, color: '#4B5563', lineHeight: 26 },
+  heading1: { fontSize: 24, fontWeight: '800', color: '#111827', marginTop: 24, marginBottom: 16 },
+  heading2: { fontSize: 20, fontWeight: '700', color: '#111827', marginTop: 20, marginBottom: 12 },
+  heading3: { fontSize: 18, fontWeight: '600', color: '#111827', marginTop: 16, marginBottom: 8 },
+  paragraph: { marginBottom: 16 },
+  strong: { fontWeight: '700', color: '#111827' },
+  list_item: { marginBottom: 8 },
+  table: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, marginBottom: 24, marginTop: 12 },
+  tr: { borderBottomWidth: 1, borderColor: '#E5E7EB', flexDirection: 'row' },
+  th: { flex: 1, padding: 12, backgroundColor: '#F9FAFB', fontWeight: '700', color: '#111827', borderRightWidth: 1, borderRightColor: '#E5E7EB' },
+  td: { flex: 1, padding: 12, color: '#4B5563', borderRightWidth: 1, borderRightColor: '#E5E7EB' },
+} as any;
