@@ -19,6 +19,27 @@ interface Blog {
   created_at: string;
 }
 
+export async function generateStaticParams(): Promise<Record<string, string>[]> {
+  try {
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('slug')
+      .eq('is_published', true);
+
+    if (error) {
+      console.error('Error fetching blogs for static params:', error);
+      return [];
+    }
+
+    return (data || []).map((blog) => ({
+      slug: blog.slug,
+    }));
+  } catch (err) {
+    console.error('Error generating static params for blog:', err);
+    return [];
+  }
+}
+
 export default function DynamicBlogPage() {
   const { slug } = useLocalSearchParams();
   const [blog, setBlog] = useState<Blog | null>(null);
