@@ -26,5 +26,4 @@ Allow: /
 # Block training-only crawlers (optional — prevents training without blocking citation)
 User-agent: CCBot
 
-
 Sitemap: https://bookyourground.com/sitemap.xml

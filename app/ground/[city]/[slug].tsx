@@ -78,6 +78,29 @@ const CLEAN_MAP_STYLES = [
     stylers: [{ visibility: "off" }],
   }
 ];
+export async function generateStaticParams(): Promise<Record<string, string>[]> {
+  try {
+    const { data, error } = await supabase
+      .from('grounds')
+      .select('city, name')
+      .eq('active', true)
+      .eq('approved', true);
+
+    if (error) {
+      console.error('Error fetching grounds for static params:', error);
+      return [];
+    }
+
+    return (data || []).map((ground) => ({
+      city: slugifyGroundSegment(ground.city),
+      slug: slugifyGroundSegment(ground.name),
+    }));
+  } catch (err) {
+    console.error('Error generating static params for ground:', err);
+    return [];
+  }
+}
+
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
