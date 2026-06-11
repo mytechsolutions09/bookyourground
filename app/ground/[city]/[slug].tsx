@@ -101,18 +101,77 @@ export async function generateStaticParams(): Promise<Record<string, string>[]> 
   }
 }
 
+function getCachedGround(cityParam: string | undefined, slugParam: string | undefined) {
+  if (typeof window !== 'undefined') return { ground: null, nearby: [] };
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(process.cwd(), 'tmp', 'grounds-cache.json');
+    if (!fs.existsSync(cachePath)) return { ground: null, nearby: [] };
+
+    const groundsList = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    const nameSlug = decodeURIComponent(String(slugParam || '')).trim();
+    const citySlug = decodeURIComponent(String(cityParam || '')).trim();
+
+    const cityWords = citySlug.replace(/-/g, ' ').trim();
+    let candidates = [];
+    if (cityWords) {
+      candidates = groundsList.filter((g: any) => g.active && g.approved && String(g.city || '').toLowerCase() === cityWords.toLowerCase());
+    }
+    if (!candidates.length) {
+      candidates = groundsList.filter((g: any) => g.active && g.approved);
+    }
+
+    const byCityAndName = candidates.find(
+      (g: any) =>
+        slugifyGroundSegment(String(g.city ?? '')) === citySlug &&
+        slugifyGroundSegment(String(g.name ?? '')) === nameSlug
+    );
+    const byNameOnly = candidates.find(
+      (g: any) => slugifyGroundSegment(String(g.name ?? '')) === nameSlug
+    );
+    const match = byCityAndName ?? byNameOnly;
+
+    if (!match) return { ground: null, nearby: [] };
+
+    // Fetch nearby
+    let nearby = groundsList.filter(
+      (g: any) => g.active && g.approved && g.city === match.city && g.id !== match.id
+    ).slice(0, 4);
+
+    if (!nearby.length) {
+      nearby = groundsList.filter(
+        (g: any) => g.active && g.approved && g.id !== match.id
+      ).slice(0, 4);
+    }
+
+    return { ground: match, nearby };
+  } catch (err) {
+    console.error('Error reading grounds cache:', err);
+    return { ground: null, nearby: [] };
+  }
+}
+
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
   const { latitude: userLat, longitude: userLng } = useLocation();
 
-  const [ground, setGround] = useState<GroundWithImages | null>(null);
-  const [loading, setLoading] = useState(true);
+  const slugParam = Array.isArray(slug) ? slug[0] : slug;
+  const cityParam = Array.isArray(city) ? city[0] : city;
+
+  // Load from cache if running on server (Node prerendering)
+  const cachedData = useMemo(() => {
+    return getCachedGround(cityParam, slugParam);
+  }, [cityParam, slugParam]);
+
+  const [ground, setGround] = useState<GroundWithImages | null>(cachedData.ground);
+  const [loading, setLoading] = useState(!cachedData.ground);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
-  const [nearbyGrounds, setNearbyGrounds] = useState<GroundWithImages[]>([]);
+  const [nearbyGrounds, setNearbyGrounds] = useState<GroundWithImages[]>(cachedData.nearby);
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('book');
   const [aboutExpanded, setAboutExpanded] = useState(false);
@@ -154,9 +213,6 @@ export default function GroundDetailsPrettyUrlScreen() {
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
   const isLargeWeb = isWeb && !isCompact;
-
-  const slugParam = Array.isArray(slug) ? slug[0] : slug;
-  const cityParam = Array.isArray(city) ? city[0] : city;
 
   const loadGround = async () => {
     try {

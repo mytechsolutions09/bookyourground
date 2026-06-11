@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, TextInp
 import { Briefcase, Trophy, Users, Star, CheckCircle2 } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
+import Head from 'expo-router/head';
 
 export default function CorporateEventsPage() {
   const [companyName, setCompanyName] = useState('');
@@ -170,7 +171,16 @@ export default function CorporateEventsPage() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Corporate Event Ground Booking | BookYourGround</title>
+          <meta name="description" content="Plan and book sports venues for corporate tournaments, team outings, and recurring leagues. Get customized corporate packages and assistance." />
+          <link rel="canonical" href="https://bookyourground.com/corporate" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

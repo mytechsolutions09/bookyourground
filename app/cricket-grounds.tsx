@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, ImageBa
 import { Search, ShieldCheck, MapPin } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 
 export default function CricketGroundsPage() {
   const content = (
@@ -51,7 +52,16 @@ export default function CricketGroundsPage() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Book Cricket Grounds & Nets Online | BookYourGround</title>
+          <meta name="description" content="Discover and book cricket grounds, turfs, and nets near you. Real-time availability, zero markup pricing, secure slots, and instant confirmations." />
+          <link rel="canonical" href="https://bookyourground.com/cricket-grounds" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

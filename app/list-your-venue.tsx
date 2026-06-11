@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from '
 import { Calendar, CreditCard, ShieldCheck, BarChart3, Check } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 
 export default function ListYourVenue() {
   const content = (
@@ -88,7 +89,16 @@ export default function ListYourVenue() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Register & List Your Venue | BookYourGround</title>
+          <meta name="description" content="List your sports ground, cricket turf, or nets on BookYourGround for free. Fill unused slots, collect upfront payments, and eliminate double-bookings." />
+          <link rel="canonical" href="https://bookyourground.com/list-your-venue" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

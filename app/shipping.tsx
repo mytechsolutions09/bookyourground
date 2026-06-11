@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Platform, StyleSheet } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import Head from 'expo-router/head';
 
 export default function ShippingScreen() {
   const content = (
@@ -70,7 +71,16 @@ export default function ShippingScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Shipping & Delivery Policy | BookYourGround</title>
+          <meta name="description" content="Read our service fulfillment, shipping, and delivery policies for both digital venue bookings and physical product purchases." />
+          <link rel="canonical" href="https://bookyourground.com/shipping" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

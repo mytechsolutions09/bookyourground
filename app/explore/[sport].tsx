@@ -16,6 +16,7 @@ import { TextInput } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Head from 'expo-router/head';
 
 const { width } = Dimensions.get('window');
 
@@ -28,10 +29,49 @@ const SPORT_NAMES: Record<string, string> = {
   all: 'All Grounds'
 };
 
+export async function generateStaticParams() {
+  return [
+    { sport: 'cricket' },
+    { sport: 'football' },
+    { sport: 'box' },
+    { sport: 'nets' },
+    { sport: 'multi' },
+    { sport: 'all' },
+  ];
+}
+
+function getCachedGroundsForSport(sport: string | undefined) {
+  if (typeof window !== 'undefined') return [];
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(process.cwd(), 'tmp', 'grounds-cache.json');
+    if (!fs.existsSync(cachePath)) return [];
+
+    const groundsList = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    const activeGrounds = groundsList.filter((g: any) => g.active && g.approved);
+    
+    if (!sport || sport === 'all') {
+      return activeGrounds;
+    }
+    
+    return activeGrounds.filter((g: any) => 
+      String(g.pitch_type || '').toLowerCase().includes(sport.toLowerCase())
+    );
+  } catch (err) {
+    console.error('Error reading grounds cache for sport:', err);
+    return [];
+  }
+}
+
 export default function SportExploreScreen() {
   const { sport = 'cricket' } = useLocalSearchParams<{ sport: string }>();
-  const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedGrounds = React.useMemo(() => {
+    return getCachedGroundsForSport(sport);
+  }, [sport]);
+
+  const [grounds, setGrounds] = useState<GroundWithImages[]>(cachedGrounds);
+  const [loading, setLoading] = useState(cachedGrounds.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'rating' | 'none'>('none');
   const insets = useSafeAreaInsets();
@@ -104,8 +144,17 @@ export default function SportExploreScreen() {
     return result;
   }, [grounds, searchQuery, sortBy]);
 
+  const pageTitle = `${SPORT_NAMES[sport as string] || 'Explore Sports Grounds'} | BookYourGround`;
+  const pageDescription = `Browse, compare, and book the best ${SPORT_NAMES[sport as string]?.toLowerCase() || 'sports grounds'} near you. Check real-time availability, split pricing, and confirm your slot instantly.`;
+
   return (
-    <View style={styles.container}>
+    <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={`https://bookyourground.com/explore/${sport}`} />
+      </Head>
+      <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
@@ -243,6 +292,7 @@ export default function SportExploreScreen() {
         )}
       </ScrollView>
     </View>
+    </>
   );
 }
 

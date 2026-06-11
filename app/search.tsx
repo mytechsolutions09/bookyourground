@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../components/MobileAppNavbar';
 import { LinearGradient } from 'expo-linear-gradient';
+import Head from 'expo-router/head';
 import { 
   Search, 
   MapPin, 
@@ -67,6 +68,20 @@ const PRICE_RANGES = [
   { label: 'Over ₹2000', min: 2000, max: 20000 },
 ];
 
+function getCachedGroundsForSearch() {
+  if (typeof window !== 'undefined') return [];
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(process.cwd(), 'tmp', 'grounds-cache.json');
+    if (!fs.existsSync(cachePath)) return [];
+    return JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+  } catch (err) {
+    console.error('Error reading grounds cache for search:', err);
+    return [];
+  }
+}
+
 export default function SearchScreen() {
   const params = useLocalSearchParams();
   const { width } = useWindowDimensions();
@@ -76,7 +91,15 @@ export default function SearchScreen() {
   
   const [query, setQuery] = useState((params.q as string) || '');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
-  const [results, setResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
+  
+  const cachedSearchGrounds = useMemo(() => {
+    return getCachedGroundsForSearch();
+  }, []);
+
+  const [results, setResults] = useState<{ grounds: any[], matches: any[] }>({ 
+    grounds: cachedSearchGrounds, 
+    matches: [] 
+  });
   const [loading, setLoading] = useState(false);
 
   const [locationKey, setLocationKey] = useState<string>((params.location as string) || '');
@@ -975,7 +998,16 @@ export default function SearchScreen() {
   );
 
   if (isWeb) {
-    return <WebLayout hideHeader={isCompact} headerContent={!isCompact ? filterBarComponent : undefined}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Search Sports Grounds & Opponents | BookYourGround</title>
+          <meta name="description" content="Search and book cricket grounds, football turfs, and find opponents online. Explore real-time slot availability near you." />
+          <link rel="canonical" href="https://bookyourground.com/search" />
+        </Head>
+        <WebLayout hideHeader={isCompact} headerContent={!isCompact ? filterBarComponent : undefined}>{content}</WebLayout>
+      </>
+    );
   }
 
   return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Platform } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import Head from 'expo-router/head';
 
 export default function PrivacyScreen() {
   const content = (
@@ -72,7 +73,16 @@ export default function PrivacyScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Privacy Policy | BookYourGround</title>
+          <meta name="description" content="Read our privacy policy to understand what data we collect, how we protect it, and your rights regarding your personal information." />
+          <link rel="canonical" href="https://bookyourground.com/privacy" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

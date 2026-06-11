@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from '
 import { Search, ShieldCheck, MapPin } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 
 export default function FootballGroundsPage() {
   const content = (
@@ -51,7 +52,16 @@ export default function FootballGroundsPage() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Book Football Grounds & Turfs Online | BookYourGround</title>
+          <meta name="description" content="Discover and book the best football turfs and 5v5, 7v7, 11v11 football grounds near you. Real-time availability, secure payments, and instant confirmation." />
+          <link rel="canonical" href="https://bookyourground.com/football-grounds" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

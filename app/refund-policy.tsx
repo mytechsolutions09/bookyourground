@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Platform } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import Head from 'expo-router/head';
 
 export default function RefundPolicyScreen() {
   const content = (
@@ -144,7 +145,16 @@ export default function RefundPolicyScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Refund & Cancellation Policy | BookYourGround</title>
+          <meta name="description" content="Understand our cancellation windows, refund eligibility criteria, rain/weather policies, and processing times for venue bookings and products." />
+          <link rel="canonical" href="https://bookyourground.com/refund-policy" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

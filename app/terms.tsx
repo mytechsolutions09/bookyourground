@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Platform } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import Head from 'expo-router/head';
 
 export default function TermsScreen() {
   const content = (
@@ -98,7 +99,16 @@ export default function TermsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Terms & Conditions | BookYourGround</title>
+          <meta name="description" content="Read our terms of service and conditions outlining rules for venue bookings, product purchases, payments, user behavior, and platform liabilities." />
+          <link rel="canonical" href="https://bookyourground.com/terms" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

@@ -28,7 +28,12 @@ async function generateSitemap() {
     console.log('Fetching active grounds from Supabase...');
     const { data: grounds, error } = await supabase
       .from('grounds')
-      .select('city, name')
+      .select(`
+        *,
+        ground_images(*),
+        reviews(rating, comment, created_at, user:profiles(full_name)),
+        time_slots(custom_price, is_available, overs_count, start_time, end_time)
+      `)
       .eq('active', true)
       .eq('approved', true);
 
@@ -90,6 +95,14 @@ async function generateSitemap() {
 
     fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml);
     console.log('Successfully generated sitemap.xml');
+
+    // Write grounds cache to tmp folder
+    const tmpDir = path.join(__dirname, '..', 'tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(tmpDir, 'grounds-cache.json'), JSON.stringify(grounds, null, 2));
+    console.log('Successfully cached grounds data to tmp/grounds-cache.json');
 
     // Generate robots.txt
     const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;

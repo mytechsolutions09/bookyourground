@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity, LayoutAnimation, UIManager } from 'react-native';
 import { HelpCircle, CalendarCheck, ShieldCheck, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
+import Head from 'expo-router/head';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -88,7 +89,16 @@ export default function FAQPage() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Frequently Asked Questions | BookYourGround</title>
+          <meta name="description" content="Find answers to common questions about booking sports grounds, payment safety, refunds, cancellations, and slot guarantees." />
+          <link rel="canonical" href="https://bookyourground.com/faq" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

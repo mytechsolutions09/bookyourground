@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, Platform, StyleSheet, Image } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
+import Head from 'expo-router/head';
 
 export default function AboutScreen() {
   const content = (
@@ -59,7 +60,16 @@ export default function AboutScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>About Us | BookYourGround</title>
+          <meta name="description" content="Learn about BookYourGround, our mission to make sports accessible, and how we help players book grounds and venue owners manage listings." />
+          <link rel="canonical" href="https://bookyourground.com/about" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

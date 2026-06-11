@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from '
 import { Check, Info } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 
 export default function PricingPage() {
   const content = (
@@ -124,7 +125,16 @@ export default function PricingPage() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Pricing Plans & Details | BookYourGround</title>
+          <meta name="description" content="Simple and transparent pricing plans for venue owners. Choose from Starter, Pro, and Enterprise options to manage your sports facilities." />
+          <link rel="canonical" href="https://bookyourground.com/pricing" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;
