@@ -13,6 +13,7 @@ import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import Head from 'expo-router/head';
 
 export default function ContactScreen() {
   const [name, setName] = useState('');
@@ -254,7 +255,16 @@ export default function ContactScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>Contact Us | BookYourGround</title>
+          <meta name="description" content="Get in touch with BookYourGround support. Send us a message, find our office address, phone number, or support email details." />
+          <link rel="canonical" href="https://bookyourground.com/contact" />
+        </Head>
+        <WebLayout>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

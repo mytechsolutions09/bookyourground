@@ -7,6 +7,7 @@ import LandingScrollContent from '@/components/landing/LandingScrollContent';
 import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
 import HomePageSkeleton from '@/components/landing/HomePageSkeleton';
 import WebLayout from '@/components/web/WebLayout';
+import Head from 'expo-router/head';
 
 const WELCOME_SEEN_KEY = 'welcome_seen_v1';
 
@@ -64,8 +65,15 @@ export default function IndexScreen() {
 
   // On web, we keep landing visible for authenticated users.
   return os === 'web' ? (
-    <WebLayout>
-      <LandingScrollContent variant="web" />
-    </WebLayout>
+    <>
+      <Head>
+        <title>Book Sports Grounds & Nets Instantly | BookYourGround</title>
+        <meta name="description" content="Instantly book cricket grounds, football turfs, box cricket, and cricket nets near you. Compare slots, pricing, and amenities online." />
+        <link rel="canonical" href="https://bookyourground.com/" />
+      </Head>
+      <WebLayout>
+        <LandingScrollContent variant="web" />
+      </WebLayout>
+    </>
   ) : null;
 }

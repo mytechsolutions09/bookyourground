@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } fro
 import { Search, CalendarCheck, CreditCard, PlayCircle } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function HowItWorks() {
@@ -75,7 +76,16 @@ export default function HowItWorks() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>;
+    return (
+      <>
+        <Head>
+          <title>How It Works - Booking Sports Venues | BookYourGround</title>
+          <meta name="description" content="Discover how to find sports grounds near you, choose real-time slots, make secure payments, and confirm your bookings instantly." />
+          <link rel="canonical" href="https://bookyourground.com/how-it-works" />
+        </Head>
+        <WebLayout isPublicNoSidebar={true}>{content}</WebLayout>
+      </>
+    );
   }
 
   return content;

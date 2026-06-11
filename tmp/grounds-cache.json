@@ -1,0 +1,2200 @@
+[
+  {
+    "id": "372564a9-b6ce-4a11-8cab-16b06c982941",
+    "owner_id": "f3d79d86-7989-4cb9-888d-74f45dd7934a",
+    "name": "Six Flags 3.0",
+    "description": "Pitch and Outfield: The grounds generally feature well-maintained matting pitches known to provide an even bounce and good pace. The outfield is relatively quick, making it favorable for batsmen, though some patches may occasionally have uneven grass distribution depending on the season.Match Broadcasting: Many matches played here are live-streamed on popular grassroots cricket apps like CricHeroes or YouTube, featuring electronic scoreboards.Day-Night Facilities: The venues are equipped with commercial-grade floodlights, making them highly popular for night matches during summer evenings.Additional Infrastructure: Facilities include standard practice nets, an on-site canteen for food and refreshments, an attached pavilion, basic washrooms, and ample parking space for teams.",
+    "address": "Nanak Heri Village",
+    "city": "New Delhi",
+    "state": "Delhi",
+    "pincode": "110071",
+    "latitude": 28.52158312,
+    "longitude": 76.98160005,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": null,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-04T16:38:02.456493+00:00",
+    "updated_at": "2026-05-17T10:26:07.289038+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "96245475-fa1d-4142-bf78-20291259db57",
+        "ground_id": "372564a9-b6ce-4a11-8cab-16b06c982941",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1775647777022-e3bogr5gepn.jpg",
+        "created_at": "2026-05-17T10:26:07.709236+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "bc6df41c-1127-47f9-86c2-153e2543013d",
+        "ground_id": "372564a9-b6ce-4a11-8cab-16b06c982941",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776944976888-zaaaxvrmu8j.blob:http://localhost:8081/3b587354-6300-4982-85b9-32958f01a86b",
+        "created_at": "2026-05-17T10:26:07.709236+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "ca8e5ccd-a881-4850-a78d-ea53588aa9cb",
+        "ground_id": "372564a9-b6ce-4a11-8cab-16b06c982941",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776944982187-ozrssflvj9c.blob:http://localhost:8081/d445da9a-aded-4632-9c86-763ba9fa44c7",
+        "created_at": "2026-05-17T10:26:07.709236+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "4895b725-b146-42be-905c-c22ee01f3a3d",
+        "ground_id": "372564a9-b6ce-4a11-8cab-16b06c982941",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776944997038-wl9g29j4hb.blob:http://localhost:8081/127dd42b-dd38-4496-83b5-78f5d6a5d9dc",
+        "created_at": "2026-05-17T10:26:07.709236+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "6ad19d51-8ffb-4b26-94a9-0ed7e02d52e2",
+    "owner_id": "f3d79d86-7989-4cb9-888d-74f45dd7934a",
+    "name": "Six Flags 1.0",
+    "description": "Pitch and Outfield: The grounds generally feature well-maintained matting pitches known to provide an even bounce and good pace. The outfield is relatively quick, making it favorable for batsmen, though some patches may occasionally have uneven grass distribution depending on the season.Match Broadcasting: Many matches played here are live-streamed on popular grassroots cricket apps like CricHeroes or YouTube, featuring electronic scoreboards.Day-Night Facilities: The venues are equipped with commercial-grade floodlights, making them highly popular for night matches during summer evenings.Additional Infrastructure: Facilities include standard practice nets, an on-site canteen for food and refreshments, an attached pavilion, basic washrooms, and ample parking space for teams.",
+    "address": "Daulatabad Link Rd, Sector 103,",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.4908,
+    "longitude": 76.9942,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-04T16:36:04.499631+00:00",
+    "updated_at": "2026-05-18T10:37:47.805759+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "1aea4b70-be18-4fd3-80a7-83066d5546d5",
+        "ground_id": "6ad19d51-8ffb-4b26-94a9-0ed7e02d52e2",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1775647607705-5i1p9psbuq.jpg",
+        "created_at": "2026-05-18T10:37:48.248518+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "a96ac86f-d168-45e8-b35e-49f99df0f2cd",
+        "ground_id": "6ad19d51-8ffb-4b26-94a9-0ed7e02d52e2",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776943358111-bc4ich341iw.blob:http://localhost:8081/6c253f6c-b17f-4666-b762-16dfdaad672b",
+        "created_at": "2026-05-18T10:37:48.248518+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "44fc2abc-684c-4fbc-9b74-5aedf72c57f6",
+        "ground_id": "6ad19d51-8ffb-4b26-94a9-0ed7e02d52e2",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776943363102-825pbef5j6e.blob:http://localhost:8081/f8963356-2f64-4e8e-877c-224b400de393",
+        "created_at": "2026-05-18T10:37:48.248518+00:00",
+        "is_primary": false,
+        "display_order": 2
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "540e0e68-1eae-455f-a018-0057f73bdc51",
+    "owner_id": "f3d79d86-7989-4cb9-888d-74f45dd7934a",
+    "name": "Six Flags 2.0",
+    "description": "Pitch and Outfield: The grounds generally feature well-maintained matting pitches known to provide an even bounce and good pace. The outfield is relatively quick, making it favorable for batsmen, though some patches may occasionally have uneven grass distribution depending on the season.Match Broadcasting: Many matches played here are live-streamed on popular grassroots cricket apps like CricHeroes or YouTube, featuring electronic scoreboards.Day-Night Facilities: The venues are equipped with commercial-grade floodlights, making them highly popular for night matches during summer evenings.Additional Infrastructure: Facilities include standard practice nets, an on-site canteen for food and refreshments, an attached pavilion, basic washrooms, and ample parking space for teams.",
+    "address": "Sector 107",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.4998309,
+    "longitude": 76.9763782,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "55 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-04T16:36:28.704182+00:00",
+    "updated_at": "2026-05-28T13:03:06.679598+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "030ee333-6835-4393-8e0e-d3103e4b5c0d",
+        "ground_id": "540e0e68-1eae-455f-a018-0057f73bdc51",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1775647563053-j0a6zj3fsai.jpg",
+        "created_at": "2026-05-28T13:03:07.135121+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "e9d5f103-1d75-44d8-acd4-e6fee52f2da4",
+        "ground_id": "540e0e68-1eae-455f-a018-0057f73bdc51",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776944192965-f04o2txeld5.blob:http://localhost:8081/398d9dc3-492e-421b-b6b2-7a9613b02d28",
+        "created_at": "2026-05-28T13:03:07.135121+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "42bb238c-7bd1-4808-9a08-b00a80dcd905",
+        "ground_id": "540e0e68-1eae-455f-a018-0057f73bdc51",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776944205939-6txr253hpcc.blob:http://localhost:8081/632c543a-b9f1-42b1-90af-aa5ccdfc3f89",
+        "created_at": "2026-05-28T13:03:07.135121+00:00",
+        "is_primary": false,
+        "display_order": 2
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "9fd5eb60-beb6-4ea2-a4b3-2ab5a6eafb74",
+    "owner_id": "1edff64d-b4d7-4253-b0b7-00f07fda46bd",
+    "name": "Battle Station Cricket Ground",
+    "description": "Battle Station Cricket Ground is a fully equipped and well-appointed 60 yard standard Cricket Ground in Gurugram. It is a lush green ground with huge boundaries and have two different pitches to play.",
+    "address": "Daultabad village, near main powerhouse",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.49405034,
+    "longitude": 76.97106532,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": false,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-16T09:42:41.363559+00:00",
+    "updated_at": "2026-05-18T10:36:17.646744+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": true,
+    "ground_images": [
+      {
+        "id": "e8f8100e-7fe4-4825-8448-50c4f41dee6a",
+        "ground_id": "9fd5eb60-beb6-4ea2-a4b3-2ab5a6eafb74",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/1edff64d-b4d7-4253-b0b7-00f07fda46bd/1778932974346-1szpflj0s5n.blob:http://localhost:8081/532b7203-c84b-4f5d-ab16-f74d48f4ff83",
+        "created_at": "2026-05-18T10:36:18.102832+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "f05b556e-6d8a-405a-a6c6-321193c143e6",
+        "ground_id": "9fd5eb60-beb6-4ea2-a4b3-2ab5a6eafb74",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/1edff64d-b4d7-4253-b0b7-00f07fda46bd/1778932980897-u3lz1gwxpyc.blob:http://localhost:8081/42d48f0c-65dd-4565-ba16-6280cab60ccf",
+        "created_at": "2026-05-18T10:36:18.102832+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "04f35411-4af7-4e8d-bf28-47f7ff576d6f",
+        "ground_id": "9fd5eb60-beb6-4ea2-a4b3-2ab5a6eafb74",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/1edff64d-b4d7-4253-b0b7-00f07fda46bd/1778933021288-b2nqzhqu2bq.blob:http://localhost:8081/1cf3b9fa-1247-4d24-bdd1-4796ac4a6dac",
+        "created_at": "2026-05-18T10:36:18.102832+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "a6968bcd-a229-4ceb-b2d7-4274fa841949",
+        "ground_id": "9fd5eb60-beb6-4ea2-a4b3-2ab5a6eafb74",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/1edff64d-b4d7-4253-b0b7-00f07fda46bd/1778933028363-kwahtmxnuy.blob:http://localhost:8081/9fe5dcb7-59e6-46a4-bf68-2389f6f3d64b",
+        "created_at": "2026-05-18T10:36:18.102832+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 90000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "5ec13990-1383-4c85-9f6a-703b371677d4",
+    "owner_id": "3ee9af70-b78a-4844-870f-70cc8d354a30",
+    "name": "The Royal Rumble Cricket",
+    "description": "THE ROYAL RUMBLE CRICKET GROUND is a fully equipped and well-appointed 60 yard standard Cricket Ground in Gurugram. It is a lush green ground with huge boundaries and have two different pitches to play.",
+    "address": "Kherki Majra",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.49775869,
+    "longitude": 76.96961586,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": false,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-16T13:55:13.340633+00:00",
+    "updated_at": "2026-05-19T10:34:17.425092+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": true,
+    "ground_images": [
+      {
+        "id": "65929619-fd5b-4d44-bfdd-7730718e8291",
+        "ground_id": "5ec13990-1383-4c85-9f6a-703b371677d4",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/3ee9af70-b78a-4844-870f-70cc8d354a30/1778940403302-df41rg394ss.com/9ce248a4-fe90-4bee-8489-d1ca4addcf25",
+        "created_at": "2026-05-19T10:34:17.920973+00:00",
+        "is_primary": false,
+        "display_order": 3
+      },
+      {
+        "id": "3459449b-0d29-417b-b9cd-5b290528ddca",
+        "ground_id": "5ec13990-1383-4c85-9f6a-703b371677d4",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/3ee9af70-b78a-4844-870f-70cc8d354a30/1778940178763-fctjx01zfs5.com/e860b349-0e1c-4f23-94e5-f78b48e0e268",
+        "created_at": "2026-05-19T10:34:17.920973+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "fe990430-addb-4368-b0e1-f26e4278d9e6",
+        "ground_id": "5ec13990-1383-4c85-9f6a-703b371677d4",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/3ee9af70-b78a-4844-870f-70cc8d354a30/1778940182653-rqm253jo4zd.com/17597df2-f410-4a5a-8067-96cf1886c36a",
+        "created_at": "2026-05-19T10:34:17.920973+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "fa3ebb1b-61be-42c6-aede-3c7528efd279",
+        "ground_id": "5ec13990-1383-4c85-9f6a-703b371677d4",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/3ee9af70-b78a-4844-870f-70cc8d354a30/1778940193956-ryw7ah7bv1h.com/ffe3685c-17ed-45c2-bd3f-cc015b0f9485",
+        "created_at": "2026-05-19T10:34:17.920973+00:00",
+        "is_primary": false,
+        "display_order": 2
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 13000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+    "owner_id": "eec47484-b584-4b47-95a6-8561d743bcc3",
+    "name": "GHS Greenfield Cricket Ground",
+    "description": "A highly rated, full-sized cricket playground located in Sector 108, Gurugram (Gurgaon), Haryana. Situated right behind the Daultabad Gaushala, it is a popular hub for local tournaments, corporate matches, and practice leagues. Pitch & Outfield: It features a well-maintained, clean, and trimmed turf pitch that offers a balanced bounce for both batting and bowling. The outfield is noted by players for being green, lush, and exceptionally quick. The ground provides essential facilities including a reasonably priced in-house canteen serving tasty food, clean washrooms, and supportive ground staff.",
+    "address": "Behind Daultabad Gaushala, Sector 108",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.50200558,
+    "longitude": 76.9745812,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "55 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 24,
+    "verified": false,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-19T06:42:36.847716+00:00",
+    "updated_at": "2026-05-19T14:39:46.417079+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": true,
+    "ground_images": [
+      {
+        "id": "10b840f5-37ab-47b9-876e-35a4df694db6",
+        "ground_id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/eec47484-b584-4b47-95a6-8561d743bcc3/1779201374036-67wuhmroglb.com/131ccf92-7bcf-4c75-86b5-a2a779268f8a",
+        "created_at": "2026-05-19T14:36:42.779127+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "8a07a27d-2ed3-4346-9106-42eb851b2751",
+        "ground_id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/eec47484-b584-4b47-95a6-8561d743bcc3/1779201385696-22ezj7vr441.com/f29654cc-6a0e-4bce-8279-bdc4c7a10247",
+        "created_at": "2026-05-19T14:36:42.779127+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "da56eb94-0951-4e74-b533-da2a257d3d71",
+        "ground_id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/eec47484-b584-4b47-95a6-8561d743bcc3/1779201389989-884ysnzqmi.com/e7182a7d-3297-499c-bbe7-cb18e5c57a84",
+        "created_at": "2026-05-19T14:36:42.779127+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "6480a8af-f0a4-4ab8-9309-09c93d533d93",
+        "ground_id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/eec47484-b584-4b47-95a6-8561d743bcc3/1779201394624-g0h085tj06q.com/39e4e2c9-e3cb-4ea0-9a2e-efe5788edc3b",
+        "created_at": "2026-05-19T14:36:42.779127+00:00",
+        "is_primary": false,
+        "display_order": 3
+      },
+      {
+        "id": "03d5257b-d4a4-40c8-9f43-90958237f466",
+        "ground_id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/eec47484-b584-4b47-95a6-8561d743bcc3/1779201398869-85qiall26q7.com/942f5224-43f1-454d-a657-ad4884b5abba",
+        "created_at": "2026-05-19T14:36:42.779127+00:00",
+        "is_primary": false,
+        "display_order": 4
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5500,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": false
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": false
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 8500,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 8500,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": false
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": false
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": false
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": false
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": false
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": false
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "13:30:00",
+        "start_time": "10:30:00",
+        "overs_count": null,
+        "custom_price": 5500,
+        "is_available": true
+      },
+      {
+        "end_time": "13:30:00",
+        "start_time": "10:30:00",
+        "overs_count": null,
+        "custom_price": 5500,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "20:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "20:30:00",
+        "overs_count": null,
+        "custom_price": 9500,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": 5500,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": 5500,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "82cf3942-1cc4-45fc-9e64-021a113d3505",
+    "owner_id": "0c4477fb-f610-4d7c-af9d-c9039f4aabf4",
+    "name": "Green 2.0 Test",
+    "description": "Pitch and Outfield: The grounds generally feature well-maintained matting pitches known to provide an even bounce and good pace. The outfield is relatively quick, making it favorable for batsmen, though some patches may occasionally have uneven grass distribution depending on the season.Match Broadcasting: Many matches played here are live-streamed on popular grassroots cricket apps like CricHeroes or YouTube, featuring electronic scoreboards.Day-Night Facilities: The venues are equipped with commercial-grade floodlights, making them highly popular for night matches during summer evenings.Additional Infrastructure: Facilities include standard practice nets, an on-site canteen for food and refreshments, an attached pavilion, basic washrooms, and ample parking space for teams.",
+    "address": "Daulatabad Link Rd, Sector 103",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.4908,
+    "longitude": 76.9942,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": null,
+    "verified": false,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-27T12:03:08.630635+00:00",
+    "updated_at": "2026-05-29T12:46:58.434901+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "60a07519-babb-48c3-a9a0-91b16a0178b2",
+        "ground_id": "82cf3942-1cc4-45fc-9e64-021a113d3505",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/4ee9d3dd-c118-4d8c-9df2-d3e4d247f921/1776943363102-825pbef5j6e.blob:http://localhost:8081/f8963356-2f64-4e8e-877c-224b400de393",
+        "created_at": "2026-05-27T12:04:10.056755+00:00",
+        "is_primary": true,
+        "display_order": 0
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "dbadce21-ff69-4650-92cd-470a8974230d",
+    "owner_id": "efdb63bc-db06-4a01-8a56-36413f04d883",
+    "name": "Balls of Fire",
+    "description": "Balls of Fire is a fully equipped and well-appointed 60 yard standard Cricket Ground in Gurugram. It is a lush green ground with huge boundaries and lake view have two different pitches to play.",
+    "address": "Daultabad village, near main powerhouse",
+    "city": "New Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.49730886,
+    "longitude": 76.96594905,
+    "base_price_per_hour": 0,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "60 Meters",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": false,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-05-15T09:22:04.389548+00:00",
+    "updated_at": "2026-05-18T10:37:03.517769+00:00",
+    "has_washrooms": true,
+    "cricket_pitch_surface": "Turf",
+    "min_price": 5000,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": true,
+    "has_new_balls": true,
+    "has_scoring": true,
+    "has_practice_nets": true,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "9a8cae6a-1179-4281-9ec1-1015852b5bdb",
+        "ground_id": "dbadce21-ff69-4650-92cd-470a8974230d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/efdb63bc-db06-4a01-8a56-36413f04d883/1778915040690-6p0iqt9vxzn.blob:http://localhost:8081/895ec4ff-988d-44e5-a6b1-a5017f7bf1cb",
+        "created_at": "2026-05-18T10:37:03.929552+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "7ece5532-491b-47db-a7a3-c8df3df9da04",
+        "ground_id": "dbadce21-ff69-4650-92cd-470a8974230d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/efdb63bc-db06-4a01-8a56-36413f04d883/1778915049560-oz1d2o6wk2.blob:http://localhost:8081/9f0be3e7-f353-4cd2-a340-1f73a3b3bba4",
+        "created_at": "2026-05-18T10:37:03.929552+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "d454c52c-5ce5-48b1-9caa-647147afe51d",
+        "ground_id": "dbadce21-ff69-4650-92cd-470a8974230d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/efdb63bc-db06-4a01-8a56-36413f04d883/1778915054433-m4gwt77hql.blob:http://localhost:8081/b47280ee-b627-44dd-a38c-844370b87152",
+        "created_at": "2026-05-18T10:37:03.929552+00:00",
+        "is_primary": false,
+        "display_order": 2
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "11:30:00",
+        "start_time": "07:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 7500,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 8000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 9000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "15:30:00",
+        "start_time": "11:30:00",
+        "overs_count": null,
+        "custom_price": 5000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "19:30:00",
+        "start_time": "15:30:00",
+        "overs_count": null,
+        "custom_price": 11000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 12000,
+        "is_available": true
+      },
+      {
+        "end_time": "23:30:00",
+        "start_time": "19:30:00",
+        "overs_count": null,
+        "custom_price": 10000,
+        "is_available": true
+      }
+    ]
+  }
+]
