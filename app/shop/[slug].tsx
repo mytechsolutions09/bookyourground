@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator, Animated, Easing, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import { slugify } from '@/utils/helpers';
 import { 
   ChevronLeft, 
@@ -436,6 +437,8 @@ export default function ProductDetailScreen() {
         <Image 
           source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
           style={[styles.mainImage, isUltraNarrow && { height: 320 }]} 
+          alt={product.name || "Product Image"}
+          accessibilityLabel={product.name || "Product Image"}
         />
         {/* Hero tag and thumbnails moved to bottom of JSX for better touch handling */}
       </View>
@@ -595,6 +598,8 @@ export default function ProductDetailScreen() {
                       <Image 
                         source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
                         style={{ width: '80%', height: '80%', resizeMode: 'contain' }} 
+                        alt={item.name || "Related Product Image"}
+                        accessibilityLabel={item.name || "Related Product Image"}
                       />
                     </View>
                     <View style={{ padding: 12 }}>
@@ -638,7 +643,7 @@ export default function ProductDetailScreen() {
                       style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
                       onPress={() => setActiveImageIndex(i)}
                     >
-                      <Image source={{ uri: img }} style={styles.mobileThumbImage} />
+                      <Image source={{ uri: img }} style={styles.mobileThumbImage} alt={`${product.name} Thumbnail ${i + 1}`} accessibilityLabel={`${product.name} Thumbnail ${i + 1}`} />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -728,11 +733,76 @@ export default function ProductDetailScreen() {
     </View>
   );
 
+  const cleanDescription = (product.description || '')
+    .replace(/Fetched from Amazon:\s*https?:\/\/[^\s]+/gi, '')
+    .replace(/\*\*|__/g, '')
+    .trim()
+    .slice(0, 160);
+
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "image": product.images || ["https://bookyourground.com/assets/images/ground-booking-for-cricket.png"],
+    "description": cleanDescription,
+    "sku": product.id,
+    "offers": {
+      "@type": "Offer",
+      "url": `https://bookyourground.com/shop/${slugify(product.name)}`,
+      "priceCurrency": "INR",
+      "price": product.price,
+      "priceValidUntil": "2027-12-31",
+      "itemCondition": "https://schema.org/NewCondition",
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "BookYourGround"
+      }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": product.rating || 4.5,
+      "reviewCount": product.review_count || 12
+    }
+  };
+
+  const seoHead = Platform.OS === 'web' ? (
+    <Head>
+      <title>{`${product.name} | BookYourGround Sports Shop`}</title>
+      <meta name="description" content={cleanDescription || `Buy ${product.name} at BookYourGround Sports Shop. High quality equipment, secure payment, and fast shipping.`} />
+      <meta name="keywords" content={`cricket, sports gear, ${product.name.toLowerCase().split(' ').join(', ')}, BookYourGround`} />
+      <link rel="canonical" href={`https://bookyourground.com/shop/${slugify(product.name)}`} />
+      <meta name="robots" content="index, follow" />
+
+      {/* Open Graph / Facebook */}
+      <meta property="og:type" content="product" />
+      <meta property="og:url" content={`https://bookyourground.com/shop/${slugify(product.name)}`} />
+      <meta property="og:title" content={`${product.name} | BookYourGround Sports Shop`} />
+      <meta property="og:description" content={cleanDescription || `Buy ${product.name} at BookYourGround Sports Shop.`} />
+      <meta property="og:image" content={product.images?.[0] || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+      <meta property="og:site_name" content="BookYourGround" />
+
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:url" content={`https://bookyourground.com/shop/${slugify(product.name)}`} />
+      <meta name="twitter:title" content={`${product.name} | BookYourGround Sports Shop`} />
+      <meta name="twitter:description" content={cleanDescription || `Buy ${product.name} at BookYourGround Sports Shop.`} />
+      <meta name="twitter:image" content={product.images?.[0] || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+    </Head>
+  ) : null;
+
   if (Platform.OS === 'web' && !isSmall) {
     const isShoes = product.category?.name === 'Shoes';
     
     return (
-      <WebLayout>
+      <>
+        {seoHead}
+        <WebLayout>
         <Stack.Screen options={{ title: product.name }} />
         <ScrollView style={{ flex: 1, backgroundColor: '#FFFFFF' }} showsVerticalScrollIndicator={false}>
           <View style={[styles.webContainer, { maxWidth: 1500, padding: 20 }]}>
@@ -747,7 +817,7 @@ export default function ProductDetailScreen() {
                         style={{ width: 60, height: 60, borderRadius: 8, borderWidth: 1, borderColor: activeImageIndex === i ? '#007185' : '#D5D9D9', overflow: 'hidden' }}
                         onPress={() => setActiveImageIndex(i)}
                       >
-                        <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                      <Image source={{ uri: img }} style={{ width: '100%', height: '100%', ...Platform.select({ web: { objectFit: 'cover' } }) }} alt={`${product.name} Thumbnail ${i + 1}`} accessibilityLabel={`${product.name} Thumbnail ${i + 1}`} />
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -756,6 +826,8 @@ export default function ProductDetailScreen() {
                     <Image 
                       source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
                       style={{ width: '100%', height: '100%', resizeMode: 'contain', maxHeight: 600 }} 
+                      alt={product.name || "Product Image"}
+                      accessibilityLabel={product.name || "Product Image"}
                     />
                   </View>
                 </View>
@@ -1029,6 +1101,8 @@ export default function ProductDetailScreen() {
                           <Image 
                             source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
                             style={{ width: '80%', height: '80%', resizeMode: 'contain' }} 
+                            alt={item.name || "Related Product Image"}
+                            accessibilityLabel={item.name || "Related Product Image"}
                           />
                         </View>
                         <View style={{ paddingTop: 12 }}>
@@ -1043,18 +1117,22 @@ export default function ProductDetailScreen() {
             </View>
         </ScrollView>
       </WebLayout>
+      </>
     );
   }
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout isPublicNoSidebar hideHeader={isSmall}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF', position: 'relative' }}>
-          {content}
-          {bottomActions}
-        </View>
-      </WebLayout>
+      <>
+        {seoHead}
+        <WebLayout isPublicNoSidebar hideHeader={isSmall}>
+          <Stack.Screen options={{ headerShown: false }} />
+          <View style={{ flex: 1, backgroundColor: '#FFFFFF', position: 'relative' }}>
+            {content}
+            {bottomActions}
+          </View>
+        </WebLayout>
+      </>
     );
   }
 

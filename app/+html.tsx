@@ -39,13 +39,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta property="og:title" content="Cricket Ground Booking - BookYourGround" />
         <meta property="og:description" content="Instantly book cricket, football, and other sports grounds online." />
         <meta property="og:image" content="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" />
+        <meta property="og:site_name" content="BookYourGround" />
 
         {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://bookyourground.com/" />
-        <meta property="twitter:title" content="Cricket Ground Booking - BookYourGround" />
-        <meta property="twitter:description" content="Instantly book cricket, football, and other sports grounds online." />
-        <meta property="twitter:image" content="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://bookyourground.com/" />
+        <meta name="twitter:title" content="Cricket Ground Booking - BookYourGround" />
+        <meta name="twitter:description" content="Instantly book cricket, football, and other sports grounds online." />
+        <meta name="twitter:image" content="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png" />
         
         <base href="/" />
         <ScrollViewStyleReset />
