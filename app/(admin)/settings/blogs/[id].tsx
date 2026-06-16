@@ -37,6 +37,9 @@ export default function AdminBlogEdit() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
   const [isCornerstone, setIsCornerstone] = useState(false);
   const [aiOptimized, setAiOptimized] = useState(false);
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [tags, setTags] = useState('');
 
   const [allBlogs, setAllBlogs] = useState<{ id: string; title: string; slug: string; excerpt: string; content: string }[]>([]);
 
@@ -557,7 +560,7 @@ YOAST SEO CHECKLIST & RULES:
 6. **Keyphrase Density**: Maintain a natural keyphrase frequency of 1% to 2.5% throughout the text body.
 7. **Single H1 Assessment**: Do NOT use H1 headers (# Heading) in the body content. Only use H2 (##) or H3 (###) to avoid multiple H1 issues.
 8. **Internal Links (Crosslinking)**: You must include at least one internal link using markdown to a page on the BookYourGround website (e.g. [book sports ground](/cricket) or [box cricket booking](/cricket) or [view grounds](/)).
-9. **Outbound Links**: You must include at least one relevant outbound link to a high-quality external sports resource or trusted guide using standard markdown (e.g., [ICC rules](https://www.icc-cricket.com) or external stats site).
+9. **Outbound Links**: You must include at least one relevant outbound link to a high-quality external sports resource or trusted guide using standard markdown (e.g., [ICC rules](https://www.icc-cricket.com)).
 10. **Competing Links**: Never use the exact focus keyphrase "${focusKeyphrase}" as the clickable anchor text for any hyperlink. Use different, descriptive words as anchor text to avoid internal competition.
 11. **Keyphrase Alts**: If you write inline markdown images like ![Alt Text](url), make sure the Alt Text contains the focus keyphrase "${focusKeyphrase}".
 12. **Content Context**: Highlight the BookYourGround platform contextually as the booking solution 1 to 3 times maximum. Do not be overly salesy.
@@ -567,6 +570,9 @@ Please provide the output in strict JSON format with the following keys exactly:
 - slug: The optimized URL-friendly slug
 - excerpt: The optimized 120-160 character excerpt
 - content: The full body of the blog post written in GitHub Flavored Markdown format.
+- seo_title: A matching optimized SEO title
+- seo_description: A matching optimized SEO description
+- tags: 3-5 relevant comma-separated tags
 
 Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
 
@@ -580,6 +586,9 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.slug) setSlug(parsed.slug);
       if (parsed.excerpt) setExcerpt(parsed.excerpt);
       if (parsed.content) setContentForm(parsed.content);
+      if (parsed.seo_title) setSeoTitle(parsed.seo_title);
+      if (parsed.seo_description) setSeoDescription(parsed.seo_description);
+      if (parsed.tags) setTags(parsed.tags);
       
       setAiOptimized(true);
 
@@ -686,6 +695,10 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
         setReadTime(data.read_time || '5 min read');
         setImageUrl(data.image_url || '');
         setIsPublished(data.is_published || false);
+        setFocusKeyphrase(data.focus_keyphrase || '');
+        setSeoTitle(data.seo_title || '');
+        setSeoDescription(data.seo_description || '');
+        setTags((data.tags || []).join(', '));
       }
     } catch (err: any) {
       console.error(err);
@@ -705,17 +718,34 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       return;
     }
 
+    // Check if slug is unique
+    const cleanSlug = slug.trim().toLowerCase();
+    const isSlugTaken = allBlogs.some(b => b.slug.trim().toLowerCase() === cleanSlug && b.id !== id);
+    if (isSlugTaken) {
+      const msg = `A blog post with the slug "${slug}" already exists. Please choose a unique slug.`;
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
     try {
       setSaving(true);
       const payload = {
         title,
-        slug,
+        slug: cleanSlug,
         excerpt,
         content: contentForm,
         author,
         read_time: readTime,
         image_url: imageUrl,
-        is_published: isPublished
+        is_published: isPublished,
+        focus_keyphrase: focusKeyphrase,
+        seo_title: seoTitle,
+        seo_description: seoDescription,
+        tags: tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
       };
 
       let error;
@@ -807,6 +837,9 @@ Please provide the output in strict JSON format with the following keys exactly:
 - content: The full body of the blog post written in GitHub Flavored Markdown format. Make it engaging, structured with headings (##), bullet points, and actionable advice.
 - read_time: Estimated read time (e.g. "4 min read")
 - image_search_query: A short 2-3 word search query to find a good stock image on Unsplash for this post.
+- seo_title: An optimized SEO title matching the keyword
+- seo_description: An optimized SEO description matching the keyword
+- tags: 3-5 relevant comma-separated tags
 
 Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
 
@@ -821,6 +854,9 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.excerpt) setExcerpt(parsed.excerpt);
       if (parsed.content) setContentForm(parsed.content);
       if (parsed.read_time) setReadTime(parsed.read_time);
+      if (parsed.seo_title) setSeoTitle(parsed.seo_title);
+      if (parsed.seo_description) setSeoDescription(parsed.seo_description);
+      if (parsed.tags) setTags(parsed.tags);
       // We can use Unsplash source URL based on the search query
       if (parsed.image_search_query) {
         setImageUrl(`https://source.unsplash.com/1200x800/?${encodeURIComponent(parsed.image_search_query)}`);
@@ -932,8 +968,175 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
         </Pressable>
       </View>      <ScrollView style={styles.content}>
         <View style={styles.splitLayout}>
-          {/* Left Column: Yoast SEO settings & AI generator */}
+          {/* Left Column: Blog Composition Fields */}
           <View style={styles.leftColumn}>
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={(val) => {
+                    setTitle(val);
+                    if (isNew && !slug) {
+                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+                    }
+                  }}
+                  placeholder="Post title"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Slug</Text>
+                <TextInput
+                  style={styles.input}
+                  value={slug}
+                  onChangeText={setSlug}
+                  placeholder="url-friendly-slug"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Excerpt</Text>
+              <TextInput
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                value={excerpt}
+                onChangeText={setExcerpt}
+                placeholder="Short description for SEO and previews"
+                multiline
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Content (Markdown)</Text>
+                <View style={styles.toolbar}>
+                  <Pressable 
+                    style={[styles.toolbarBtn, !showPreview && styles.toolbarBtnActive]} 
+                    onPress={() => setShowPreview(false)}
+                  >
+                    <Text style={[styles.toolbarBtnText, !showPreview && styles.toolbarBtnTextActive]}>Code</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.toolbarBtn, showPreview && styles.toolbarBtnActive]} 
+                    onPress={() => setShowPreview(true)}
+                  >
+                    <Text style={[styles.toolbarBtnText, showPreview && styles.toolbarBtnTextActive]}>Preview</Text>
+                  </Pressable>
+                  {!showPreview && (
+                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
+                      <Bold size={16} color="#4B5563" />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+              {showPreview ? (
+                <View style={[styles.input, { height: 300, overflow: 'hidden' }]}>
+                  <ScrollView style={{ flex: 1 }}>
+                    <Markdown style={markdownStyles}>
+                      {contentForm || '*Nothing to preview*'}
+                    </Markdown>
+                  </ScrollView>
+                </View>
+              ) : (
+                <TextInput
+                  style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  value={contentForm}
+                  onChangeText={setContentForm}
+                  onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                  placeholder="Write your content here using Markdown..."
+                  multiline
+                />
+              )}
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Author</Text>
+                <TextInput
+                  style={styles.input}
+                  value={author}
+                  onChangeText={setAuthor}
+                  placeholder="e.g. Admin"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Read Time</Text>
+                <TextInput
+                  style={styles.input}
+                  value={readTime}
+                  onChangeText={setReadTime}
+                  placeholder="e.g. 5 min read"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>SEO Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={seoTitle}
+                  onChangeText={setSeoTitle}
+                  placeholder="SEO Title (optional)"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Tags</Text>
+                <TextInput
+                  style={styles.input}
+                  value={tags}
+                  onChangeText={setTags}
+                  placeholder="tags (comma separated)"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>SEO Description</Text>
+              <TextInput
+                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+                value={seoDescription}
+                onChangeText={setSeoDescription}
+                placeholder="SEO Description (optional)"
+                multiline
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Image URL</Text>
+              <View style={styles.imageInputRow}>
+                <View style={styles.imageInputWrapper}>
+                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
+                  <TextInput
+                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
+                    value={imageUrl}
+                    onChangeText={setImageUrl}
+                    placeholder="https://..."
+                  />
+                </View>
+                <Pressable style={styles.uploadBtn} onPress={pickImage}>
+                  <Upload size={18} color="#4B5563" />
+                  <Text style={styles.uploadBtnText}>Upload</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.publishRow}>
+              <View>
+                <Text style={styles.label}>Publish Status</Text>
+                <Text style={styles.helperText}>Published posts are visible to the public</Text>
+              </View>
+              <Switch 
+                value={isPublished}
+                onValueChange={setIsPublished}
+                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
+              />
+            </View>
+          </View>
+
+          {/* Right Column: Yoast SEO settings & AI generator */}
+          <View style={styles.rightColumn}>
             {/* Gemini AI Generator Section */}
             <View style={styles.aiSection}>
               <View style={styles.aiHeader}>
@@ -1185,13 +1388,11 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                   <View style={styles.facebookCard}>
                     <View style={styles.facebookImgMock}>
                       {imageUrl ? (
-                        <img 
-                          src={imageUrl} 
-                          style={{ width: '100%', height: 200, objectFit: 'cover' }} 
+                        <Image 
+                          source={{ uri: imageUrl }} 
+                          style={{ width: '100%', height: 200 }} 
+                          resizeMode="cover"
                           alt="Preview"
-                          onError={(e) => {
-                            (e.target as any).style.display = 'none';
-                          }}
                         />
                       ) : (
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
@@ -1209,141 +1410,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                   </View>
                 </View>
               )}
-            </View>
-          </View>
-
-          {/* Right Column: Blog Composition Fields */}
-          <View style={styles.rightColumn}>
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Title</Text>
-                <TextInput
-                  style={styles.input}
-                  value={title}
-                  onChangeText={(val) => {
-                    setTitle(val);
-                    if (isNew && !slug) {
-                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-                    }
-                  }}
-                  placeholder="Post title"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Slug</Text>
-                <TextInput
-                  style={styles.input}
-                  value={slug}
-                  onChangeText={setSlug}
-                  placeholder="url-friendly-slug"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Excerpt</Text>
-              <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-                value={excerpt}
-                onChangeText={setExcerpt}
-                placeholder="Short description for SEO and previews"
-                multiline
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Content (Markdown)</Text>
-                <View style={styles.toolbar}>
-                  <Pressable 
-                    style={[styles.toolbarBtn, !showPreview && styles.toolbarBtnActive]} 
-                    onPress={() => setShowPreview(false)}
-                  >
-                    <Text style={[styles.toolbarBtnText, !showPreview && styles.toolbarBtnTextActive]}>Code</Text>
-                  </Pressable>
-                  <Pressable 
-                    style={[styles.toolbarBtn, showPreview && styles.toolbarBtnActive]} 
-                    onPress={() => setShowPreview(true)}
-                  >
-                    <Text style={[styles.toolbarBtnText, showPreview && styles.toolbarBtnTextActive]}>Preview</Text>
-                  </Pressable>
-                  {!showPreview && (
-                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
-                      <Bold size={16} color="#4B5563" />
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-              {showPreview ? (
-                <View style={[styles.input, { height: 1000, overflow: 'hidden' }]}>
-                  <ScrollView style={{ flex: 1 }}>
-                    <Markdown style={markdownStyles}>
-                      {contentForm || '*Nothing to preview*'}
-                    </Markdown>
-                  </ScrollView>
-                </View>
-              ) : (
-                <TextInput
-                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-                  value={contentForm}
-                  onChangeText={setContentForm}
-                  onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-                  placeholder="Write your content here using markdown..."
-                  multiline
-                />
-              )}
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Author</Text>
-                <TextInput
-                  style={styles.input}
-                  value={author}
-                  onChangeText={setAuthor}
-                  placeholder="e.g. Admin"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Read Time</Text>
-                <TextInput
-                  style={styles.input}
-                  value={readTime}
-                  onChangeText={setReadTime}
-                  placeholder="e.g. 5 min read"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Image URL</Text>
-              <View style={styles.imageInputRow}>
-                <View style={styles.imageInputWrapper}>
-                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
-                  <TextInput
-                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
-                    value={imageUrl}
-                    onChangeText={setImageUrl}
-                    placeholder="https://..."
-                  />
-                </View>
-                <Pressable style={styles.uploadBtn} onPress={pickImage}>
-                  <Upload size={18} color="#4B5563" />
-                  <Text style={styles.uploadBtnText}>Upload</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.publishRow}>
-              <View>
-                <Text style={styles.label}>Publish Status</Text>
-                <Text style={styles.helperText}>Published posts are visible to the public</Text>
-              </View>
-              <Switch 
-                value={isPublished}
-                onValueChange={setIsPublished}
-                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
-              />
             </View>
           </View>
         </View>
@@ -1381,8 +1447,8 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
   content: { paddingVertical: 24, paddingHorizontal: 0, width: '100%' },
   splitLayout: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 24, width: '100%' },
-  leftColumn: { flex: Platform.OS === 'web' ? 1 : undefined, minWidth: Platform.OS === 'web' ? 420 : '100%' },
-  rightColumn: { flex: Platform.OS === 'web' ? 1.3 : undefined, minWidth: Platform.OS === 'web' ? 500 : '100%' },
+  leftColumn: { flex: Platform.OS === 'web' ? 1.3 : undefined, minWidth: Platform.OS === 'web' ? 500 : '100%' },
+  rightColumn: { flex: Platform.OS === 'web' ? 1 : undefined, minWidth: Platform.OS === 'web' ? 420 : '100%' },
   
   aiSection: { backgroundColor: '#F3E8FF', padding: 24, borderRadius: 12, marginBottom: 32, borderWidth: 1, borderColor: '#E9D5FF' },
   yoastSection: { backgroundColor: '#FFFFFF', padding: 24, borderRadius: 12, marginBottom: 32, borderLeftWidth: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
