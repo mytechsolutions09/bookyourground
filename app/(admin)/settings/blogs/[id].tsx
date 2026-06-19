@@ -91,6 +91,12 @@ const htmlToMarkdown = (html: string): string => {
   return md.trim();
 };
 
+const isHtmlContent = (content?: string): boolean => {
+  if (!content) return false;
+  const clean = content.replace(/^\ufeff/g, '').trim(); // Remove BOM and trim whitespace
+  return clean.startsWith('<') || clean.includes('<p>') || clean.includes('<h2>') || clean.includes('<!--');
+};
+
 export default function AdminBlogEdit() {
   const { id } = useLocalSearchParams();
   const isNew = id === 'new';
@@ -1628,7 +1634,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
               {editorTab === 'preview' ? (
                 <View style={[styles.input, { height: 1000, overflow: 'hidden' }]}>
                   <ScrollView style={{ flex: 1 }}>
-                    {Platform.OS === 'web' && contentForm.trim().startsWith('<') ? (
+                    {isHtmlContent(contentForm) && Platform.OS === 'web' ? (
                       <>
                         <style dangerouslySetInnerHTML={{ __html: `
                           .html-preview-content p { margin-bottom: 16px; font-size: 15px; color: #4B5563; line-height: 26px; }

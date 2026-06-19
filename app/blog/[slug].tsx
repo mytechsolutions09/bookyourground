@@ -7,6 +7,12 @@ import Markdown from 'react-native-markdown-display';
 import { supabase } from '@/lib/supabase';
 import Head from 'expo-router/head';
 
+const isHtmlContent = (content?: string): boolean => {
+  if (!content) return false;
+  const clean = content.replace(/^\ufeff/g, '').trim(); // Remove BOM and trim whitespace
+  return clean.startsWith('<') || clean.includes('<p>') || clean.includes('<h2>') || clean.includes('<!--');
+};
+
 interface Blog {
   id: string;
   slug: string;
@@ -170,7 +176,7 @@ export default function DynamicBlogPage() {
               />
             ) : null}
 
-            {blog.content?.trim().startsWith('<') && Platform.OS === 'web' ? (
+            {isHtmlContent(blog.content) && Platform.OS === 'web' ? (
               <>
                 <style dangerouslySetInnerHTML={{ __html: `
                   .html-blog-content p { margin-bottom: 16px; font-size: 16px; color: #4B5563; line-height: 28px; }
