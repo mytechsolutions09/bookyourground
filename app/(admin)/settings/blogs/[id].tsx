@@ -12,6 +12,85 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
+const markdownToHtml = (md: string): string => {
+  if (!md) return '';
+  let html = md;
+  // Convert headers
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  // Convert bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+  // Convert italics
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+  // Convert links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Convert images
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
+  
+  // Convert bullet points to <li>
+  const lines = html.split('\n');
+  let inList = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      const content = line.substring(2);
+      if (!inList) {
+        lines[i] = '<ul>\n  <li>' + content + '</li>';
+        inList = true;
+      } else {
+        lines[i] = '  <li>' + content + '</li>';
+      }
+    } else {
+      if (inList) {
+        lines[i - 1] = lines[i - 1] + '\n</ul>';
+        inList = false;
+      }
+    }
+  }
+  if (inList) {
+    lines[lines.length - 1] = lines[lines.length - 1] + '\n</ul>';
+  }
+  html = lines.join('\n');
+
+  // Convert paragraphs
+  const blocks = html.split(/\n\s*\n/);
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i].trim();
+    if (block && !block.startsWith('<h') && !block.startsWith('<ul') && !block.startsWith('<li') && !block.startsWith('<blockquote') && !block.startsWith('<pre')) {
+      blocks[i] = `<p>${block}</p>`;
+    }
+  }
+  html = blocks.join('\n\n');
+
+  return html;
+};
+
+const htmlToMarkdown = (html: string): string => {
+  if (!html) return '';
+  let md = html;
+  // Convert tags back
+  md = md.replace(/<p>(.*?)<\/p>/gi, '$1\n\n');
+  md = md.replace(/<h1>(.*?)<\/h1>/gi, '# $1\n\n');
+  md = md.replace(/<h2>(.*?)<\/h2>/gi, '## $1\n\n');
+  md = md.replace(/<h3>(.*?)<\/h3>/gi, '### $1\n\n');
+  md = md.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
+  md = md.replace(/<b>(.*?)<\/b>/gi, '**$1**');
+  md = md.replace(/<em>(.*?)<\/em>/gi, '*$1*');
+  md = md.replace(/<i>(.*?)<\/i>/gi, '*$1*');
+  md = md.replace(/<a href=["'](.*?)["']>(.*?)<\/a>/gi, '[$2]($1)');
+  md = md.replace(/<img.*?src=["'](.*?)["'].*?alt=["'](.*?)["'].*?>/gi, '![$2]($1)');
+  md = md.replace(/<img.*?alt=["'](.*?)["'].*?src=["'](.*?)["'].*?>/gi, '![$1]($2)');
+  md = md.replace(/<img.*?src=["'](.*?)["'].*?>/gi, '![]($1)');
+  md = md.replace(/<ul>\s*([\s\S]*?)\s*<\/ul>/gi, '$1\n');
+  md = md.replace(/<li>(.*?)<\/li>/gi, '- $1');
+  
+  md = md.replace(/\n\s*\n\s*\n/g, '\n\n');
+  return md.trim();
+};
+
 export default function AdminBlogEdit() {
   const { id } = useLocalSearchParams();
   const isNew = id === 'new';
@@ -32,11 +111,12 @@ export default function AdminBlogEdit() {
   const [aiTopic, setAiTopic] = useState('');
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [focusKeyphrase, setFocusKeyphrase] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [editorTab, setEditorTab] = useState<'markdown' | 'html' | 'preview'>('markdown');
   const [yoastTab, setYoastTab] = useState<'analysis' | 'google' | 'social'>('analysis');
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
   const [isCornerstone, setIsCornerstone] = useState(false);
   const [aiOptimized, setAiOptimized] = useState(false);
+  
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [tags, setTags] = useState('');
@@ -122,8 +202,11 @@ export default function AdminBlogEdit() {
       });
     }
 
+    const activeSeoTitle = seoTitle || title;
+    const activeSeoDesc = seoDescription || excerpt;
+
     // 3. Keyphrase in SEO Title
-    const titleLower = title.toLowerCase();
+    const titleLower = activeSeoTitle.toLowerCase();
     if (titleLower.includes(kp)) {
       const index = titleLower.indexOf(kp);
       const isNearBeginning = index <= (titleLower.length / 2);
@@ -149,37 +232,37 @@ export default function AdminBlogEdit() {
     }
 
     // 4. Title width/length
-    if (title.length >= 40 && title.length <= 70) {
+    if (activeSeoTitle.length >= 40 && activeSeoTitle.length <= 70) {
       checks.push({
         label: 'Title Width (Length)',
         status: 'green' as const,
-        desc: `Perfect visual title length (${title.length} characters).`
+        desc: `Perfect visual title length (${activeSeoTitle.length} characters).`
       });
     } else {
       checks.push({
         label: 'Title Width (Length)',
         status: 'orange' as const,
-        desc: `SEO Title is ${title.length} characters. Recommended range is 40–70 characters for optimal display width.`
+        desc: `SEO Title is ${activeSeoTitle.length} characters. Recommended range is 40–70 characters for optimal display width.`
       });
     }
 
     // 5. Meta description (Excerpt) Length
-    if (excerpt.length >= 120 && excerpt.length <= 160) {
+    if (activeSeoDesc.length >= 120 && activeSeoDesc.length <= 160) {
       checks.push({
         label: 'Meta Description Length',
         status: 'green' as const,
-        desc: `Perfect meta description length (${excerpt.length} characters).`
+        desc: `Perfect meta description length (${activeSeoDesc.length} characters).`
       });
     } else {
       checks.push({
         label: 'Meta Description Length',
         status: 'orange' as const,
-        desc: `Meta description is ${excerpt.length} characters. Recommended length is 120–160 characters.`
+        desc: `Meta description is ${activeSeoDesc.length} characters. Recommended length is 120–160 characters.`
       });
     }
 
     // 6. Keyphrase in Meta Description
-    const excerptLower = excerpt.toLowerCase();
+    const excerptLower = activeSeoDesc.toLowerCase();
     if (excerptLower.includes(kp)) {
       checks.push({
         label: 'Keyphrase in Meta Description',
@@ -541,20 +624,23 @@ export default function AdminBlogEdit() {
 We are editing a blog post with the target Focus Keyphrase: "${focusKeyphrase}".
 Current Post Details:
 - Title: "${title}"
+- SEO Title: "${seoTitle}"
 - Slug: "${slug}"
 - Excerpt: "${excerpt}"
+- SEO Description: "${seoDescription}"
+- Tags: "${tags}"
 - Content: "${contentForm}"
 
 Our live Yoast SEO analysis flagged these errors/warnings that must be resolved:
 ${failedChecks.map(c => `- ${c.label}: ${c.desc}`).join('\n')}
 ${isCornerstone ? `- Cornerstone Content Length: Cornerstone articles require in-depth content (currently ${wordCount} words, 900+ words recommended).` : ''}
 
-Please rewrite and optimize the Title, Slug, Excerpt (meta description), and Markdown Body Content to resolve ALL of the issues listed above, adhering strictly to these premium Yoast SEO criteria:
+Please rewrite and optimize the Title, SEO Title, Slug, Excerpt, SEO Description, Tags, and Markdown Body Content to resolve ALL of the issues listed above, adhering strictly to these premium Yoast SEO criteria:
 
 YOAST SEO CHECKLIST & RULES:
-1. **Keyphrase in SEO Title**: Include the focus keyphrase "${focusKeyphrase}" in the title, keeping it near the very beginning of the title. Title length must be strictly between 40 to 70 characters (Title Width/Length rule).
+1. **Keyphrase in SEO Title**: Include the focus keyphrase "${focusKeyphrase}" in the SEO Title (or Title if SEO Title is empty), keeping it near the very beginning of the title. Title length must be strictly between 40 to 70 characters.
 2. **Keyphrase in Slug**: Ensure the slug contains the exact focus keyphrase (lowercased, hyphenated).
-3. **Meta Description**: Keep the excerpt strictly between 120 and 160 characters, and it must contain the focus keyphrase "${focusKeyphrase}" naturally.
+3. **Meta Description / SEO Description**: Keep the SEO Description (or excerpt if SEO Description is empty) strictly between 120 and 160 characters, and it must contain the focus keyphrase "${focusKeyphrase}" naturally.
 4. **Keyphrase in Introduction**: The very first paragraph of the markdown body must contain the focus keyphrase "${focusKeyphrase}" in the first couple of sentences. The introduction must be 150 to 200 words long to hook the reader naturally. Never use the word "Introduction" as a heading title.
 5. **Keyphrase in Subheadings**: The focus keyphrase "${focusKeyphrase}" must appear in at least one subheading (H2 or H3 heading, e.g. ## Heading or ### Heading). Structure headings cleanly.
 6. **Keyphrase Density**: Maintain a natural keyphrase frequency of 1% to 2.5% throughout the text body.
@@ -566,12 +652,12 @@ YOAST SEO CHECKLIST & RULES:
 12. **Content Context**: Highlight the BookYourGround platform contextually as the booking solution 1 to 3 times maximum. Do not be overly salesy.
 
 Please provide the output in strict JSON format with the following keys exactly:
-- title: The optimized SEO-friendly title
+- title: The optimized title
 - slug: The optimized URL-friendly slug
-- excerpt: The optimized 120-160 character excerpt
+- excerpt: The optimized excerpt
 - content: The full body of the blog post written in GitHub Flavored Markdown format.
-- seo_title: A matching optimized SEO title
-- seo_description: A matching optimized SEO description
+- seo_title: Optimized SEO Title (around 40-70 characters)
+- seo_description: Optimized SEO Meta Description (around 120-160 characters)
 - tags: 3-5 relevant comma-separated tags
 
 Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
@@ -588,7 +674,9 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.content) setContentForm(parsed.content);
       if (parsed.seo_title) setSeoTitle(parsed.seo_title);
       if (parsed.seo_description) setSeoDescription(parsed.seo_description);
-      if (parsed.tags) setTags(parsed.tags);
+      if (parsed.tags) {
+        setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
+      }
       
       setAiOptimized(true);
 
@@ -629,8 +717,11 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
 We are editing a blog post with the target Focus Keyphrase: "${focusKeyphrase}".
 Current Post Details:
 - Title: "${title}"
+- SEO Title: "${seoTitle}"
 - Slug: "${slug}"
 - Excerpt: "${excerpt}"
+- SEO Description: "${seoDescription}"
+- Tags: "${tags}"
 - Content: "${contentForm}"
 
 Our live Yoast SEO analysis flagged this specific error/warning that must be resolved:
@@ -643,6 +734,9 @@ Please provide the output in strict JSON format with the following keys exactly:
 - slug: The slug (optimized if needed, else same)
 - excerpt: The excerpt (optimized if needed, else same)
 - content: The full body of the blog post written in GitHub Flavored Markdown format (optimized if needed, else same).
+- seo_title: The SEO Title (optimized if needed, else same)
+- seo_description: The SEO Description (optimized if needed, else same)
+- tags: The Tags (optimized if needed, else same)
 
 Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`json). Just the raw JSON string.`;
 
@@ -656,6 +750,11 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.slug) setSlug(parsed.slug);
       if (parsed.excerpt) setExcerpt(parsed.excerpt);
       if (parsed.content) setContentForm(parsed.content);
+      if (parsed.seo_title) setSeoTitle(parsed.seo_title);
+      if (parsed.seo_description) setSeoDescription(parsed.seo_description);
+      if (parsed.tags) {
+        setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
+      }
       
       setAiOptimized(true);
 
@@ -742,10 +841,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
         focus_keyphrase: focusKeyphrase,
         seo_title: seoTitle,
         seo_description: seoDescription,
-        tags: tags
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean)
+        tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
       };
 
       let error;
@@ -856,7 +952,10 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.read_time) setReadTime(parsed.read_time);
       if (parsed.seo_title) setSeoTitle(parsed.seo_title);
       if (parsed.seo_description) setSeoDescription(parsed.seo_description);
-      if (parsed.tags) setTags(parsed.tags);
+      if (parsed.focus_keyphrase) setFocusKeyphrase(parsed.focus_keyphrase);
+      if (parsed.tags) {
+        setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
+      }
       // We can use Unsplash source URL based on the search query
       if (parsed.image_search_query) {
         setImageUrl(`https://source.unsplash.com/1200x800/?${encodeURIComponent(parsed.image_search_query)}`);
@@ -1364,23 +1463,24 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                           <Text style={styles.googleMobileUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
                         </View>
                       </View>
-                      <Text style={styles.googleMobileTitle}>{title || 'Please Write a Catchy Title...'} | BookYourGround</Text>
+                      <Text style={styles.googleMobileTitle}>{(seoTitle || title) || 'Please Write a Catchy Title...'} | BookYourGround</Text>
                       <Text style={styles.googleMobileDesc}>
-                        {excerpt ? (excerpt.length > 155 ? `${excerpt.substring(0, 155)}...` : excerpt) : 'Please write a meta description in the excerpt field to optimize search results view...'}
+                        {(seoDescription || excerpt) ? (((seoDescription || excerpt)).length > 155 ? `${((seoDescription || excerpt)).substring(0, 155)}...` : (seoDescription || excerpt)) : 'Please write a meta description in the excerpt/seo description field to optimize search results view...'}
                       </Text>
                     </View>
                   ) : (
                     <View style={styles.googleDesktopCard}>
                       <Text style={styles.googleDesktopUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
-                      <Text style={styles.googleDesktopTitle}>{title || 'Please Write a Catchy Title...'} | BookYourGround</Text>
+                      <Text style={styles.googleDesktopTitle}>{(seoTitle || title) || 'Please Write a Catchy Title...'} | BookYourGround</Text>
                       <Text style={styles.googleDesktopDesc}>
-                        {excerpt ? (excerpt.length > 165 ? `${excerpt.substring(0, 165)}...` : excerpt) : 'Please write a meta description in the excerpt field to optimize search results view...'}
+                        {(seoDescription || excerpt) ? (((seoDescription || excerpt)).length > 165 ? `${((seoDescription || excerpt)).substring(0, 165)}...` : (seoDescription || excerpt)) : 'Please write a meta description in the excerpt/seo description field to optimize search results view...'}
                       </Text>
                     </View>
                   )}
                 </View>
               )}
 
+              {/* Tab Content 3: Social Media Previews */}
               {/* Tab Content 3: Social Media Previews */}
               {yoastTab === 'social' && (
                 <View style={styles.previewContainer}>
@@ -1402,14 +1502,230 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                     </View>
                     <View style={styles.facebookMeta}>
                       <Text style={styles.facebookSiteName}>BOOKYOURGROUND.COM</Text>
-                      <Text style={styles.facebookTitle}>{title || 'Catchy Blog Headline'}</Text>
+                      <Text style={styles.facebookTitle}>{(seoTitle || title) || 'Catchy Blog Headline'}</Text>
                       <Text style={styles.facebookDesc} numberOfLines={2}>
-                        {excerpt || 'Short summary of the blog post to capture readers attention when shared on social timelines.'}
+                        {(seoDescription || excerpt) || 'Short summary of the blog post to capture readers attention when shared on social timelines.'}
                       </Text>
                     </View>
                   </View>
                 </View>
               )}
+            </View>
+          </View>
+
+          {/* Right Column: Blog Composition Fields */}
+          <View style={styles.rightColumn}>
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={(val) => {
+                    setTitle(val);
+                    if (isNew && !slug) {
+                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+                    }
+                  }}
+                  placeholder="Post title"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Slug</Text>
+                <TextInput
+                  style={styles.input}
+                  value={slug}
+                  onChangeText={setSlug}
+                  placeholder="url-friendly-slug"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Excerpt</Text>
+              <TextInput
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                value={excerpt}
+                onChangeText={setExcerpt}
+                placeholder="Short description for SEO and previews"
+                multiline
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>SEO Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={seoTitle}
+                  onChangeText={setSeoTitle}
+                  placeholder="SEO Title (defaults to Title)"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Tags</Text>
+                <TextInput
+                  style={styles.input}
+                  value={tags}
+                  onChangeText={setTags}
+                  placeholder="comma, separated, tags"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>SEO Description</Text>
+              <TextInput
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                value={seoDescription}
+                onChangeText={setSeoDescription}
+                placeholder="SEO Description (defaults to Excerpt)"
+                multiline
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Content ({editorTab === 'html' ? 'HTML' : 'Markdown'})</Text>
+                <View style={styles.toolbar}>
+                  <Pressable 
+                    style={[styles.toolbarBtn, editorTab === 'markdown' && styles.toolbarBtnActive]} 
+                    onPress={() => {
+                      if (editorTab === 'html') {
+                        const converted = htmlToMarkdown(contentForm);
+                        setContentForm(converted);
+                      }
+                      setEditorTab('markdown');
+                    }}
+                  >
+                    <Text style={[styles.toolbarBtnText, editorTab === 'markdown' && styles.toolbarBtnTextActive]}>Markdown</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.toolbarBtn, editorTab === 'html' && styles.toolbarBtnActive]} 
+                    onPress={() => {
+                      if (editorTab === 'markdown') {
+                        const converted = markdownToHtml(contentForm);
+                        setContentForm(converted);
+                      }
+                      setEditorTab('html');
+                    }}
+                  >
+                    <Text style={[styles.toolbarBtnText, editorTab === 'html' && styles.toolbarBtnTextActive]}>HTML</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.toolbarBtn, editorTab === 'preview' && styles.toolbarBtnActive]} 
+                    onPress={() => setEditorTab('preview')}
+                  >
+                    <Text style={[styles.toolbarBtnText, editorTab === 'preview' && styles.toolbarBtnTextActive]}>Preview</Text>
+                  </Pressable>
+                  {editorTab === 'markdown' && (
+                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
+                      <Bold size={16} color="#4B5563" />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+              {editorTab === 'preview' ? (
+                <View style={[styles.input, { height: 1000, overflow: 'hidden' }]}>
+                  <ScrollView style={{ flex: 1 }}>
+                    {Platform.OS === 'web' && contentForm.trim().startsWith('<') ? (
+                      <>
+                        <style dangerouslySetInnerHTML={{ __html: `
+                          .html-preview-content p { margin-bottom: 16px; font-size: 15px; color: #4B5563; line-height: 26px; }
+                          .html-preview-content h1 { font-size: 24px; font-weight: 800; color: #111827; margin-top: 24px; margin-bottom: 16px; }
+                          .html-preview-content h2 { font-size: 20px; font-weight: 700; color: #111827; margin-top: 20px; margin-bottom: 12px; }
+                          .html-preview-content h3 { font-size: 18px; font-weight: 600; color: #111827; margin-top: 16px; margin-bottom: 8px; }
+                          .html-preview-content strong { font-weight: 700; color: #111827; }
+                          .html-preview-content ul { margin-bottom: 16px; padding-left: 20px; }
+                          .html-preview-content li { margin-bottom: 8px; font-size: 15px; color: #4B5563; }
+                          .html-preview-content a { color: #10B981; text-decoration: underline; }
+                          .html-preview-content table { border-collapse: collapse; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 24px; margin-top: 12px; }
+                          .html-preview-content th { background-color: #F9FAFB; font-weight: 700; color: #111827; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+                          .html-preview-content td { color: #4B5563; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; }
+                        `}} />
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: contentForm }} 
+                          className="html-preview-content"
+                          style={{ padding: '10px' }}
+                        />
+                      </>
+                    ) : (
+                      <Markdown style={markdownStyles}>
+                        {contentForm || '*Nothing to preview*'}
+                      </Markdown>
+                    )}
+                  </ScrollView>
+                </View>
+              ) : editorTab === 'html' ? (
+                <TextInput
+                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  value={contentForm}
+                  onChangeText={setContentForm}
+                  placeholder="Write your content here using HTML..."
+                  multiline
+                />
+              ) : (
+                <TextInput
+                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  value={contentForm}
+                  onChangeText={setContentForm}
+                  onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                  placeholder="Write your content here using markdown..."
+                  multiline
+                />
+              )}
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Author</Text>
+                <TextInput
+                  style={styles.input}
+                  value={author}
+                  onChangeText={setAuthor}
+                  placeholder="e.g. Admin"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Read Time</Text>
+                <TextInput
+                  style={styles.input}
+                  value={readTime}
+                  onChangeText={setReadTime}
+                  placeholder="e.g. 5 min read"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Image URL</Text>
+              <View style={styles.imageInputRow}>
+                <View style={styles.imageInputWrapper}>
+                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
+                  <TextInput
+                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
+                    value={imageUrl}
+                    onChangeText={setImageUrl}
+                    placeholder="https://..."
+                  />
+                </View>
+                <Pressable style={styles.uploadBtn} onPress={pickImage}>
+                  <Upload size={18} color="#4B5563" />
+                  <Text style={styles.uploadBtnText}>Upload</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.publishRow}>
+              <View>
+                <Text style={styles.label}>Publish Status</Text>
+                <Text style={styles.helperText}>Published posts are visible to the public</Text>
+              </View>
+              <Switch 
+                value={isPublished}
+                onValueChange={setIsPublished}
+                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
+              />
             </View>
           </View>
         </View>
