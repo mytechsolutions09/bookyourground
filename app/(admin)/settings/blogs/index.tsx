@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, Platform, Image } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit3, Trash2, Globe, Lock } from 'lucide-react-native';
@@ -13,6 +13,8 @@ interface Blog {
   slug: string;
   is_published: boolean;
   created_at: string;
+  image_url?: string;
+  excerpt?: string;
 }
 
 export default function AdminBlogsList() {
@@ -28,7 +30,7 @@ export default function AdminBlogsList() {
       setLoading(true);
       const { data, error } = await supabase
         .from('blogs')
-        .select('id, title, slug, is_published, created_at')
+        .select('id, title, slug, is_published, created_at, image_url, excerpt')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -96,7 +98,7 @@ export default function AdminBlogsList() {
         ) : (
           <View style={styles.table}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, { flex: 2 }]}>Title</Text>
+              <Text style={[styles.th, { flex: 2 }]}>Post Details</Text>
               <Text style={[styles.th, { flex: 1 }]}>Status</Text>
               <Text style={[styles.th, { flex: 1 }]}>Date</Text>
               <Text style={[styles.th, { width: 100, textAlign: 'right' }]}>Actions</Text>
@@ -104,9 +106,21 @@ export default function AdminBlogsList() {
 
             {blogs.map(blog => (
               <View key={blog.id} style={styles.tableRow}>
-                <View style={[styles.td, { flex: 2 }]}>
-                  <Text style={styles.blogTitle}>{blog.title}</Text>
-                  <Text style={styles.blogSlug}>/{blog.slug}</Text>
+                <View style={[styles.td, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+                  {blog.image_url ? (
+                    <Image source={{ uri: blog.image_url }} style={styles.thumbnail} />
+                  ) : (
+                    <View style={styles.thumbnailPlaceholder}>
+                      <Globe size={18} color="#9CA3AF" />
+                    </View>
+                  )}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.blogTitle} numberOfLines={1}>{blog.title}</Text>
+                    <Text style={styles.blogSlug}>/{blog.slug}</Text>
+                    {blog.excerpt ? (
+                      <Text style={styles.blogExcerpt} numberOfLines={2}>{blog.excerpt}</Text>
+                    ) : null}
+                  </View>
                 </View>
                 <View style={[styles.td, { flex: 1 }]}>
                   <View style={[styles.statusBadge, blog.is_published ? styles.statusPublished : styles.statusDraft]}>
@@ -282,5 +296,26 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12.5,
     color: '#4B5563',
+  },
+  thumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  thumbnailPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  blogExcerpt: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
   },
 });

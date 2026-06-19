@@ -847,6 +847,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
+                alt="BookYourGround Logo"
+                accessibilityLabel="BookYourGround Logo"
               />
             </TouchableOpacity>
 
@@ -1129,6 +1131,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
+                alt="BookYourGround Logo"
+                accessibilityLabel="BookYourGround Logo"
               />
             </TouchableOpacity>
 
@@ -1267,6 +1271,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                     style={styles.logoImage}
                     resizeMode="contain"
+                    alt="BookYourGround Logo"
+                    accessibilityLabel="BookYourGround Logo"
                   />
                 </TouchableOpacity>
               )}

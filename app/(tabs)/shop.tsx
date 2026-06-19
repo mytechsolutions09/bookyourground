@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Head from 'expo-router/head';
 import { slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
@@ -396,6 +397,8 @@ export default function ShopScreen() {
           <Image
             source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }}
             style={styles.productImage}
+            alt={product.name || "Product Image"}
+            accessibilityLabel={product.name || "Product Image"}
           />
           {product.tag && (
             <View style={styles.tagBadge}>
@@ -450,6 +453,8 @@ export default function ShopScreen() {
         <Image
           source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')}
           style={styles.heroImageBg}
+          alt={activeCategory === 'Shoes' ? "Performance Footwear Shop Hero" : "SG Cricket Balls Shop Hero"}
+          accessibilityLabel={activeCategory === 'Shoes' ? "Performance Footwear Shop Hero" : "SG Cricket Balls Shop Hero"}
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
@@ -797,28 +802,75 @@ export default function ShopScreen() {
   );
 
   if (Platform.OS === 'web') {
+    const schemaMarkup = {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "Sports Shop - BookYourGround",
+      "description": "Discover professional cricket bats, balls, footwear, and protective gear at BookYourGround Shop.",
+      "url": "https://bookyourground.com/shop",
+      "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": filteredProducts.slice(0, 10).map((product, idx) => ({
+          "@type": "ListItem",
+          "position": idx + 1,
+          "url": `https://bookyourground.com/shop/${slugify(product.name)}`,
+          "name": product.name,
+          "image": product.images?.[0] || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"
+        }))
+      }
+    };
+
     return (
-      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
-        <View style={styles.screen}>
-          {isSmall && (
-            <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
-              <TouchableOpacity
-                style={styles.cartIcon}
-                onPress={() => router.push('/shop/cart')}
-              >
-                <ShoppingCart size={22} color="#ff3564" strokeWidth={2} />
-                {cartCount > 0 && (
-                  <View style={styles.cartBadge}>
-                    <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-          {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
-        </View>
-        {renderFilterModal()}
-      </WebLayout>
+      <>
+        <Head>
+          <title>Sports Shop - Buy Quality Cricket Gear & Equipment | BookYourGround</title>
+          <meta name="description" content="Discover professional cricket bats, balls, footwear, and protective gear at BookYourGround Shop. Gear up for your next big match today." />
+          <meta name="keywords" content="cricket shop, cricket gear, buy cricket bats, sports equipment, cricket spikes, BookYourGround" />
+          <link rel="canonical" href="https://bookyourground.com/shop" />
+          <meta name="robots" content="index, follow" />
+
+          {/* Open Graph / Facebook */}
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="https://bookyourground.com/shop" />
+          <meta property="og:title" content="Sports Shop - Buy Quality Cricket Gear & Equipment | BookYourGround" />
+          <meta property="og:description" content="Discover professional cricket bats, balls, footwear, and protective gear at BookYourGround Shop. Gear up for your next big match today." />
+          <meta property="og:image" content={featuredProduct?.images?.[0] || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+          <meta property="og:site_name" content="BookYourGround" />
+
+          {/* Twitter */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:url" content="https://bookyourground.com/shop" />
+          <meta name="twitter:title" content="Sports Shop - Buy Quality Cricket Gear & Equipment | BookYourGround" />
+          <meta name="twitter:description" content="Discover professional cricket bats, balls, footwear, and protective gear at BookYourGround Shop. Gear up for your next big match today." />
+          <meta name="twitter:image" content={featuredProduct?.images?.[0] || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+          />
+        </Head>
+        <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+          <View style={styles.screen}>
+            {isSmall && (
+              <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
+                <TouchableOpacity
+                  style={styles.cartIcon}
+                  onPress={() => router.push('/shop/cart')}
+                >
+                  <ShoppingCart size={22} color="#ff3564" strokeWidth={2} />
+                  {cartCount > 0 && (
+                    <View style={styles.cartBadge}>
+                      <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+            {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
+          </View>
+          {renderFilterModal()}
+        </WebLayout>
+      </>
     );
   }
 

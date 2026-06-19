@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import { ChevronLeft } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import { supabase } from '@/lib/supabase';
 import Head from 'expo-router/head';
+
+const isHtmlContent = (content?: string): boolean => {
+  if (!content) return false;
+  const clean = content.replace(/^\ufeff/g, '').trim(); // Remove BOM and trim whitespace
+  return clean.startsWith('<') || clean.includes('<p>') || clean.includes('<h2>') || clean.includes('<!--');
+};
 
 interface Blog {
   id: string;
@@ -170,9 +176,31 @@ export default function DynamicBlogPage() {
               />
             ) : null}
 
-            <Markdown style={markdownStyles}>
-              {blog.content || ''}
-            </Markdown>
+            {isHtmlContent(blog.content) && Platform.OS === 'web' ? (
+              <>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  .html-blog-content p { margin-bottom: 16px; font-size: 16px; color: #4B5563; line-height: 28px; }
+                  .html-blog-content h1 { font-size: 28px; font-weight: 800; color: #111827; margin-top: 24px; margin-bottom: 16px; }
+                  .html-blog-content h2 { font-size: 24px; font-weight: 700; color: #111827; margin-top: 20px; margin-bottom: 12px; }
+                  .html-blog-content h3 { font-size: 20px; font-weight: 600; color: #111827; margin-top: 16px; margin-bottom: 8px; }
+                  .html-blog-content strong { font-weight: 700; color: #111827; }
+                  .html-blog-content ul { margin-bottom: 16px; padding-left: 20px; }
+                  .html-blog-content li { margin-bottom: 8px; font-size: 16px; color: #4B5563; }
+                  .html-blog-content a { color: #0D9488; text-decoration: underline; }
+                  .html-blog-content table { border-collapse: collapse; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 24px; margin-top: 12px; }
+                  .html-blog-content th { background-color: #F9FAFB; font-weight: 700; color: #111827; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+                  .html-blog-content td { color: #4B5563; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; }
+                `}} />
+                <div 
+                  dangerouslySetInnerHTML={{ __html: blog.content }} 
+                  className="html-blog-content"
+                />
+              </>
+            ) : (
+              <Markdown style={markdownStyles}>
+                {blog.content || ''}
+              </Markdown>
+            )}
           </View>
 
           <View style={styles.footer}>
