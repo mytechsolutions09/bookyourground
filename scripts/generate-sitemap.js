@@ -23,6 +23,17 @@ function slugifyGroundSegment(value) {
     .replace(/-+$/, '');
 }
 
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')     // Replace spaces with -
+    .replace(/[^\w-]+/g, '')  // Remove all non-word chars
+    .replace(/--+/g, '-');    // Replace multiple - with single -
+}
+
 async function generateSitemap() {
   try {
     console.log('Fetching active grounds from Supabase...');
@@ -55,6 +66,15 @@ async function generateSitemap() {
       '/refund-policy',
       '/blog',
       '/shop',
+      '/corporate',
+      '/cricket-grounds',
+      '/football-grounds',
+      '/how-it-works',
+      '/list-your-venue',
+      '/match-strategies',
+      '/pricing',
+      '/book-cricket-ground-in-delhi',
+      '/book-cricket-ground-in-gurugram',
     ];
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -84,6 +104,59 @@ async function generateSitemap() {
         xml += `    <priority>0.9</priority>\n`;
         xml += `  </url>\n`;
       }
+    }
+
+    // Add dynamic blog routes
+    try {
+      console.log('Fetching active blogs from Supabase...');
+      const { data: blogs, error: blogError } = await supabase
+        .from('blogs')
+        .select('slug')
+        .eq('is_published', true);
+      
+      if (blogError) {
+        console.warn('Error fetching blogs from Supabase. Skipping blog routes:', blogError);
+      } else if (blogs && blogs.length > 0) {
+        for (const blog of blogs) {
+          if (!blog.slug) continue;
+          const route = `/blog/${blog.slug}`;
+          
+          xml += `  <url>\n`;
+          xml += `    <loc>${SITE_URL}${route}</loc>\n`;
+          xml += `    <lastmod>${date}</lastmod>\n`;
+          xml += `    <changefreq>weekly</changefreq>\n`;
+          xml += `    <priority>0.8</priority>\n`;
+          xml += `  </url>\n`;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process blog routes for sitemap:', err);
+    }
+
+    // Add dynamic product routes
+    try {
+      console.log('Fetching products from Supabase...');
+      const { data: products, error: productError } = await supabase
+        .from('shop_products')
+        .select('name');
+      
+      if (productError) {
+        console.warn('Error fetching products from Supabase. Skipping product routes:', productError);
+      } else if (products && products.length > 0) {
+        for (const product of products) {
+          if (!product.name) continue;
+          const route = `/shop/${slugify(product.name)}`;
+          
+          xml += `  <url>\n`;
+          xml += `    <loc>${SITE_URL}${route}</loc>\n`;
+          xml += `    <lastmod>${date}</lastmod>\n`;
+          xml += `    <changefreq>weekly</changefreq>\n`;
+          xml += `    <priority>0.8</priority>\n`;
+          xml += `  </url>\n`;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process product routes for sitemap:', err);
     }
 
     xml += `</urlset>`;
