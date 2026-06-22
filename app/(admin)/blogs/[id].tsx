@@ -7,7 +7,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as ImagePicker from 'expo-image-picker';
 import Markdown from 'react-native-markdown-display';
 import WebLayout from '@/components/web/WebLayout';
-import SettingsSubbar from '@/components/admin/SettingsSubbar';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
@@ -1037,18 +1036,14 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
     if (Platform.OS === 'web') {
       return (
         <WebLayout noCard>
-          <SettingsSubbar>
-            {loader}
-          </SettingsSubbar>
+          {loader}
         </WebLayout>
       );
     }
     return (
-      <SettingsSubbar>
-        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-          {loader}
-        </View>
-      </SettingsSubbar>
+      <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+        {loader}
+      </View>
     );
   }
 
@@ -1104,7 +1099,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
             <View style={styles.formGroup}>
               <Text style={styles.label}>Excerpt</Text>
               <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                style={[styles.input, { height: 50, textAlignVertical: 'top' }]}
                 value={excerpt}
                 onChangeText={setExcerpt}
                 placeholder="Short description for SEO and previews"
@@ -1112,44 +1107,125 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
               />
             </View>
 
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>SEO Title</Text>
+                <TextInput
+                  style={styles.input}
+                  value={seoTitle}
+                  onChangeText={setSeoTitle}
+                  placeholder="SEO Title (defaults to Title)"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Tags</Text>
+                <TextInput
+                  style={styles.input}
+                  value={tags}
+                  onChangeText={setTags}
+                  placeholder="comma, separated, tags"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>SEO Description</Text>
+              <TextInput
+                style={[styles.input, { height: 50, textAlignVertical: 'top' }]}
+                value={seoDescription}
+                onChangeText={setSeoDescription}
+                placeholder="SEO Description (defaults to Excerpt)"
+                multiline
+              />
+            </View>
+
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Content (Markdown)</Text>
+                <Text style={styles.label}>Content ({editorTab === 'html' ? 'HTML' : 'Markdown'})</Text>
                 <View style={styles.toolbar}>
                   <Pressable 
-                    style={[styles.toolbarBtn, !showPreview && styles.toolbarBtnActive]} 
-                    onPress={() => setShowPreview(false)}
+                    style={[styles.toolbarBtn, editorTab === 'markdown' && styles.toolbarBtnActive]} 
+                    onPress={() => {
+                      if (editorTab === 'html') {
+                        const converted = htmlToMarkdown(contentForm);
+                        setContentForm(converted);
+                      }
+                      setEditorTab('markdown');
+                    }}
                   >
-                    <Text style={[styles.toolbarBtnText, !showPreview && styles.toolbarBtnTextActive]}>Code</Text>
+                    <Text style={[styles.toolbarBtnText, editorTab === 'markdown' && styles.toolbarBtnTextActive]}>Markdown</Text>
                   </Pressable>
                   <Pressable 
-                    style={[styles.toolbarBtn, showPreview && styles.toolbarBtnActive]} 
-                    onPress={() => setShowPreview(true)}
+                    style={[styles.toolbarBtn, editorTab === 'html' && styles.toolbarBtnActive]} 
+                    onPress={() => {
+                      if (editorTab === 'markdown') {
+                        const converted = markdownToHtml(contentForm);
+                        setContentForm(converted);
+                      }
+                      setEditorTab('html');
+                    }}
                   >
-                    <Text style={[styles.toolbarBtnText, showPreview && styles.toolbarBtnTextActive]}>Preview</Text>
+                    <Text style={[styles.toolbarBtnText, editorTab === 'html' && styles.toolbarBtnTextActive]}>HTML</Text>
                   </Pressable>
-                  {!showPreview && (
+                  <Pressable 
+                    style={[styles.toolbarBtn, editorTab === 'preview' && styles.toolbarBtnActive]} 
+                    onPress={() => setEditorTab('preview')}
+                  >
+                    <Text style={[styles.toolbarBtnText, editorTab === 'preview' && styles.toolbarBtnTextActive]}>Preview</Text>
+                  </Pressable>
+                  {editorTab === 'markdown' && (
                     <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
                       <Bold size={16} color="#4B5563" />
                     </Pressable>
                   )}
                 </View>
               </View>
-              {showPreview ? (
+              {editorTab === 'preview' ? (
                 <View style={[styles.input, { height: 300, overflow: 'hidden' }]}>
                   <ScrollView style={{ flex: 1 }}>
-                    <Markdown style={markdownStyles}>
-                      {contentForm || '*Nothing to preview*'}
-                    </Markdown>
+                    {isHtmlContent(contentForm) && Platform.OS === 'web' ? (
+                      <>
+                        <style dangerouslySetInnerHTML={{ __html: `
+                          .html-preview-content p { margin-bottom: 16px; font-size: 15px; color: #4B5563; line-height: 26px; }
+                          .html-preview-content h1 { font-size: 24px; font-weight: 800; color: #111827; margin-top: 24px; margin-bottom: 16px; }
+                          .html-preview-content h2 { font-size: 20px; font-weight: 700; color: #111827; margin-top: 20px; margin-bottom: 12px; }
+                          .html-preview-content h3 { font-size: 18px; font-weight: 600; color: #111827; margin-top: 16px; margin-bottom: 8px; }
+                          .html-preview-content strong { font-weight: 700; color: #111827; }
+                          .html-preview-content ul { margin-bottom: 16px; padding-left: 20px; }
+                          .html-preview-content li { margin-bottom: 8px; font-size: 15px; color: #4B5563; }
+                          .html-preview-content a { color: #10B981; text-decoration: underline; }
+                          .html-preview-content table { border-collapse: collapse; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 24px; margin-top: 12px; }
+                          .html-preview-content th { background-color: #F9FAFB; font-weight: 700; color: #111827; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; text-align: left; }
+                          .html-preview-content td { color: #4B5563; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; }
+                        `}} />
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: contentForm }} 
+                          className="html-preview-content"
+                          style={{ padding: '10px' }}
+                        />
+                      </>
+                    ) : (
+                      <Markdown style={markdownStyles}>
+                        {contentForm || '*Nothing to preview*'}
+                      </Markdown>
+                    )}
                   </ScrollView>
                 </View>
+              ) : editorTab === 'html' ? (
+                <TextInput
+                  style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  value={contentForm}
+                  onChangeText={setContentForm}
+                  placeholder="Write your content here using HTML..."
+                  multiline
+                />
               ) : (
                 <TextInput
                   style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
                   value={contentForm}
                   onChangeText={setContentForm}
                   onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-                  placeholder="Write your content here using Markdown..."
+                  placeholder="Write your content here using markdown..."
                   multiline
                 />
               )}
@@ -1174,38 +1250,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                   placeholder="e.g. 5 min read"
                 />
               </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>SEO Title</Text>
-                <TextInput
-                  style={styles.input}
-                  value={seoTitle}
-                  onChangeText={setSeoTitle}
-                  placeholder="SEO Title (optional)"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Tags</Text>
-                <TextInput
-                  style={styles.input}
-                  value={tags}
-                  onChangeText={setTags}
-                  placeholder="tags (comma separated)"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>SEO Description</Text>
-              <TextInput
-                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
-                value={seoDescription}
-                onChangeText={setSeoDescription}
-                placeholder="SEO Description (optional)"
-                multiline
-              />
             </View>
 
             <View style={styles.formGroup}>
@@ -1519,221 +1563,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
             </View>
           </View>
 
-          {/* Right Column: Blog Composition Fields */}
-          <View style={styles.rightColumn}>
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Title</Text>
-                <TextInput
-                  style={styles.input}
-                  value={title}
-                  onChangeText={(val) => {
-                    setTitle(val);
-                    if (isNew && !slug) {
-                      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
-                    }
-                  }}
-                  placeholder="Post title"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Slug</Text>
-                <TextInput
-                  style={styles.input}
-                  value={slug}
-                  onChangeText={setSlug}
-                  placeholder="url-friendly-slug"
-                />
-              </View>
-            </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Excerpt</Text>
-              <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-                value={excerpt}
-                onChangeText={setExcerpt}
-                placeholder="Short description for SEO and previews"
-                multiline
-              />
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>SEO Title</Text>
-                <TextInput
-                  style={styles.input}
-                  value={seoTitle}
-                  onChangeText={setSeoTitle}
-                  placeholder="SEO Title (defaults to Title)"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Tags</Text>
-                <TextInput
-                  style={styles.input}
-                  value={tags}
-                  onChangeText={setTags}
-                  placeholder="comma, separated, tags"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>SEO Description</Text>
-              <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-                value={seoDescription}
-                onChangeText={setSeoDescription}
-                placeholder="SEO Description (defaults to Excerpt)"
-                multiline
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Content ({editorTab === 'html' ? 'HTML' : 'Markdown'})</Text>
-                <View style={styles.toolbar}>
-                  <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'markdown' && styles.toolbarBtnActive]} 
-                    onPress={() => {
-                      if (editorTab === 'html') {
-                        const converted = htmlToMarkdown(contentForm);
-                        setContentForm(converted);
-                      }
-                      setEditorTab('markdown');
-                    }}
-                  >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'markdown' && styles.toolbarBtnTextActive]}>Markdown</Text>
-                  </Pressable>
-                  <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'html' && styles.toolbarBtnActive]} 
-                    onPress={() => {
-                      if (editorTab === 'markdown') {
-                        const converted = markdownToHtml(contentForm);
-                        setContentForm(converted);
-                      }
-                      setEditorTab('html');
-                    }}
-                  >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'html' && styles.toolbarBtnTextActive]}>HTML</Text>
-                  </Pressable>
-                  <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'preview' && styles.toolbarBtnActive]} 
-                    onPress={() => setEditorTab('preview')}
-                  >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'preview' && styles.toolbarBtnTextActive]}>Preview</Text>
-                  </Pressable>
-                  {editorTab === 'markdown' && (
-                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
-                      <Bold size={16} color="#4B5563" />
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-              {editorTab === 'preview' ? (
-                <View style={[styles.input, { height: 1000, overflow: 'hidden' }]}>
-                  <ScrollView style={{ flex: 1 }}>
-                    {isHtmlContent(contentForm) && Platform.OS === 'web' ? (
-                      <>
-                        <style dangerouslySetInnerHTML={{ __html: `
-                          .html-preview-content p { margin-bottom: 16px; font-size: 15px; color: #4B5563; line-height: 26px; }
-                          .html-preview-content h1 { font-size: 24px; font-weight: 800; color: #111827; margin-top: 24px; margin-bottom: 16px; }
-                          .html-preview-content h2 { font-size: 20px; font-weight: 700; color: #111827; margin-top: 20px; margin-bottom: 12px; }
-                          .html-preview-content h3 { font-size: 18px; font-weight: 600; color: #111827; margin-top: 16px; margin-bottom: 8px; }
-                          .html-preview-content strong { font-weight: 700; color: #111827; }
-                          .html-preview-content ul { margin-bottom: 16px; padding-left: 20px; }
-                          .html-preview-content li { margin-bottom: 8px; font-size: 15px; color: #4B5563; }
-                          .html-preview-content a { color: #10B981; text-decoration: underline; }
-                          .html-preview-content table { border-collapse: collapse; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 24px; margin-top: 12px; }
-                          .html-preview-content th { background-color: #F9FAFB; font-weight: 700; color: #111827; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; text-align: left; }
-                          .html-preview-content td { color: #4B5563; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; }
-                        `}} />
-                        <div 
-                          dangerouslySetInnerHTML={{ __html: contentForm }} 
-                          className="html-preview-content"
-                          style={{ padding: '10px' }}
-                        />
-                      </>
-                    ) : (
-                      <Markdown style={markdownStyles}>
-                        {contentForm || '*Nothing to preview*'}
-                      </Markdown>
-                    )}
-                  </ScrollView>
-                </View>
-              ) : editorTab === 'html' ? (
-                <TextInput
-                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-                  value={contentForm}
-                  onChangeText={setContentForm}
-                  placeholder="Write your content here using HTML..."
-                  multiline
-                />
-              ) : (
-                <TextInput
-                  style={[styles.input, { height: 1000, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-                  value={contentForm}
-                  onChangeText={setContentForm}
-                  onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-                  placeholder="Write your content here using markdown..."
-                  multiline
-                />
-              )}
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Author</Text>
-                <TextInput
-                  style={styles.input}
-                  value={author}
-                  onChangeText={setAuthor}
-                  placeholder="e.g. Admin"
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Read Time</Text>
-                <TextInput
-                  style={styles.input}
-                  value={readTime}
-                  onChangeText={setReadTime}
-                  placeholder="e.g. 5 min read"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Image URL</Text>
-              <View style={styles.imageInputRow}>
-                <View style={styles.imageInputWrapper}>
-                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
-                  <TextInput
-                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
-                    value={imageUrl}
-                    onChangeText={setImageUrl}
-                    placeholder="https://..."
-                  />
-                </View>
-                <Pressable style={styles.uploadBtn} onPress={pickImage}>
-                  <Upload size={18} color="#4B5563" />
-                  <Text style={styles.uploadBtnText}>Upload</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.publishRow}>
-              <View>
-                <Text style={styles.label}>Publish Status</Text>
-                <Text style={styles.helperText}>Published posts are visible to the public</Text>
-              </View>
-              <Switch 
-                value={isPublished}
-                onValueChange={setIsPublished}
-                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
-              />
-            </View>
-          </View>
         </View>
         
         <View style={{ height: 100 }} />
@@ -1744,110 +1574,106 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
   if (Platform.OS === 'web') {
     return (
       <WebLayout noCard>
-        <SettingsSubbar>
-          {content}
-        </SettingsSubbar>
+        {content}
       </WebLayout>
     );
   }
 
   return (
-    <SettingsSubbar>
-      <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-        {content}
-      </View>
-    </SettingsSubbar>
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      {content}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  backBtn: { padding: 8, borderRadius: 8, backgroundColor: '#F3F4F6' },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 8 },
-  saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  content: { paddingVertical: 24, paddingHorizontal: 0, width: '100%' },
-  splitLayout: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 24, width: '100%' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  backBtn: { padding: 6, borderRadius: 8, backgroundColor: '#F3F4F6' },
+  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  saveBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10b981', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, gap: 6 },
+  saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
+  content: { paddingVertical: 8, paddingHorizontal: 0, width: '100%' },
+  splitLayout: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 12, width: '100%' },
   leftColumn: { flex: Platform.OS === 'web' ? 1.3 : undefined, minWidth: Platform.OS === 'web' ? 500 : '100%' },
   rightColumn: { flex: Platform.OS === 'web' ? 1 : undefined, minWidth: Platform.OS === 'web' ? 420 : '100%' },
   
-  aiSection: { backgroundColor: '#F3E8FF', padding: 24, borderRadius: 12, marginBottom: 32, borderWidth: 1, borderColor: '#E9D5FF' },
-  yoastSection: { backgroundColor: '#FFFFFF', padding: 24, borderRadius: 12, marginBottom: 32, borderLeftWidth: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
-  yoastHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12 },
+  aiSection: { backgroundColor: '#F3E8FF', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#E9D5FF' },
+  yoastSection: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  yoastHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 6 },
   trafficLight: { width: 14, height: 14, borderRadius: 7 },
-  yoastTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  yoastBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  yoastBadgeText: { fontSize: 12, fontWeight: '700' },
-  analysisList: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16 },
-  analysisTitle: { fontSize: 15, fontWeight: '700', color: '#374151' },
-  yoastAiBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, gap: 6 },
-  yoastAiBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  checkItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
-  bullet: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
+  yoastTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  yoastBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  yoastBadgeText: { fontSize: 11, fontWeight: '700' },
+  analysisList: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  analysisTitle: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  yoastAiBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, gap: 4 },
+  yoastAiBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  checkItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  bullet: { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
   checkLabel: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
-  checkDesc: { fontSize: 12, color: '#4B5563', marginTop: 2 },
-  cornerstoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F8FF', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF', marginBottom: 16 },
-  cornerstoneLabel: { fontSize: 14, fontWeight: '700', color: '#6B21A8' },
-  cornerstoneDesc: { fontSize: 12, color: '#7E22CE', marginTop: 4, paddingRight: 12 },
-  yoastTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', gap: 16, marginBottom: 16 },
-  yoastTabBtn: { paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  checkDesc: { fontSize: 12, color: '#4B5563', marginTop: 1 },
+  cornerstoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F8FF', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF', marginBottom: 8 },
+  cornerstoneLabel: { fontSize: 13, fontWeight: '700', color: '#6B21A8' },
+  cornerstoneDesc: { fontSize: 12, color: '#7E22CE', marginTop: 2, paddingRight: 12 },
+  yoastTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', gap: 12, marginBottom: 8 },
+  yoastTabBtn: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   yoastTabBtnActive: { borderBottomColor: '#10B981' },
-  yoastTabBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  yoastTabBtnText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   yoastTabBtnTextActive: { color: '#10B981' },
-  previewContainer: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 16, marginTop: 12 },
-  previewControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 8 },
-  previewTitle: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  previewContainer: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginTop: 12 },
+  previewControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 6 },
+  previewTitle: { fontSize: 13, fontWeight: '700', color: '#374151' },
   deviceRow: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 6, padding: 2, gap: 2 },
-  deviceBtn: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 },
+  deviceBtn: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 4 },
   deviceBtnActive: { backgroundColor: '#FFFFFF' },
-  deviceBtnText: { fontSize: 11, fontWeight: '600', color: '#4B5563' },
+  deviceBtnText: { fontSize: 10, fontWeight: '600', color: '#4B5563' },
   deviceBtnTextActive: { color: '#111827' },
-  googleMobileCard: { backgroundColor: '#FFFFFF', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  googleMobileMeta: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
+  googleMobileCard: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  googleMobileMeta: { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 6 },
   googleMobileFavicon: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  googleFaviconText: { fontSize: 12 },
+  googleFaviconText: { fontSize: 11 },
   googleSiteName: { fontSize: 11, fontWeight: '700', color: '#202124' },
   googleMobileUrl: { fontSize: 10, color: '#4d5156' },
-  googleMobileTitle: { fontSize: 17, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
-  googleMobileDesc: { fontSize: 12, color: '#4d5156', lineHeight: 18 },
-  googleDesktopCard: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  googleDesktopUrl: { fontSize: 12, color: '#202124', marginBottom: 4 },
-  googleDesktopTitle: { fontSize: 20, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
-  googleDesktopDesc: { fontSize: 14, color: '#4d5156', lineHeight: 22 },
+  googleMobileTitle: { fontSize: 16, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
+  googleMobileDesc: { fontSize: 12, color: '#4d5156', lineHeight: 16 },
+  googleDesktopCard: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  googleDesktopUrl: { fontSize: 11, color: '#202124', marginBottom: 4 },
+  googleDesktopTitle: { fontSize: 18, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
+  googleDesktopDesc: { fontSize: 13, color: '#4d5156', lineHeight: 20 },
   facebookCard: { backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#DDD' },
-  facebookImgMock: { width: '100%', height: 200, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  facebookMeta: { padding: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', backgroundColor: '#F2F3F5' },
-  facebookSiteName: { fontSize: 11, color: '#606770', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  facebookTitle: { fontSize: 14, fontWeight: '700', color: '#1d2129', marginBottom: 4 },
-  facebookDesc: { fontSize: 12, color: '#606770', lineHeight: 16 },
-  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  aiTitle: { fontSize: 18, fontWeight: '700', color: '#6B21A8' },
-  aiDesc: { fontSize: 14, color: '#7E22CE', marginBottom: 16 },
-  aiInputRow: { flexDirection: 'row', gap: 12 },
-  aiInput: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8B4FE', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: '#4C1D95' },
-  aiBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 24, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  aiBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 15 },
+  facebookImgMock: { width: '100%', height: 160, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  facebookMeta: { padding: 10, borderTopWidth: 1, borderTopColor: '#F0F0F0', backgroundColor: '#F2F3F5' },
+  facebookSiteName: { fontSize: 10, color: '#606770', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  facebookTitle: { fontSize: 13, fontWeight: '700', color: '#1d2129', marginBottom: 4 },
+  facebookDesc: { fontSize: 11, color: '#606770', lineHeight: 14 },
+  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  aiTitle: { fontSize: 14, fontWeight: '700', color: '#6B21A8' },
+  aiDesc: { fontSize: 12, color: '#7E22CE', marginBottom: 8 },
+  aiInputRow: { flexDirection: 'row', gap: 10 },
+  aiInput: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8B4FE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13, color: '#4C1D95' },
+  aiBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  aiBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
   
-  formRow: { flexDirection: 'row', gap: 24 },
-  formGroup: { marginBottom: 24 },
+  formRow: { flexDirection: 'row', gap: 16 },
+  formGroup: { marginBottom: 10 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  toolbar: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  toolbar: { flexDirection: 'row', gap: 6, marginBottom: 6 },
   toolbarBtn: { padding: 4, borderRadius: 4, backgroundColor: '#F3F4F6' },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
-  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: '#111827' },
+  label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 3 },
+  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13, color: '#111827' },
   toolbarBtnActive: { backgroundColor: '#E5E7EB' },
-  toolbarBtnText: { fontSize: 13, color: '#4B5563', fontWeight: '500' },
+  toolbarBtnText: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
   toolbarBtnTextActive: { color: '#111827', fontWeight: '600' },
   
-  imageInputRow: { flexDirection: 'row', gap: 12 },
+  imageInputRow: { flexDirection: 'row', gap: 10 },
   imageInputWrapper: { flex: 1, position: 'relative', justifyContent: 'center' },
   imageIcon: { position: 'absolute', left: 12, zIndex: 1 },
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, gap: 8, borderWidth: 1, borderColor: '#D1D5DB' },
-  uploadBtnText: { color: '#4B5563', fontWeight: '600', fontSize: 14 },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 4, borderWidth: 1, borderColor: '#D1D5DB' },
+  uploadBtnText: { color: '#4B5563', fontWeight: '600', fontSize: 13 },
   
-  publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginTop: 12 },
-  helperText: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginTop: 8 },
+  helperText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
 });
 
 const markdownStyles = {

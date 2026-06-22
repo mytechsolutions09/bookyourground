@@ -58,6 +58,7 @@ import {
   Info,
   PanelLeftClose,
   PanelLeftOpen,
+  FileText,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/contexts/AuthContext';
@@ -251,7 +252,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     }
   }, [startX]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultSidebarOpen !== undefined ? !defaultSidebarOpen : false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const isInitialAdmin = segments.includes('(admin)') || (pathname || '').startsWith('/cricketdata') || (pathname || '').startsWith('/(admin)/cricketdata') || (pathname || '').includes('/blogs');
+    return isInitialAdmin ? true : (defaultSidebarOpen !== undefined ? !defaultSidebarOpen : false);
+  });
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);
@@ -669,6 +673,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
     cleanPath.startsWith('/(admin)/') ||
+    cleanPath.startsWith('/blogs') ||
     cleanPath.startsWith('/settings/') ||
     cleanPath === '/add-ground' ||
     cleanPath === '/(owner)/add-ground' ||
@@ -761,7 +766,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         '/orders', '/(admin)/orders', '/returns', '/(admin)/returns',
         '/categories', '/(admin)/categories'
       ];
-      const isSettings = cleanPath.includes('/settings');
+      const isSettings = cleanPath.includes('/settings') || cleanPath.startsWith('/blogs');
       return cleanPath.startsWith('/cricketdata') || isSettings || adminRoutes.includes(cleanPath);
     }
     
@@ -777,6 +782,13 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   };
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;
+  
+  useEffect(() => {
+    if (isAdminLayout) {
+      setSidebarCollapsed(true);
+    }
+  }, [isAdminLayout]);
+
   const bodyStyle = (isPublicNoSidebar || isCompact) ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
   const showHeroHeader =
     isLanding ||
@@ -1375,6 +1387,12 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           icon={LifeBuoy}
                           label="Support Tickets"
                           badge={superAdminBadges.tickets || undefined}
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/blogs"
+                          icon={FileText}
+                          label="Blogs"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink

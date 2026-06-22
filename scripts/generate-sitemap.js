@@ -159,6 +159,40 @@ async function generateSitemap() {
       console.error('Failed to process product routes for sitemap:', err);
     }
 
+    // Add custom sitemap URLs from sitemap_urls table
+    try {
+      console.log('Fetching custom sitemap URLs from Supabase...');
+      const { data: customUrls, error: customError } = await supabase
+        .from('sitemap_urls')
+        .select('url, priority, changefreq');
+      
+      if (customError) {
+        console.warn('Error fetching custom sitemap URLs from Supabase. Skipping custom routes:', customError.message);
+      } else if (customUrls && customUrls.length > 0) {
+        for (const item of customUrls) {
+          if (!item.url) continue;
+          
+          // Ensure it starts with /
+          let route = item.url.trim();
+          if (!route.startsWith('/')) {
+            route = '/' + route;
+          }
+          
+          const priorityVal = item.priority ? Number(item.priority).toFixed(1) : '0.8';
+          const freqVal = item.changefreq || 'weekly';
+          
+          xml += `  <url>\n`;
+          xml += `    <loc>${SITE_URL}${route}</loc>\n`;
+          xml += `    <lastmod>${date}</lastmod>\n`;
+          xml += `    <changefreq>${freqVal}</changefreq>\n`;
+          xml += `    <priority>${priorityVal}</priority>\n`;
+          xml += `  </url>\n`;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process custom sitemap routes:', err);
+    }
+
     xml += `</urlset>`;
 
     const publicDir = path.join(__dirname, '..', 'public');

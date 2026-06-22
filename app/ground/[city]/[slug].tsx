@@ -976,6 +976,46 @@ export default function GroundDetailsPrettyUrlScreen() {
       {ground && (() => {
         const venueImg = ground.ground_images?.[0]?.image_url || 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png';
         const venueDesc = ground.description || `Book ${ground.name} on BookYourGround. Compare slots, pricing, and amenities online.`;
+        
+        const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+        const rawImages = (ground.ground_images ?? []).filter((img) => img.image_url);
+        const sortedImages = [...rawImages].sort((a, b) => {
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          return (a.display_order ?? 0) - (b.display_order ?? 0);
+        });
+        const imageUrls = sortedImages.length
+          ? sortedImages.map((img) => img.image_url)
+          : [fallbackUri];
+
+        const sportsActivityLocationSchema = {
+          "@context": "https://schema.org",
+          "@type": "SportsActivityLocation",
+          "@id": `https://bookyourground.com/ground/${cityParam}/${slugParam}#sports-activity-location`,
+          "name": ground.name,
+          "description": venueDesc,
+          "image": imageUrls,
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": ground.address,
+            "addressLocality": ground.city,
+            "addressRegion": ground.state,
+            "postalCode": ground.pincode,
+            "addressCountry": "IN"
+          },
+          ...(ground.latitude && ground.longitude ? {
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": ground.latitude,
+              "longitude": ground.longitude
+            }
+          } : {}),
+          "url": `https://bookyourground.com/ground/${cityParam}/${slugParam}`,
+          "priceRange": ground.min_price || ground.base_price_per_hour 
+            ? `INR ${ground.min_price || ground.base_price_per_hour}` 
+            : "₹₹"
+        };
+
         return (
           <Head>
             <title>{ground.name} - BookYourGround</title>
@@ -998,6 +1038,11 @@ export default function GroundDetailsPrettyUrlScreen() {
             <meta name="twitter:title" content={`${ground.name} | BookYourGround`} />
             <meta name="twitter:description" content={venueDesc} />
             <meta name="twitter:image" content={venueImg} />
+
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(sportsActivityLocationSchema) }}
+            />
           </Head>
         );
       })()}
