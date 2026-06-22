@@ -64,6 +64,78 @@ function getCachedGroundsForSport(sport: string | undefined) {
   }
 }
 
+const getSportFAQs = (sport: string) => {
+  const normalized = String(sport || 'all').toLowerCase();
+  
+  if (normalized.includes('cricket')) {
+    return [
+      {
+        question: "How can I book cricket grounds near me?",
+        answer: "To book a cricket ground, select the Cricket option on our explore page, browse venues in your city, check slot availability, and book instantly."
+      },
+      {
+        question: "What types of cricket pitches are available?",
+        answer: "Our venues offer various cricket pitch types including professional turf pitches, concrete pitches with mats, and indoor box cricket setups."
+      },
+      {
+        question: "Can I book cricket practice nets?",
+        answer: "Yes, you can filter for practice nets on BookYourGround to book individual batting and bowling lanes, including options with bowling machines."
+      }
+    ];
+  }
+  
+  if (normalized.includes('football')) {
+    return [
+      {
+        question: "How do I book a football turf near me?",
+        answer: "Browse the Football Turfs explore page, select a turf, pick a slot that fits your schedule, and complete the booking securely online."
+      },
+      {
+        question: "What are the common sizes of football turfs available?",
+        answer: "Most football turfs listed support 5-a-side, 7-a-side, or 9-a-side matches. You can check the turf dimensions and capacity in the venue details."
+      }
+    ];
+  }
+  
+  if (normalized.includes('box')) {
+    return [
+      {
+        question: "How do I book box cricket arenas?",
+        answer: "Select Box Cricket on our explore page, pick a venue near you, select the time slot you want to play, and book instantly."
+      },
+      {
+        question: "Is equipment provided at box cricket venues?",
+        answer: "Many box cricket venues offer bat and ball rental. Check the amenities list under the specific ground's detail page."
+      }
+    ];
+  }
+  
+  if (normalized.includes('nets')) {
+    return [
+      {
+        question: "Can I book cricket nets with bowling machines?",
+        answer: "Yes, look for the 'Bowling Machine' amenity tag in the venue features list when booking cricket nets."
+      },
+      {
+        question: "What is the typical slot duration for cricket nets?",
+        answer: "Cricket net practice slots are usually 1 hour long, though you can book multiple consecutive slots if you require more time."
+      }
+    ];
+  }
+
+  // Fallback for multi, all, or others
+  return [
+    {
+      question: "How do I book a sports venue on BookYourGround?",
+      answer: "Select the sport you want to play, view the list of available grounds, choose a time slot, and make a secure online payment to confirm your booking."
+    },
+    {
+      question: "What is included in a ground booking?",
+      answer: "Amenities vary by venue but typically include washrooms, parking, and changing rooms. Some venues also offer premium amenities like floodlights, bibs, and equipment rental."
+    }
+  ];
+};
+
 export default function SportExploreScreen() {
   const { sport = 'cricket' } = useLocalSearchParams<{ sport: string }>();
   const cachedGrounds = React.useMemo(() => {
@@ -147,12 +219,30 @@ export default function SportExploreScreen() {
   const pageTitle = `${SPORT_NAMES[sport as string] || 'Explore Sports Grounds'} | BookYourGround`;
   const pageDescription = `Browse, compare, and book the best ${SPORT_NAMES[sport as string]?.toLowerCase() || 'sports grounds'} near you. Check real-time availability, split pricing, and confirm your slot instantly.`;
 
+  const faqs = getSportFAQs(sport);
+  const faqPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
   return (
     <>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
         <link rel="canonical" href={`https://bookyourground.com/explore/${sport}`} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema) }}
+        />
       </Head>
       <View style={styles.container}>
       {/* Header */}

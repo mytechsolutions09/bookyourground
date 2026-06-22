@@ -63,6 +63,45 @@ export default function IndexScreen() {
   }
 
 
+  const faqPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I book a sports ground on BookYourGround?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "To book a ground, search for your preferred sport (e.g., cricket, football) and city, choose a venue, select an available date and time slot, and securely pay online via UPI, cards, or net banking."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Are the slot availabilities shown real-time?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, all slots shown on BookYourGround are synced in real-time with the venues. When you book a slot, it is instantly locked and confirmed."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I cancel or reschedule my booking?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, you can cancel or reschedule bookings according to each venue's specific cancellation policy, which is clearly displayed on the checkout page before making a payment."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is there any extra booking fee or markup?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No, BookYourGround offers 0% markup and no hidden fees for players. You pay the exact price listed by the venue owner."
+        }
+      }
+    ]
+  };
+
   // On web, we keep landing visible for authenticated users.
   return os === 'web' ? (
     <>
@@ -70,6 +109,10 @@ export default function IndexScreen() {
         <title>Book Sports Grounds & Nets Instantly | BookYourGround</title>
         <meta name="description" content="Instantly book cricket grounds, football turfs, box cricket, and cricket nets near you. Compare slots, pricing, and amenities online." />
         <link rel="canonical" href="https://bookyourground.com/" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema) }}
+        />
       </Head>
       <WebLayout>
         <LandingScrollContent variant="web" />

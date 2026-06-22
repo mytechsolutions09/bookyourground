@@ -38,7 +38,6 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isContracts = pathname.includes('/settings/contract-submissions');
   const isDeletions = pathname.includes('/settings/deletion-requests');
   const isSkills = pathname.includes('/settings/skills');
-  const isBlogs = pathname.includes('/settings/blogs');
   const isFetchGrounds = pathname.includes('/settings/fetch-grounds');
   const isCorporate = pathname.includes('/settings/corporate');
 
@@ -142,15 +141,6 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           >
             <Text style={[styles.subLinkText, isSkills && styles.subLinkTextActive]}>
               Skills
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push((BASE + '/blogs') as any)}
-            style={[styles.subLink, isBlogs && styles.subLinkActive]}
-          >
-            <Text style={[styles.subLinkText, isBlogs && styles.subLinkTextActive]}>
-              Blogs
             </Text>
           </Pressable>
 

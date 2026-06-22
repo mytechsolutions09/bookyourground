@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { Plus, Edit3, Trash2, Globe, Lock } from 'lucide-react-native';
 
 import WebLayout from '@/components/web/WebLayout';
-import SettingsSubbar from '@/components/admin/SettingsSubbar';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
+import BlogsSubbar from '@/components/admin/BlogsSubbar';
 
 interface Blog {
   id: string;
@@ -78,13 +79,15 @@ export default function AdminBlogsList() {
           <Text style={styles.title}>Blogs</Text>
           <Text style={styles.subtitle}>Manage your platform's blog posts</Text>
         </View>
-        <Pressable 
-          style={styles.createBtn}
-          onPress={() => router.push('/(admin)/settings/blogs/new')}
-        >
-          <Plus size={20} color="#FFFFFF" />
-          <Text style={styles.createBtnText}>Create Blog</Text>
-        </Pressable>
+        {Platform.OS !== 'web' && (
+          <Pressable 
+            style={styles.createBtn}
+            onPress={() => router.push('/(admin)/blogs/new')}
+          >
+            <Plus size={20} color="#FFFFFF" />
+            <Text style={styles.createBtnText}>Create Blog</Text>
+          </Pressable>
+        )}
       </View>
 
       <ScrollView style={styles.listContainer}>
@@ -136,7 +139,7 @@ export default function AdminBlogsList() {
                   </Text>
                 </View>
                 <View style={[styles.td, { width: 100, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }]}>
-                  <Pressable onPress={() => router.push(`/(admin)/settings/blogs/${blog.id}`)}>
+                  <Pressable onPress={() => router.push(`/(admin)/blogs/${blog.id}`)}>
                     <Edit3 size={18} color="#3B82F6" />
                   </Pressable>
                   <Pressable onPress={() => handleDelete(blog.id)}>
@@ -154,19 +157,20 @@ export default function AdminBlogsList() {
   if (Platform.OS === 'web') {
     return (
       <WebLayout noCard>
-        <SettingsSubbar>
+        <BlogsSubbar activeTab="posts">
           {content}
-        </SettingsSubbar>
+        </BlogsSubbar>
       </WebLayout>
     );
   }
 
   return (
-    <SettingsSubbar>
-      <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <MobileAppNavbar title="PLATFORM BLOGS" titleColor="#10b981" />
+      <BlogsSubbar activeTab="posts">
         {content}
-      </View>
-    </SettingsSubbar>
+      </BlogsSubbar>
+    </View>
   );
 }
 
