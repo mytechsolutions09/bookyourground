@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const HOST = 'bookyourground.com';
-const API_KEY = 'ff70da8ffbf0429c9c7339246e05b0da';
+const API_KEY = '833ea02fa39ec7bdecf0749e712c2860';
 const KEY_LOCATION = `https://${HOST}/${API_KEY}.txt`;
 const SITEMAP_PATH = path.join(__dirname, 'public', 'sitemap.xml');
 
