@@ -31,14 +31,16 @@ async function submitToIndexNow() {
 
     console.log(`Found ${urlList.length} URLs to submit to IndexNow.`);
 
+    const HOST = 'bookyourground.com';
+    const KEY_LOCATION = `https://${HOST}/${API_KEY}.txt`;
+    
     const payload = {
       host: HOST,
       key: API_KEY,
-      keyLocation: KEY_LOCATION,
       urlList: urlList,
     };
 
-    const response = await fetch('https://api.indexnow.org/IndexNow', {
+    const response = await fetch('https://yandex.com/indexnow', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
