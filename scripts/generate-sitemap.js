@@ -69,6 +69,7 @@ async function generateSitemap() {
       '/corporate',
       '/cricket-grounds',
       '/football-grounds',
+      '/grounds-info',
       '/how-it-works',
       '/list-your-venue',
       '/match-strategies',

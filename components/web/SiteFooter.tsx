@@ -93,6 +93,12 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/grounds-info' as any)}
+            >
+              Grounds Info
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/corporate' as any)}
             >
               Corporate Events
