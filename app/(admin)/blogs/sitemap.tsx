@@ -351,7 +351,7 @@ export default function SitemapManager() {
   }, [allUrls]);
 
   const content = (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <Stack.Screen options={{ title: 'Sitemap Manager' }} />
 
       {/* Top Banner Header */}
@@ -474,15 +474,13 @@ export default function SitemapManager() {
             <Text style={styles.emptyText}>No URLs match your filter.</Text>
           </View>
         ) : (
-          <FlatList
-            data={filteredUrls}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
+          <View>
+            {filteredUrls.map((item) => {
               const scoreColors = getScoreColor(item.seoScore);
               const typeColors = TYPE_COLORS[item.type];
               
               return (
-                <View style={styles.tableRow}>
+                <View key={item.id} style={styles.tableRow}>
                   {/* Title & Badge */}
                   <View style={[styles.tdCell, { flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                     <Text style={styles.urlTitle} numberOfLines={1}>
@@ -543,8 +541,8 @@ export default function SitemapManager() {
                   </View>
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         )}
       </View>
 
@@ -554,7 +552,7 @@ export default function SitemapManager() {
           <Text style={styles.toastText}>{toastMsg}</Text>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 
   if (Platform.OS === 'web') {
@@ -571,7 +569,7 @@ export default function SitemapManager() {
     <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <MobileAppNavbar title="SITEMAP MANAGER" titleColor="#10B981" />
       <BlogsSubbar activeTab="sitemap">
-        <ScrollView style={{ flex: 1 }}>{content}</ScrollView>
+        {content}
       </BlogsSubbar>
     </View>
   );
@@ -579,9 +577,11 @@ export default function SitemapManager() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingHorizontal: 4,
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 60,
   },
   header: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
