@@ -457,11 +457,21 @@ export default function SitemapManager() {
       <View style={styles.tableCard}>
         {/* Table Header */}
         <View style={styles.tableHeaderRow}>
-          <Text style={[styles.thText, { flex: 1.5 }]}>TITLE</Text>
-          <Text style={[styles.thText, { width: 100, textAlign: 'center' }]}>INDEXED</Text>
-          <Text style={[styles.thText, { width: 120, textAlign: 'center' }]}>SEO SCORE</Text>
-          <Text style={[styles.thText, { flex: 2 }]}>URL PATH</Text>
-          <Text style={[styles.thText, { width: 140, textAlign: 'right' }]}>ACTIONS</Text>
+          <View style={{ flex: 1.5, justifyContent: 'center' }}>
+            <Text style={styles.thText}>TITLE</Text>
+          </View>
+          <View style={{ width: 100, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={styles.thText}>INDEXED</Text>
+          </View>
+          <View style={{ width: 120, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={styles.thText}>SEO SCORE</Text>
+          </View>
+          <View style={{ flex: 2, justifyContent: 'center' }}>
+            <Text style={styles.thText}>URL PATH</Text>
+          </View>
+          <View style={{ width: 140, alignItems: 'flex-end', justifyContent: 'center' }}>
+            <Text style={styles.thText}>ACTIONS</Text>
+          </View>
         </View>
 
         {loading ? (
