@@ -590,14 +590,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingBottom: 60,
   },
   header: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'space-between',
     alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
-    paddingVertical: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
     gap: 16,
   },
   title: {
