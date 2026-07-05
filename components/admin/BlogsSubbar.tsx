@@ -1,96 +1,67 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { FileText, Globe, Plus } from 'lucide-react-native';
 
 export default function BlogsSubbar({ children, activeTab }: { children: React.ReactNode; activeTab: 'posts' | 'sitemap' }) {
-  const isWeb = Platform.OS === 'web';
-  console.log('BlogsSubbar rendering. isWeb:', isWeb, 'activeTab:', activeTab);
-
-  const menu = (
-    <>
-      {isWeb && (
-        <Pressable
-          onPress={() => router.push('/(admin)/blogs/new')}
-          style={styles.newBlogBtn}
-          // @ts-ignore
-          title="Create New Blog"
-        >
-          <Plus size={16} color="#FFFFFF" />
-        </Pressable>
-      )}
-
-      <Pressable
-        onPress={() => router.push('/(admin)/blogs' as any)}
-        style={[
-          styles.subbarItem,
-          activeTab === 'posts' && styles.subbarItemActive,
-          !isWeb && styles.mobileTab,
-          !isWeb && activeTab === 'posts' && styles.mobileTabActive
-        ]}
-        // @ts-ignore
-        title="Blog Posts"
-      >
-        <FileText size={isWeb ? 18 : 14} color={activeTab === 'posts' ? '#10B981' : '#6B7280'} />
-        {!isWeb && (
-          <Text style={[
-            styles.subbarItemText,
-            activeTab === 'posts' && styles.subbarItemTextActive,
-            { fontSize: 13 }
-          ]}>
-            Blog Posts
-          </Text>
-        )}
-      </Pressable>
-
-      <Pressable
-        onPress={() => router.push('/(admin)/blogs/sitemap' as any)}
-        style={[
-          styles.subbarItem,
-          activeTab === 'sitemap' && styles.subbarItemActive,
-          !isWeb && styles.mobileTab,
-          !isWeb && activeTab === 'sitemap' && styles.mobileTabActive
-        ]}
-        // @ts-ignore
-        title="Sitemap Manager"
-      >
-        <Globe size={isWeb ? 18 : 14} color={activeTab === 'sitemap' ? '#10B981' : '#6B7280'} />
-        {!isWeb && (
-          <Text style={[
-            styles.subbarItemText,
-            activeTab === 'sitemap' && styles.subbarItemTextActive,
-            { fontSize: 13 }
-          ]}>
-            Sitemap Manager
-          </Text>
-        )}
-      </Pressable>
-    </>
-  );
-
-  if (isWeb) {
-    return (
-      <View style={styles.shell}>
-        <View style={styles.subbar}>
-          {menu}
-        </View>
-        <View style={styles.content}>{children}</View>
-      </View>
-    );
-  }
+  const isPosts = activeTab === 'posts';
+  const isSitemap = activeTab === 'sitemap';
 
   return (
-    <View style={styles.mobileShell}>
-      <View style={styles.mobileSubbar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.mobileSubbarScroll}
-        >
-          {menu}
-        </ScrollView>
+    <View style={styles.shell}>
+      <View style={styles.headerBar}>
+        <View style={styles.leftSection}>
+          <View style={styles.iconBox}>
+            <FileText size={18} color="#10b981" />
+          </View>
+          <View style={styles.titleGroup}>
+            <Text style={styles.titleText}>Blogs</Text>
+            <Text style={styles.subtitleText}>Management</Text>
+          </View>
+        </View>
+
+        <View style={styles.navSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.navScrollContent}
+          >
+            <Pressable
+              onPress={() => router.push('/(admin)/blogs' as any)}
+              style={[styles.navBtn, isPosts && styles.navBtnActive]}
+            >
+              <FileText size={16} color={isPosts ? '#10b981' : '#6B7280'} style={{ marginRight: 6 }} />
+              <Text style={[styles.navBtnLabel, isPosts && styles.navBtnLabelActive]}>
+                BLOG POSTS
+              </Text>
+              {isPosts && <View style={styles.activeIndicator} />}
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(admin)/blogs/sitemap' as any)}
+              style={[styles.navBtn, isSitemap && styles.navBtnActive]}
+            >
+              <Globe size={16} color={isSitemap ? '#10b981' : '#6B7280'} style={{ marginRight: 6 }} />
+              <Text style={[styles.navBtnLabel, isSitemap && styles.navBtnLabelActive]}>
+                SITEMAP MANAGER
+              </Text>
+              {isSitemap && <View style={styles.activeIndicator} />}
+            </Pressable>
+          </ScrollView>
+        </View>
+
+        {Platform.OS === 'web' && (
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => router.push('/(admin)/blogs/new')}
+          >
+            <Plus size={16} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>CREATE BLOG</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={{ flex: 1 }}>{children}</View>
+
+      <View style={styles.content}>{children}</View>
     </View>
   );
 }
@@ -98,99 +69,104 @@ export default function BlogsSubbar({ children, activeTab }: { children: React.R
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    minHeight: '100%',
   },
-  subbar: {
-    width: 48,
-    backgroundColor: '#FCFDFD',
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-    paddingVertical: 24,
-    paddingHorizontal: 4,
+  headerBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-  },
-  newBlogBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    backgroundColor: '#FFFFFF', 
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 24,
+    height: 56,
     ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-        transition: 'transform 0.2s ease, background-color 0.2s ease',
-      } as any,
+      web: { position: 'sticky' as any, top: 0, zIndex: 100 },
     }),
   },
-  subbarItem: {
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginRight: 24,
+  },
+  iconBox: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      } as any,
-    }),
   },
-  subbarItemActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  titleGroup: {
+    justifyContent: 'center',
   },
-  subbarItemText: {
-    fontSize: 13.5,
-    fontWeight: '600',
-    color: '#4B5563',
+  titleText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
     fontFamily: 'Inter',
   },
-  subbarItemTextActive: {
-    color: '#10B981',
+  subtitleText: {
+    fontSize: 9,
+    color: '#6B7280',
+    marginTop: -1,
+    fontFamily: 'Inter',
+  },
+  navSection: {
+    flex: 1,
+    height: '100%',
+  },
+  navScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
+  },
+  navBtn: {
+    height: '100%',
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    flexDirection: 'row',
+  },
+  navBtnActive: {
+    backgroundColor: '#F9FAFB',
+  },
+  navBtnLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
+  },
+  navBtnLabelActive: {
+    color: '#10b981', 
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 2,
+    backgroundColor: '#10b981',
+    borderRadius: 2,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#05291f',
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Inter',
   },
   content: {
     flex: 1,
-    paddingLeft: 20,
-    minWidth: 0,
-  },
-  
-  // Mobile styles
-  mobileShell: {
-    flex: 1,
-    flexDirection: 'column',
-    backgroundColor: '#FFFFFF',
-  },
-  mobileSubbar: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingHorizontal: 16,
-  },
-  mobileSubbarScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  mobileTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 'auto',
-  },
-  mobileTabActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: '#10B981',
   },
 });
