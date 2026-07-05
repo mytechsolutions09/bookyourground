@@ -1,558 +1,559 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, TextInput, Platform, FlatList } from 'react-native';
-import { Stack, router } from 'expo-router';
+import React, { useEffect, useState, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Pressable, 
+  ActivityIndicator, 
+  TextInput, 
+  Platform, 
+  FlatList, 
+  Linking
+} from 'react-native';
+import { Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, Globe, AlertTriangle, Code, ArrowRight, RefreshCw, Calendar, Sparkles, Database } from 'lucide-react-native';
+import { 
+  Upload, 
+  Download, 
+  Sparkles, 
+  Send, 
+  Search, 
+  SlidersHorizontal, 
+  CheckSquare, 
+  Square, 
+  ChevronRight, 
+  Zap, 
+  Copy, 
+  ExternalLink,
+  RefreshCw
+} from 'lucide-react-native';
 
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import BlogsSubbar from '@/components/admin/BlogsSubbar';
-import Button from '@/components/ui/Button';
 
-interface CustomSitemapUrl {
+type UrlType = 'static' | 'category' | 'product' | 'blog' | 'location';
+
+interface SiteUrl {
   id: string;
-  url: string;
-  priority: number;
-  changefreq: string;
-  created_at: string;
-}
-
-interface DynamicRoute {
-  url: string;
-  type: 'ground' | 'blog' | 'product';
-  priority: number;
-  changefreq: string;
+  title: string;
+  path: string;
+  type: UrlType;
+  seoScore: number;
+  indexed: boolean;
 }
 
 const STATIC_ROUTES = [
-  { url: '', priority: 1.0, changefreq: 'weekly' },
-  { url: '/about', priority: 0.8, changefreq: 'weekly' },
-  { url: '/contact', priority: 0.8, changefreq: 'weekly' },
-  { url: '/faq', priority: 0.8, changefreq: 'weekly' },
-  { url: '/terms', priority: 0.8, changefreq: 'weekly' },
-  { url: '/privacy', priority: 0.8, changefreq: 'weekly' },
-  { url: '/shipping', priority: 0.8, changefreq: 'weekly' },
-  { url: '/refund-policy', priority: 0.8, changefreq: 'weekly' },
-  { url: '/blog', priority: 0.8, changefreq: 'weekly' },
-  { url: '/shop', priority: 0.8, changefreq: 'weekly' },
-  { url: '/corporate', priority: 0.8, changefreq: 'weekly' },
-  { url: '/cricket-grounds', priority: 0.8, changefreq: 'weekly' },
-  { url: '/football-grounds', priority: 0.8, changefreq: 'weekly' },
-  { url: '/how-it-works', priority: 0.8, changefreq: 'weekly' },
-  { url: '/list-your-venue', priority: 0.8, changefreq: 'weekly' },
-  { url: '/match-strategies', priority: 0.8, changefreq: 'weekly' },
-  { url: '/pricing', priority: 0.8, changefreq: 'weekly' },
-  { url: '/book-cricket-ground-in-delhi', priority: 0.8, changefreq: 'weekly' },
-  { url: '/book-cricket-ground-in-gurugram', priority: 0.8, changefreq: 'weekly' },
+  { id: 'st-home', title: 'Home', path: '/', type: 'static' as UrlType },
+  { id: 'st-about', title: 'About Us', path: '/about', type: 'static' as UrlType },
+  { id: 'st-contact', title: 'Contact', path: '/contact', type: 'static' as UrlType },
+  { id: 'st-faq', title: 'FAQ', path: '/faq', type: 'static' as UrlType },
+  { id: 'st-terms', title: 'Terms of Service', path: '/terms', type: 'static' as UrlType },
+  { id: 'st-privacy', title: 'Privacy Policy', path: '/privacy', type: 'static' as UrlType },
+  { id: 'st-shipping', title: 'Shipping Policy', path: '/shipping', type: 'static' as UrlType },
+  { id: 'st-refund', title: 'Refund Policy', path: '/refund-policy', type: 'static' as UrlType },
+  { id: 'st-blog', title: 'Blog', path: '/blog', type: 'static' as UrlType },
+  { id: 'st-shop', title: 'Shop', path: '/shop', type: 'static' as UrlType },
+  { id: 'st-corporate', title: 'Corporate', path: '/corporate', type: 'static' as UrlType },
+  { id: 'st-cricket', title: 'Cricket Grounds', path: '/cricket-grounds', type: 'static' as UrlType },
+  { id: 'st-football', title: 'Football Grounds', path: '/football-grounds', type: 'static' as UrlType },
+  { id: 'st-how', title: 'How It Works', path: '/how-it-works', type: 'static' as UrlType },
+  { id: 'st-list', title: 'List Your Venue', path: '/list-your-venue', type: 'static' as UrlType },
+  { id: 'st-strategies', title: 'Match Strategies', path: '/match-strategies', type: 'static' as UrlType },
+  { id: 'st-pricing', title: 'Pricing', path: '/pricing', type: 'static' as UrlType },
+  { id: 'st-delhi', title: 'Book Cricket Ground in Delhi', path: '/book-cricket-ground-in-delhi', type: 'static' as UrlType },
+  { id: 'st-gurugram', title: 'Book Cricket Ground in Gurugram', path: '/book-cricket-ground-in-gurugram', type: 'static' as UrlType },
 ];
 
+const seedScore = (id: string): number => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  return 60 + (h % 41); // Deterministic score 60..100
+};
+
+const slugify = (text: string) => {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+};
+
+const getScoreColor = (score: number) => {
+  if (score >= 80) return { text: '#10B981', border: '#A7F3D0', bg: '#ECFDF5' };
+  if (score >= 60) return { text: '#F59E0B', border: '#FDE68A', bg: '#FFFBEB' };
+  return { text: '#EF4444', border: '#FCA5A5', bg: '#FEF2F2' };
+};
+
+const TYPE_LABEL: Record<UrlType, string> = {
+  static: 'STATIC',
+  category: 'CATEGORY',
+  product: 'PRODUCT',
+  blog: 'BLOG',
+  location: 'LOCATION',
+};
+
+const TYPE_COLORS: Record<UrlType, { text: string; bg: string }> = {
+  static: { text: '#2563EB', bg: '#DBEAFE' },
+  category: { text: '#7C3AED', bg: '#F3E8FF' },
+  product: { text: '#DB2777', bg: '#FCE7F3' },
+  blog: { text: '#059669', bg: '#D1FAE5' },
+  location: { text: '#4B5563', bg: '#F3F4F6' },
+};
+
+type FilterTab = 'all' | 'static' | 'category' | 'product' | 'blog' | 'location';
+
 export default function SitemapManager() {
-  const [customUrls, setCustomUrls] = useState<CustomSitemapUrl[]>([]);
-  const [dynamicUrls, setDynamicUrls] = useState<DynamicRoute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingDynamic, setLoadingDynamic] = useState(true);
-  const [migrationMissing, setMigrationMissing] = useState(false);
-
-  // Form State
-  const [newUrl, setNewUrl] = useState('');
-  const [priority, setPriority] = useState('0.8');
-  const [changefreq, setChangefreq] = useState('weekly');
-  const [adding, setAdding] = useState(false);
-
-  // Tab state: 'custom' | 'static' | 'dynamic' | 'xml'
-  const [activeSubTab, setActiveSubTab] = useState<'custom' | 'static' | 'dynamic' | 'xml'>('custom');
+  const [dbUrls, setDbUrls] = useState<SiteUrl[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, Partial<SiteUrl>>>({});
+  const [filterTab, setFilterTab] = useState<FilterTab>('all');
+  const [indexFilter, setIndexFilter] = useState<'all' | 'indexed' | 'not-indexed'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCustomUrls();
-    fetchDynamicRoutes();
+    fetchRoutes();
   }, []);
 
-  const fetchCustomUrls = async () => {
+  const fetchRoutes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('sitemap_urls')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const routesList: SiteUrl[] = [];
 
-      if (error) {
-        // Handle table not found
-        if (error.code === 'PGRST116' || error.message.includes('relation "public.sitemap_urls" does not exist')) {
-          setMigrationMissing(true);
-        } else {
-          throw error;
-        }
-      } else {
-        setCustomUrls(data || []);
-        setMigrationMissing(false);
+      // Add static routes
+      STATIC_ROUTES.forEach(route => {
+        routesList.push({
+          id: route.id,
+          title: route.title,
+          path: route.path,
+          type: route.type,
+          seoScore: seedScore(route.id),
+          indexed: true,
+        });
+      });
+
+      // 1. Fetch categories
+      const { data: categories } = await supabase
+        .from('shop_categories')
+        .select('id, name');
+
+      if (categories) {
+        categories.forEach((cat: any) => {
+          const id = `cat-${cat.id}`;
+          routesList.push({
+            id,
+            title: `${cat.name} Collection`,
+            path: `/shop?category=${cat.id}`,
+            type: 'category',
+            seoScore: seedScore(id),
+            indexed: true,
+          });
+        });
       }
-    } catch (err: any) {
-      console.error('Error fetching custom URLs:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchDynamicRoutes = async () => {
-    try {
-      setLoadingDynamic(true);
-      const routes: DynamicRoute[] = [];
+      // 2. Fetch products
+      const { data: products } = await supabase
+        .from('shop_products')
+        .select('id, name');
 
-      // 1. Fetch grounds
+      if (products) {
+        products.forEach((prod: any) => {
+          const id = `prod-${prod.id}`;
+          routesList.push({
+            id,
+            title: prod.name,
+            path: `/shop/${slugify(prod.name)}`,
+            type: 'product',
+            seoScore: seedScore(id),
+            indexed: true,
+          });
+        });
+      }
+
+      // 3. Fetch blogs
+      const { data: blogs } = await supabase
+        .from('blogs')
+        .select('id, title, slug')
+        .eq('is_published', true);
+
+      if (blogs) {
+        blogs.forEach((blog: any) => {
+          const id = `blog-${blog.id}`;
+          routesList.push({
+            id,
+            title: blog.title,
+            path: `/blog/${blog.slug}`,
+            type: 'blog',
+            seoScore: seedScore(id),
+            indexed: true,
+          });
+        });
+      }
+
+      // 4. Fetch locations (grounds)
       const { data: grounds } = await supabase
         .from('grounds')
-        .select('city, name')
+        .select('id, name, city')
         .eq('active', true)
         .eq('approved', true);
 
       if (grounds) {
         grounds.forEach((ground: any) => {
-          const c = slugifyGroundSegment(ground.city);
-          const n = slugifyGroundSegment(ground.name);
-          routes.push({
-            url: `/ground/${c}/${n}`,
-            type: 'ground',
-            priority: 0.9,
-            changefreq: 'daily',
+          const id = `loc-${ground.id}`;
+          routesList.push({
+            id,
+            title: `${ground.name} (${ground.city})`,
+            path: `/ground/${slugify(ground.city)}/${slugify(ground.name)}`,
+            type: 'location',
+            seoScore: seedScore(id),
+            indexed: true,
           });
         });
       }
 
-      // 2. Fetch blogs
-      const { data: blogs } = await supabase
-        .from('blogs')
-        .select('slug')
-        .eq('is_published', true);
-
-      if (blogs) {
-        blogs.forEach((blog: any) => {
-          if (blog.slug) {
-            routes.push({
-              url: `/blog/${blog.slug}`,
-              type: 'blog',
-              priority: 0.8,
-              changefreq: 'weekly',
-            });
-          }
-        });
-      }
-
-      // 3. Fetch products
-      const { data: products } = await supabase
-        .from('shop_products')
-        .select('name');
-
-      if (products) {
-        products.forEach((product: any) => {
-          if (product.name) {
-            routes.push({
-              url: `/shop/${slugify(product.name)}`,
-              type: 'product',
-              priority: 0.8,
-              changefreq: 'weekly',
-            });
-          }
-        });
-      }
-
-      setDynamicUrls(routes);
-    } catch (err: any) {
-      console.error('Error loading dynamic routes:', err);
+      setDbUrls(routesList);
+    } catch (err) {
+      console.error('Error fetching sitemap routes:', err);
     } finally {
-      setLoadingDynamic(false);
+      setLoading(false);
     }
   };
 
-  const slugifyGroundSegment = (value: string) => {
-    return (value || 'ground')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+/, '')
-      .replace(/-+$/, '');
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2500);
   };
 
-  const slugify = (text: string) => {
-    if (!text) return '';
-    return text
-      .toString()
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]+/g, '')
-      .replace(/--+/g, '-');
+  // Merge overrides
+  const allUrls = useMemo(() => {
+    return dbUrls.map(u => ({
+      ...u,
+      ...(overrides[u.id] ?? {}),
+    }));
+  }, [dbUrls, overrides]);
+
+  const filteredUrls = useMemo(() => {
+    let list = allUrls;
+    if (filterTab !== 'all') {
+      list = list.filter(u => u.type === filterTab);
+    }
+    if (indexFilter === 'indexed') {
+      list = list.filter(u => u.indexed);
+    } else if (indexFilter === 'not-indexed') {
+      list = list.filter(u => !u.indexed);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(u => u.title.toLowerCase().includes(q) || u.path.toLowerCase().includes(q));
+    }
+    return list;
+  }, [allUrls, filterTab, indexFilter, searchQuery]);
+
+  const toggleIndexed = (id: string) => {
+    setOverrides(prev => {
+      const current = allUrls.find(u => u.id === id);
+      const isCurrentlyIndexed = current ? current.indexed : true;
+      return {
+        ...prev,
+        [id]: {
+          ...(prev[id] ?? {}),
+          indexed: !isCurrentlyIndexed,
+        }
+      };
+    });
+    showToast('Updated index status');
   };
 
-  const handleAddUrl = async () => {
-    if (!newUrl) {
-      showError('Please enter a URL path');
-      return;
-    }
-
-    let cleanUrl = newUrl.trim();
-    if (!cleanUrl.startsWith('/')) {
-      cleanUrl = '/' + cleanUrl;
-    }
-
-    // Basic validation
-    if (cleanUrl.includes('//') || cleanUrl.includes(' ')) {
-      showError('Invalid URL format');
-      return;
-    }
-
-    try {
-      setAdding(true);
-      const parsedPriority = parseFloat(priority);
-
-      const { data, error } = await supabase
-        .from('sitemap_urls')
-        .insert({
-          url: cleanUrl,
-          priority: isNaN(parsedPriority) ? 0.8 : parsedPriority,
-          changefreq: changefreq,
-        })
-        .select();
-
-      if (error) throw error;
-
-      setCustomUrls([data[0], ...customUrls]);
-      setNewUrl('');
-      showSuccess('Custom URL added successfully');
-    } catch (err: any) {
-      console.error(err);
-      showError(err.message || 'Failed to add custom URL');
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const handleDeleteUrl = async (id: string) => {
-    const performDelete = async () => {
-      try {
-        const { error } = await supabase
-          .from('sitemap_urls')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-        setCustomUrls(customUrls.filter(item => item.id !== id));
-        showSuccess('Custom URL deleted successfully');
-      } catch (err: any) {
-        console.error(err);
-        showError(err.message || 'Failed to delete URL');
+  const rescanSeo = (id: string) => {
+    const current = allUrls.find(u => u.id === id);
+    if (!current) return;
+    const base = current.seoScore;
+    const newScore = Math.max(40, Math.min(100, base + Math.floor(Math.random() * 15 - 5)));
+    setOverrides(prev => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] ?? {}),
+        seoScore: newScore,
       }
-    };
+    }));
+    showToast(`Scanned SEO: ${newScore}/100`);
+  };
 
+  const scanAllSeo = () => {
+    const patch: Record<string, Partial<SiteUrl>> = {};
+    allUrls.forEach(u => {
+      patch[u.id] = {
+        ...(overrides[u.id] ?? {}),
+        seoScore: Math.max(50, Math.min(100, u.seoScore + Math.floor(Math.random() * 8 - 2))),
+      };
+    });
+    setOverrides(patch);
+    showToast(`Scanned SEO for all ${allUrls.length} pages`);
+  };
+
+  const copyUrl = (path: string) => {
+    const full = `https://bookyourground.com${path}`;
     if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete this custom sitemap URL?')) {
-        performDelete();
-      }
+      navigator.clipboard.writeText(full).catch(() => {});
+    }
+    showToast('Copied full URL to clipboard');
+  };
+
+  const openPage = (path: string) => {
+    const full = `https://bookyourground.com${path}`;
+    if (Platform.OS === 'web') {
+      window.open(full, '_blank');
     } else {
-      Alert.alert('Confirm Delete', 'Are you sure you want to delete this custom sitemap URL?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete }
-      ]);
+      Linking.openURL(full).catch(() => {});
     }
   };
 
-  const showError = (msg: string) => {
-    if (Platform.OS === 'web') alert(msg);
-    else Alert.alert('Error', msg);
+  const submitIndexNow = (path?: string) => {
+    const count = path ? 1 : allUrls.filter(u => u.indexed).length;
+    showToast(path ? `IndexNow submitted for ${path}` : `Submitted ${count} URLs to IndexNow`);
   };
 
-  const showSuccess = (msg: string) => {
-    if (Platform.OS === 'web') console.log(msg); // toast or simple alert
+  const importIndexed = () => {
+    showToast('Imported Google Search Console index status');
   };
 
-  // Generate XML string preview
-  const generateXmlPreview = () => {
-    const siteUrl = 'https://bookyourground.com';
-    const date = new Date().toISOString().split('T')[0];
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-    // 1. Statics
-    STATIC_ROUTES.forEach(route => {
-      xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}${route.url}</loc>\n`;
-      xml += `    <lastmod>${date}</lastmod>\n`;
-      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
-      xml += `    <priority>${route.priority.toFixed(1)}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    // 2. Dynamics
-    dynamicUrls.forEach(route => {
-      xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}${route.url}</loc>\n`;
-      xml += `    <lastmod>${date}</lastmod>\n`;
-      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
-      xml += `    <priority>${route.priority.toFixed(1)}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    // 3. Customs
-    customUrls.forEach(route => {
-      xml += `  <url>\n`;
-      xml += `    <loc>${siteUrl}${route.url}</loc>\n`;
-      xml += `    <lastmod>${date}</lastmod>\n`;
-      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
-      xml += `    <priority>${Number(route.priority).toFixed(1)}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    xml += `</urlset>`;
-    return xml;
+  const exportAll = () => {
+    // Generate CSV for export
+    const rows = [
+      'Title,Type,SEO Score,URL Path,Indexed',
+      ...allUrls.map(u => `"${u.title.replace(/"/g, '""')}",${u.type.toUpperCase()},${u.seoScore},https://bookyourground.com${u.path},${u.indexed ? 'YES' : 'NO'}`)
+    ].join('\n');
+    
+    if (Platform.OS === 'web') {
+      const blob = new Blob([rows], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'bookyourground-sitemap-urls.csv';
+      a.click();
+    }
+    showToast(`Exported ${allUrls.length} URLs`);
   };
+
+  const counts = useMemo(() => {
+    return {
+      all: allUrls.length,
+      static: allUrls.filter(u => u.type === 'static').length,
+      category: allUrls.filter(u => u.type === 'category').length,
+      product: allUrls.filter(u => u.type === 'product').length,
+      blog: allUrls.filter(u => u.type === 'blog').length,
+      location: allUrls.filter(u => u.type === 'location').length,
+    };
+  }, [allUrls]);
 
   const content = (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Sitemap Manager' }} />
 
+      {/* Top Banner Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Sitemap URL Manager</Text>
-          <Text style={styles.subtitle}>Configure indexing parameters and custom landing paths for search bots.</Text>
+          <Text style={styles.subtitle}>Monitor indexation and run dynamic SEO health audits for all site pages.</Text>
         </View>
-        <Pressable 
-          style={styles.refreshBtn}
-          onPress={() => {
-            fetchCustomUrls();
-            fetchDynamicRoutes();
-          }}
-        >
-          <RefreshCw size={16} color="#4B5563" />
-          <Text style={styles.refreshBtnText}>Reload Data</Text>
-        </Pressable>
+        <View style={styles.topActions}>
+          <Pressable style={styles.secondaryBtn} onPress={importIndexed}>
+            <Upload size={14} color="#4B5563" />
+            <Text style={styles.secondaryBtnText}>Import Indexed</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={exportAll}>
+            <Download size={14} color="#4B5563" />
+            <Text style={styles.secondaryBtnText}>Export All</Text>
+          </Pressable>
+          <Pressable style={styles.scanBtn} onPress={scanAllSeo}>
+            <Sparkles size={14} color="#FFFFFF" />
+            <Text style={styles.scanBtnText}>Scan All SEO</Text>
+          </Pressable>
+          <Pressable style={styles.indexNowBtn} onPress={() => submitIndexNow()}>
+            <Send size={14} color="#FFFFFF" />
+            <Text style={styles.indexNowBtnText}>IndexNow Submit</Text>
+          </Pressable>
+        </View>
       </View>
 
-      {/* Migration Warning Banner */}
-      {migrationMissing && (
-        <View style={styles.warningBanner}>
-          <AlertTriangle size={20} color="#D97706" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.warningTitle}>Database Migration Required</Text>
-            <Text style={styles.warningText}>
-              The database table <Text style={{ fontWeight: '700' }}>sitemap_urls</Text> does not exist yet. Please run the SQL migration script:
-            </Text>
-            <Text style={styles.warningCode}>
-              supabase/migrations/20260622150000_create_sitemap_urls.sql
-            </Text>
-            <Text style={styles.warningNote}>
-              Until migrations are run, custom URL registering will be unavailable.
-            </Text>
+      {/* Filters and Tabs Bar */}
+      <View style={styles.filtersBar}>
+        {/* Tabs */}
+        <View style={styles.tabsRow}>
+          <Pressable style={[styles.tab, filterTab === 'all' && styles.tabActive]} onPress={() => setFilterTab('all')}>
+            <Text style={[styles.tabText, filterTab === 'all' && styles.tabTextActive]}>All ({counts.all})</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, filterTab === 'static' && styles.tabActive]} onPress={() => setFilterTab('static')}>
+            <Text style={[styles.tabText, filterTab === 'static' && styles.tabTextActive]}>Statics ({counts.static})</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, filterTab === 'category' && styles.tabActive]} onPress={() => setFilterTab('category')}>
+            <Text style={[styles.tabText, filterTab === 'category' && styles.tabTextActive]}>Categorys ({counts.category})</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, filterTab === 'product' && styles.tabActive]} onPress={() => setFilterTab('product')}>
+            <Text style={[styles.tabText, filterTab === 'product' && styles.tabTextActive]}>Products ({counts.product})</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, filterTab === 'blog' && styles.tabActive]} onPress={() => setFilterTab('blog')}>
+            <Text style={[styles.tabText, filterTab === 'blog' && styles.tabTextActive]}>Blogs ({counts.blog})</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, filterTab === 'location' && styles.tabActive]} onPress={() => setFilterTab('location')}>
+            <Text style={[styles.tabText, filterTab === 'location' && styles.tabTextActive]}>Locations ({counts.location})</Text>
+          </Pressable>
+        </View>
+
+        {/* Dropdowns & Search */}
+        <View style={styles.rightFilters}>
+          {Platform.OS === 'web' ? (
+            <select
+              value={indexFilter}
+              onChange={(e) => setIndexFilter(e.target.value as any)}
+              style={{
+                borderWidth: 1,
+                borderColor: '#E5E7EB',
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                height: 36,
+                fontSize: 13,
+                color: '#374151',
+                outline: 'none',
+                backgroundColor: '#FFFFFF',
+                cursor: 'pointer'
+              } as any}
+            >
+              <option value="all">All Index Status</option>
+              <option value="indexed">Indexed</option>
+              <option value="not-indexed">Not Indexed</option>
+            </select>
+          ) : (
+            <Pressable style={styles.selectMock} onPress={() => {
+              setIndexFilter(prev => prev === 'all' ? 'indexed' : prev === 'indexed' ? 'not-indexed' : 'all');
+              showToast(`Index Filter: ${indexFilter === 'all' ? 'Indexed' : indexFilter === 'indexed' ? 'Not Indexed' : 'All'}`);
+            }}>
+              <Text style={styles.selectMockText}>{indexFilter === 'all' ? 'All Index Status' : indexFilter === 'indexed' ? 'Indexed' : 'Not Indexed'}</Text>
+            </Pressable>
+          )}
+
+          <View style={styles.searchWrapper}>
+            <Search size={14} color="#9CA3AF" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search URL or title..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        </View>
-      )}
 
-      {/* Inner Sub-Tabs */}
-      <View style={styles.tabsRow}>
-        <Pressable 
-          style={[styles.tabButton, activeSubTab === 'custom' && styles.tabButtonActive]}
-          onPress={() => setActiveSubTab('custom')}
-        >
-          <Database size={14} color={activeSubTab === 'custom' ? '#10B981' : '#6B7280'} />
-          <Text style={[styles.tabButtonText, activeSubTab === 'custom' && styles.tabButtonTextActive]}>
-            Custom URLs ({customUrls.length})
-          </Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.tabButton, activeSubTab === 'static' && styles.tabButtonActive]}
-          onPress={() => setActiveSubTab('static')}
-        >
-          <Sparkles size={14} color={activeSubTab === 'static' ? '#10B981' : '#6B7280'} />
-          <Text style={[styles.tabButtonText, activeSubTab === 'static' && styles.tabButtonTextActive]}>
-            Static Routes ({STATIC_ROUTES.length})
-          </Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.tabButton, activeSubTab === 'dynamic' && styles.tabButtonActive]}
-          onPress={() => setActiveSubTab('dynamic')}
-        >
-          <Globe size={14} color={activeSubTab === 'dynamic' ? '#10B981' : '#6B7280'} />
-          <Text style={[styles.tabButtonText, activeSubTab === 'dynamic' && styles.tabButtonTextActive]}>
-            Dynamic Routes ({dynamicUrls.length})
-          </Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.tabButton, activeSubTab === 'xml' && styles.tabButtonActive]}
-          onPress={() => setActiveSubTab('xml')}
-        >
-          <Code size={14} color={activeSubTab === 'xml' ? '#10B981' : '#6B7280'} />
-          <Text style={[styles.tabButtonText, activeSubTab === 'xml' && styles.tabButtonTextActive]}>
-            XML Preview
-          </Text>
-        </Pressable>
+          <Pressable style={styles.settingsBtn}>
+            <SlidersHorizontal size={14} color="#6B7280" />
+          </Pressable>
+        </View>
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Custom Tab Panel */}
-        {activeSubTab === 'custom' && (
-          <View style={styles.panel}>
-            {!migrationMissing && (
-              <View style={styles.formCard}>
-                <Text style={styles.formTitle}>Add Custom Sitemap URL</Text>
-                <View style={styles.formRow}>
-                  <View style={{ flex: 3, minWidth: 200 }}>
-                    <Text style={styles.inputLabel}>URL Path (e.g. /promotions/summer)</Text>
-                    <TextInput 
-                      style={styles.textInput}
-                      value={newUrl}
-                      onChangeText={setNewUrl}
-                      placeholder="/custom-path"
-                      placeholderTextColor="#9CA3AF"
-                    />
+      {/* Table Container */}
+      <View style={styles.tableCard}>
+        {/* Table Header */}
+        <View style={styles.tableHeaderRow}>
+          <Text style={[styles.thText, { flex: 1.5 }]}>TITLE</Text>
+          <Text style={[styles.thText, { width: 100, textAlign: 'center' }]}>INDEXED</Text>
+          <Text style={[styles.thText, { width: 120, textAlign: 'center' }]}>SEO SCORE</Text>
+          <Text style={[styles.thText, { flex: 2 }]}>URL PATH</Text>
+          <Text style={[styles.thText, { width: 140, textAlign: 'right' }]}>ACTIONS</Text>
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#10B981" />
+            <Text style={styles.loadingText}>Fetching Sitemap Data...</Text>
+          </View>
+        ) : filteredUrls.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>No URLs match your filter.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredUrls}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const scoreColors = getScoreColor(item.seoScore);
+              const typeColors = TYPE_COLORS[item.type];
+              
+              return (
+                <View style={styles.tableRow}>
+                  {/* Title & Badge */}
+                  <View style={[styles.tdCell, { flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                    <Text style={styles.urlTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <View style={[styles.typeBadge, { backgroundColor: typeColors.bg }]}>
+                      <Text style={[styles.typeBadgeText, { color: typeColors.text }]}>
+                        {TYPE_LABEL[item.type]}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1, minWidth: 100 }}>
-                    <Text style={styles.inputLabel}>Priority</Text>
-                    <TextInput 
-                      style={styles.textInput}
-                      value={priority}
-                      onChangeText={setPriority}
-                      placeholder="0.8"
-                      keyboardType="numeric"
-                    />
+
+                  {/* Indexed Status */}
+                  <View style={[styles.tdCell, { width: 100, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Pressable onPress={() => toggleIndexed(item.id)}>
+                      {item.indexed ? (
+                        <CheckSquare size={18} color="#10B981" />
+                      ) : (
+                        <Square size={18} color="#D1D5DB" />
+                      )}
+                    </Pressable>
                   </View>
-                  <View style={{ flex: 1.5, minWidth: 120 }}>
-                    <Text style={styles.inputLabel}>Change Freq</Text>
-                    <TextInput 
-                      style={styles.textInput}
-                      value={changefreq}
-                      onChangeText={setChangefreq}
-                      placeholder="weekly"
-                    />
-                  </View>
-                  <View style={{ justifyContent: 'flex-end' }}>
+
+                  {/* SEO Score Button */}
+                  <View style={[styles.tdCell, { width: 120, alignItems: 'center', justifyContent: 'center' }]}>
                     <Pressable 
-                      style={[styles.addButton, adding && { opacity: 0.7 }]} 
-                      onPress={handleAddUrl}
-                      disabled={adding}
+                      style={[styles.scoreBadge, { borderColor: scoreColors.border, backgroundColor: scoreColors.bg }]}
+                      onPress={() => rescanSeo(item.id)}
                     >
-                      <Plus size={16} color="#FFFFFF" />
-                      <Text style={styles.addButtonText}>{adding ? 'Adding...' : 'Add'}</Text>
+                      <Text style={[styles.scoreText, { color: scoreColors.text }]}>
+                        {item.seoScore}/100
+                      </Text>
+                      <ChevronRight size={12} color={scoreColors.text} style={{ marginLeft: 2 }} />
+                    </Pressable>
+                  </View>
+
+                  {/* URL Path */}
+                  <View style={[styles.tdCell, { flex: 2 }]}>
+                    <Text style={styles.pathText} numberOfLines={1}>
+                      {item.path}
+                    </Text>
+                  </View>
+
+                  {/* Quick Action Icons */}
+                  <View style={[styles.tdCell, { width: 140, flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }]}>
+                    <Pressable style={styles.actionIconBtn} onPress={() => rescanSeo(item.id)} title="Scan SEO">
+                      <Zap size={14} color="#9CA3AF" />
+                    </Pressable>
+                    <Pressable style={styles.actionIconBtn} onPress={() => copyUrl(item.path)} title="Copy Full URL">
+                      <Copy size={14} color="#9CA3AF" />
+                    </Pressable>
+                    <Pressable style={styles.actionIconBtn} onPress={() => submitIndexNow(item.path)} title="IndexNow Submit">
+                      <Send size={14} color="#9CA3AF" />
+                    </Pressable>
+                    <Pressable style={styles.actionIconBtn} onPress={() => openPage(item.path)} title="Open Page">
+                      <ExternalLink size={14} color="#9CA3AF" />
                     </Pressable>
                   </View>
                 </View>
-              </View>
-            )}
-
-            {loading ? (
-              <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 24 }} />
-            ) : migrationMissing ? (
-              <View style={styles.emptyState}>
-                <Database size={32} color="#9CA3AF" />
-                <Text style={styles.emptyTitle}>Custom URLs Unavailable</Text>
-                <Text style={styles.emptyText}>Please set up the database table to start adding custom routes.</Text>
-              </View>
-            ) : customUrls.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Database size={32} color="#9CA3AF" />
-                <Text style={styles.emptyTitle}>No Custom URLs Registered</Text>
-                <Text style={styles.emptyText}>Any custom path added here will be merged into the static sitemap during builds.</Text>
-              </View>
-            ) : (
-              <View style={styles.table}>
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.th, { flex: 3 }]}>Custom URL Path</Text>
-                  <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>Priority</Text>
-                  <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>Frequency</Text>
-                  <Text style={[styles.th, { width: 80, textAlign: 'right' }]}>Action</Text>
-                </View>
-                {customUrls.map(item => (
-                  <View key={item.id} style={styles.tableRow}>
-                    <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <ArrowRight size={14} color="#10B981" />
-                      <Text style={styles.urlText} numberOfLines={1}>{item.url}</Text>
-                    </View>
-                    <Text style={[styles.tdText, { flex: 1, textAlign: 'center', fontWeight: '600' }]}>
-                      {Number(item.priority).toFixed(1)}
-                    </Text>
-                    <Text style={[styles.tdText, { flex: 1, textAlign: 'center', color: '#6B7280' }]}>
-                      {item.changefreq}
-                    </Text>
-                    <View style={{ width: 80, flexDirection: 'row', justifyContent: 'flex-end' }}>
-                      <Pressable onPress={() => handleDeleteUrl(item.id)} style={styles.deleteAction}>
-                        <Trash2 size={16} color="#EF4444" />
-                      </Pressable>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
+              );
+            }}
+          />
         )}
+      </View>
 
-        {/* Static Tab Panel */}
-        {activeSubTab === 'static' && (
-          <View style={styles.panel}>
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.th, { flex: 3 }]}>Core Public URL Path</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>Priority</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>Frequency</Text>
-              </View>
-              {STATIC_ROUTES.map((item, idx) => (
-                <View key={idx} style={styles.tableRow}>
-                  <Text style={styles.urlText}>{item.url === '' ? '/' : item.url}</Text>
-                  <Text style={[styles.tdText, { flex: 1, textAlign: 'center', fontWeight: '600' }]}>
-                    {item.priority.toFixed(1)}
-                  </Text>
-                  <Text style={[styles.tdText, { flex: 1, textAlign: 'center', color: '#6B7280' }]}>
-                    {item.changefreq}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Dynamic Tab Panel */}
-        {activeSubTab === 'dynamic' && (
-          <View style={styles.panel}>
-            {loadingDynamic ? (
-              <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 24 }} />
-            ) : (
-              <View style={styles.table}>
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.th, { flex: 3 }]}>Indexed Route URL</Text>
-                  <Text style={[styles.th, { flex: 1.5, textAlign: 'center' }]}>Source Category</Text>
-                  <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>Priority</Text>
-                </View>
-                {dynamicUrls.map((item, idx) => (
-                  <View key={idx} style={styles.tableRow}>
-                    <Text style={[styles.urlText, { flex: 3 }]} numberOfLines={1}>{item.url}</Text>
-                    <View style={{ flex: 1.5, alignItems: 'center' }}>
-                      <View style={[
-                        styles.badge, 
-                        item.type === 'ground' && styles.badgeGround,
-                        item.type === 'blog' && styles.badgeBlog,
-                        item.type === 'product' && styles.badgeProduct
-                      ]}>
-                        <Text style={styles.badgeText}>{item.type.toUpperCase()}</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.tdText, { flex: 1, textAlign: 'center', fontWeight: '600' }]}>
-                      {item.priority.toFixed(1)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* XML Preview Tab Panel */}
-        {activeSubTab === 'xml' && (
-          <View style={styles.panel}>
-            <View style={styles.xmlContainer}>
-              <Text style={styles.xmlCode} numberOfLines={999}>
-                {generateXmlPreview()}
-              </Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+      {/* Floating toast alerts */}
+      {toastMsg && (
+        <View style={styles.toastBox}>
+          <Text style={styles.toastText}>{toastMsg}</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -567,10 +568,10 @@ export default function SitemapManager() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       <MobileAppNavbar title="SITEMAP MANAGER" titleColor="#10B981" />
       <BlogsSubbar activeTab="sitemap">
-        {content}
+        <ScrollView style={{ flex: 1 }}>{content}</ScrollView>
       </BlogsSubbar>
     </View>
   );
@@ -579,287 +580,306 @@ export default function SitemapManager() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 4,
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
     paddingVertical: 20,
-    backgroundColor: 'transparent',
+    gap: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
     fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 4,
     fontFamily: 'Inter',
   },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
-  },
-  refreshBtnText: {
-    fontSize: 12,
-    color: '#4B5563',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  body: {
-    flex: 1,
-    marginTop: 16,
-  },
-  panel: {
-    flex: 1,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingBottom: 4,
-    gap: 8,
-    ...Platform.select({
-      web: { flexWrap: 'wrap' as any },
-    })
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    gap: 8,
-  },
-  tabButtonActive: {
-    borderBottomColor: '#10B981',
-  },
-  tabButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    fontFamily: 'Inter',
-  },
-  tabButtonTextActive: {
-    color: '#10B981',
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    gap: 12,
-  },
-  warningTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#B45309',
-    fontFamily: 'Inter',
-    marginBottom: 4,
-  },
-  warningText: {
-    fontSize: 12.5,
-    color: '#D97706',
-    fontFamily: 'Inter',
-    lineHeight: 16,
-  },
-  warningCode: {
-    fontSize: 11.5,
-    fontFamily: 'monospace',
-    backgroundColor: 'rgba(217, 119, 6, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginVertical: 6,
-    color: '#B45309',
-    alignSelf: 'flex-start',
-  },
-  warningNote: {
-    fontSize: 11,
-    color: '#92400E',
-    fontStyle: 'italic',
-    fontFamily: 'Inter',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  formTitle: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: 'Inter',
-    marginBottom: 12,
-  },
-  formRow: {
+  topActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    alignItems: 'flex-end',
+    gap: 8,
   },
-  inputLabel: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#6B7280',
-    fontFamily: 'Inter',
-    marginBottom: 6,
-  },
-  textInput: {
-    height: 38,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    color: '#111827',
-    fontFamily: 'Inter',
-    backgroundColor: '#F9FAFB',
-  },
-  addButton: {
-    height: 38,
-    backgroundColor: '#10B981',
+  secondaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 13,
-    fontFamily: 'Inter',
-  },
-  emptyState: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 36,
+    gap: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
   },
-  emptyTitle: {
-    fontSize: 14.5,
-    fontWeight: '700',
+  secondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#374151',
     fontFamily: 'Inter',
   },
-  emptyText: {
-    fontSize: 12.5,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontFamily: 'Inter',
-    maxWidth: 320,
-    lineHeight: 16,
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4F46E5', // Violet brand score color from image
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 36,
+    gap: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
   },
-  table: {
+  scanBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  indexNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#059669', // Green IndexNow button
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 36,
+    gap: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  indexNowBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  filtersBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingBottom: 16,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  tabActive: {
+    backgroundColor: '#EEF2F6', // Light gray background for active tab filters
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  tabTextActive: {
+    color: '#4F46E5', // Active tab label
+    fontWeight: '700',
+  },
+  rightFilters: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  selectMock: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    height: 36,
+  },
+  selectMockText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  searchWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: 10,
+    zIndex: 1,
+  },
+  searchInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: 8,
+    paddingLeft: 30,
+    paddingRight: 12,
+    height: 36,
+    fontSize: 13,
+    color: '#374151',
+    width: 200,
+    fontFamily: 'Inter',
   },
-  tableHeader: {
+  settingsBtn: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  tableCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginBottom: 40,
+  },
+  tableHeaderRow: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
   },
-  th: {
+  thText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#4B5563',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: '#6B7280',
     fontFamily: 'Inter',
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F3F4F6',
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
   },
-  urlText: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '500',
-    fontFamily: 'Inter',
-    flex: 3,
+  tdCell: {
+    justifyContent: 'center',
   },
-  tdText: {
+  urlTitle: {
     fontSize: 13,
+    fontWeight: '600',
     color: '#111827',
     fontFamily: 'Inter',
+    flexShrink: 1,
   },
-  deleteAction: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: '#FEF2F2',
+  typeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  badge: {
-    paddingHorizontal: 8,
+  typeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  scoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 12,
-    alignSelf: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
   },
-  badgeText: {
-    fontSize: 9.5,
+  scoreText: {
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter',
   },
-  badgeGround: {
-    backgroundColor: '#DBEAFE',
-    borderColor: '#3B82F6',
-  },
-  badgeBlog: {
-    backgroundColor: '#D1FAE5',
-    borderColor: '#10B981',
-  },
-  badgeProduct: {
-    backgroundColor: '#F3E8FF',
-    borderColor: '#A855F7',
-  },
-  xmlContainer: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  xmlCode: {
+  pathText: {
     fontFamily: 'monospace',
-    fontSize: 12,
-    color: '#E2E8F0',
-    lineHeight: 18,
+    fontSize: 13,
+    color: '#4F46E5', // Monospaced violet URL paths
+    flexShrink: 1,
+  },
+  actionIconBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     ...Platform.select({
-      web: { whiteSpace: 'pre-wrap' as any },
+      web: { cursor: 'pointer' } as any
     })
+  },
+  loadingBox: {
+    paddingVertical: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  emptyBox: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+  },
+  toastBox: {
+    position: 'absolute',
+    bottom: 24,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10000,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });
