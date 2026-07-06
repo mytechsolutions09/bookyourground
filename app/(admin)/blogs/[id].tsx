@@ -156,7 +156,7 @@ export default function AdminBlogEdit() {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [tags, setTags] = useState('');
-  const [category, setCategory] = useState('Astrology blog');
+  const [category, setCategory] = useState('Indian sports venues');
 
   const [allBlogs, setAllBlogs] = useState<{ id: string; title: string; slug: string; excerpt: string; content: string }[]>([]);
 
@@ -1131,7 +1131,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                       cursor: 'pointer'
                     } as any}
                   >
-                    <option value="Astrology blog">Astrology blog</option>
+                    <option value="Indian sports venues">Indian sports venues</option>
                     <option value="Cricket Grounds">Cricket Grounds</option>
                     <option value="Football Grounds">Football Grounds</option>
                     <option value="Venue Booking">Venue Booking</option>
@@ -1142,7 +1142,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                     style={styles.input}
                     value={category}
                     onChangeText={setCategory}
-                    placeholder="Astrology blog"
+                    placeholder="Indian sports venues"
                   />
                 )}
               </View>
