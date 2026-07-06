@@ -1180,7 +1180,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                 style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
                 value={excerpt}
                 onChangeText={(val) => {
-                  if (val.length <= 155) setExcerpt(val);
+                  setExcerpt(val.slice(0, 155));
                 }}
                 placeholder="Provide a 1-2 sentence brief preview of the post. Used for article lists and SEO snippets."
                 placeholderTextColor="#9CA3AF"
