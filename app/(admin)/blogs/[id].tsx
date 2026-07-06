@@ -30,7 +30,8 @@ import {
   ExternalLink,
   CheckSquare,
   Square,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from 'lucide-react-native';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as ImagePicker from 'expo-image-picker';
