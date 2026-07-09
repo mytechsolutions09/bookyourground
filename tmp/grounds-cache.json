@@ -1339,6 +1339,4791 @@
     ]
   },
   {
+    "id": "b03051d1-55d3-4e34-adea-bd2784d37645",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "Ambala Cricket Ground",
+    "description": "Professional cricket ground for league and practice matches.",
+    "address": "Ambala, Haryana",
+    "city": "Ambala",
+    "state": "Haryana",
+    "pincode": "133001",
+    "latitude": 30.3752,
+    "longitude": 76.7821,
+    "base_price_per_hour": 1200,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "Standard",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T08:21:50.899323+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": "Matting",
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "3148d6eb-7d12-483b-8b2c-800e7c6991b0",
+        "ground_id": "b03051d1-55d3-4e34-adea-bd2784d37645",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462040919-6ywjt2h44hr.jpg",
+        "created_at": "2026-06-26T08:21:51.526015+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "b8d74ec4-a173-408a-85b0-151ba99e2cee",
+        "ground_id": "b03051d1-55d3-4e34-adea-bd2784d37645",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462045457-korwna2gtod.jpg",
+        "created_at": "2026-06-26T08:21:51.526015+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "f787b883-7a47-4c43-b4ab-bc3358498bd9",
+        "ground_id": "b03051d1-55d3-4e34-adea-bd2784d37645",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462051652-l8vrxwulz9c.jpg",
+        "created_at": "2026-06-26T08:21:51.526015+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "babf2481-4964-477f-b6d3-99e6c9a0dc03",
+        "ground_id": "b03051d1-55d3-4e34-adea-bd2784d37645",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462060020-vccklqskhlg.jpg",
+        "created_at": "2026-06-26T08:21:51.526015+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "67af4a4c-5192-493c-8d0c-ff209338dc5c",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "DPGITM Sports Complex",
+    "description": "Sports complex with outdoor cricket facilities.",
+    "address": "DPGITM Campus, Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "pincode": "122006",
+    "latitude": 28.4089,
+    "longitude": 76.9726,
+    "base_price_per_hour": 900,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "Standard",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": false,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T08:22:47.256947+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": "Turf",
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "4649010e-18e0-4961-8bd8-8ca66538716d",
+        "ground_id": "67af4a4c-5192-493c-8d0c-ff209338dc5c",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782461870928-wwch7qg900n.jpg",
+        "created_at": "2026-06-26T08:22:47.748914+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "703d927d-bad2-40f0-8ea0-82cc48dbeb10",
+        "ground_id": "67af4a4c-5192-493c-8d0c-ff209338dc5c",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782461875812-3ufyc0aswtf.jpg",
+        "created_at": "2026-06-26T08:22:47.748914+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "d68b8671-bb8d-48f3-822f-272cfeed3b88",
+        "ground_id": "67af4a4c-5192-493c-8d0c-ff209338dc5c",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782461879544-z02kkley1sr.jpg",
+        "created_at": "2026-06-26T08:22:47.748914+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "e2c8e045-9771-4f65-9823-bb05a749ac71",
+        "ground_id": "67af4a4c-5192-493c-8d0c-ff209338dc5c",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782461884440-uduxjenmrnl.jpg",
+        "created_at": "2026-06-26T08:22:47.748914+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "fccb5b0b-248b-41fa-9a23-c74e52558da6",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "Kraft DrinkPole Star Cricket Ground",
+    "description": "Premium cricket facility with floodlights.",
+    "address": "Pole Star, Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "pincode": "122009",
+    "latitude": 28.485,
+    "longitude": 77.085,
+    "base_price_per_hour": 1050,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "Standard",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": false,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T09:02:28.27789+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": "Turf",
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "0931269b-49c8-414d-a38b-9f72b01a4581",
+        "ground_id": "fccb5b0b-248b-41fa-9a23-c74e52558da6",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782463357315-tlrsgu41g0e.jpg",
+        "created_at": "2026-06-26T09:02:28.981905+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "06393586-0c01-4e73-9126-52f62520e7aa",
+        "ground_id": "fccb5b0b-248b-41fa-9a23-c74e52558da6",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782463368992-ut5p3ol7o3.jpg",
+        "created_at": "2026-06-26T09:02:28.981905+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "3e20d312-7e9a-4109-ab58-7f3dd48c1a62",
+        "ground_id": "fccb5b0b-248b-41fa-9a23-c74e52558da6",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782463375460-gqqx1904fqq.jpg",
+        "created_at": "2026-06-26T09:02:28.981905+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "a58b65f8-360c-4b91-9a8f-67a2d36f140a",
+        "ground_id": "fccb5b0b-248b-41fa-9a23-c74e52558da6",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782463381133-abcxcyn4cb.jpg",
+        "created_at": "2026-06-26T09:02:28.981905+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "c63029a6-8e84-463a-8cd6-10c7bdcf1e7d",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "Hare Knoll Cricket Ground",
+    "description": "Premium cricket ground in Sector 72.",
+    "address": "Sector 72, Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "pincode": "122101",
+    "latitude": 28.42,
+    "longitude": 77.062,
+    "base_price_per_hour": 1100,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "Standard",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T08:44:29.120293+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": "Turf",
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "53a80778-b1d2-4185-9ae8-8db9454a0511",
+        "ground_id": "c63029a6-8e84-463a-8cd6-10c7bdcf1e7d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462731632-5vf11lfc527.jpg",
+        "created_at": "2026-06-26T08:44:29.668129+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "c47ec53d-b931-47fb-98c4-6d0022719207",
+        "ground_id": "c63029a6-8e84-463a-8cd6-10c7bdcf1e7d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462735813-zce1jw6qmfh.jpg",
+        "created_at": "2026-06-26T08:44:29.668129+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "798bf0a0-e1cf-4563-a6be-850fd95c597a",
+        "ground_id": "c63029a6-8e84-463a-8cd6-10c7bdcf1e7d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462740974-q73ojp4g28.jpg",
+        "created_at": "2026-06-26T08:44:29.668129+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "d2fab41a-99a8-4473-9a4f-82a4d7eb5b13",
+        "ground_id": "c63029a6-8e84-463a-8cd6-10c7bdcf1e7d",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782462744116-376xcwmf4f6.jpg",
+        "created_at": "2026-06-26T08:44:29.668129+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "dff3899f-d43a-4ad3-beab-81c8bd51f796",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "Boundary Box Cricket Arena",
+    "description": "Indoor box cricket with premium turf and lighting.",
+    "address": "Boundary Complex, Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "pincode": "122018",
+    "latitude": 28.45,
+    "longitude": 77.04,
+    "base_price_per_hour": 800,
+    "pitch_type": "Box Cricket",
+    "ground_size": "Box",
+    "has_floodlights": false,
+    "has_parking": false,
+    "has_changing_rooms": true,
+    "has_pavilion": false,
+    "capacity": 6,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T08:53:40.893222+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": null,
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "2de72ab5-560c-4335-b331-5948e96283f1",
+        "ground_id": "dff3899f-d43a-4ad3-beab-81c8bd51f796",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782463993952-865e7s35487.jpg",
+        "created_at": "2026-06-26T08:53:41.494176+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "7e35ca6a-152d-4f85-9f7b-eb93240de3b3",
+        "ground_id": "dff3899f-d43a-4ad3-beab-81c8bd51f796",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464003070-94mjy4jcfm7.jpg",
+        "created_at": "2026-06-26T08:53:41.494176+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "69719f98-3a1a-49df-9626-26df77021f83",
+        "ground_id": "dff3899f-d43a-4ad3-beab-81c8bd51f796",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464007687-qxr5r2wph1e.jpg",
+        "created_at": "2026-06-26T08:53:41.494176+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "7ca522ab-0046-4bb4-b9d9-9ccbd5662e52",
+        "ground_id": "dff3899f-d43a-4ad3-beab-81c8bd51f796",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464012768-jhv2wp1otjk.jpg",
+        "created_at": "2026-06-26T08:53:41.494176+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      }
+    ]
+  },
+  {
     "id": "9497bda2-4c4b-464d-a92b-415ec8cc98a0",
     "owner_id": "eec47484-b584-4b47-95a6-8561d743bcc3",
     "name": "GHS Greenfield Cricket Ground",
@@ -1683,6 +6468,963 @@
         "start_time": "14:00:00",
         "overs_count": null,
         "custom_price": 5500,
+        "is_available": true
+      }
+    ]
+  },
+  {
+    "id": "f0497bfb-a01f-451a-9653-7e20800185e9",
+    "owner_id": "8c72932f-e8f7-4812-911d-bdea550b64d3",
+    "name": "Strike Ani Strike Cricket Ground",
+    "description": "Full-size turf ground for tournaments and league play.",
+    "address": "Strike Complex, Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "pincode": "122022",
+    "latitude": 28.4958,
+    "longitude": 77.0402,
+    "base_price_per_hour": 1200,
+    "pitch_type": "Cricket Ground",
+    "ground_size": "Standard",
+    "has_floodlights": true,
+    "has_parking": true,
+    "has_changing_rooms": true,
+    "has_pavilion": true,
+    "capacity": 22,
+    "verified": true,
+    "approved": true,
+    "active": true,
+    "created_at": "2026-06-25T13:50:50.100467+00:00",
+    "updated_at": "2026-06-26T08:58:06.505537+00:00",
+    "has_washrooms": false,
+    "cricket_pitch_surface": "Turf",
+    "min_price": null,
+    "pricing_model": "hours",
+    "is_indoor": false,
+    "has_bowling_machine": false,
+    "lanes_count": 1,
+    "has_manual_throwdown": false,
+    "has_umpires": false,
+    "has_new_balls": false,
+    "has_scoring": false,
+    "has_practice_nets": false,
+    "has_swimming_pool": false,
+    "ground_images": [
+      {
+        "id": "28c2433e-88c2-470c-8dcc-5477d4f40950",
+        "ground_id": "f0497bfb-a01f-451a-9653-7e20800185e9",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464268595-ueki1dnl2l.jpg",
+        "created_at": "2026-06-26T08:58:07.169551+00:00",
+        "is_primary": true,
+        "display_order": 0
+      },
+      {
+        "id": "d1789420-6cf1-40ac-941c-dfd2b16a8cde",
+        "ground_id": "f0497bfb-a01f-451a-9653-7e20800185e9",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464273998-qrqyecxnfr.jpg",
+        "created_at": "2026-06-26T08:58:07.169551+00:00",
+        "is_primary": false,
+        "display_order": 1
+      },
+      {
+        "id": "6b991f3d-55b7-4a0d-b9c1-ebc1ca485c14",
+        "ground_id": "f0497bfb-a01f-451a-9653-7e20800185e9",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464278660-bnjagmz2jel.jpg",
+        "created_at": "2026-06-26T08:58:07.169551+00:00",
+        "is_primary": false,
+        "display_order": 2
+      },
+      {
+        "id": "2b1a8527-a1ee-4638-b3e3-5ac76b05587d",
+        "ground_id": "f0497bfb-a01f-451a-9653-7e20800185e9",
+        "image_url": "https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/ground-images/owner-media/8c72932f-e8f7-4812-911d-bdea550b64d3/1782464282634-55bam3fy74.jpg",
+        "created_at": "2026-06-26T08:58:07.169551+00:00",
+        "is_primary": false,
+        "display_order": 3
+      }
+    ],
+    "reviews": [],
+    "time_slots": [
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "07:00:00",
+        "start_time": "06:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "08:00:00",
+        "start_time": "07:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "09:00:00",
+        "start_time": "08:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "10:00:00",
+        "start_time": "09:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "11:00:00",
+        "start_time": "10:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "12:00:00",
+        "start_time": "11:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "13:00:00",
+        "start_time": "12:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "14:00:00",
+        "start_time": "13:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "15:00:00",
+        "start_time": "14:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "16:00:00",
+        "start_time": "15:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "17:00:00",
+        "start_time": "16:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "18:00:00",
+        "start_time": "17:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "19:00:00",
+        "start_time": "18:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "20:00:00",
+        "start_time": "19:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "21:00:00",
+        "start_time": "20:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "22:00:00",
+        "start_time": "21:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "23:00:00",
+        "start_time": "22:00:00",
+        "overs_count": null,
+        "custom_price": null,
+        "is_available": true
+      },
+      {
+        "end_time": "00:00:00",
+        "start_time": "23:00:00",
+        "overs_count": null,
+        "custom_price": null,
         "is_available": true
       }
     ]
