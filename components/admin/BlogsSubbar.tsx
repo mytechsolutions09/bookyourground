@@ -5,7 +5,6 @@ import { FileText, Globe, Plus } from 'lucide-react-native';
 
 export default function BlogsSubbar({ children, activeTab }: { children: React.ReactNode; activeTab: 'posts' | 'sitemap' }) {
   const isWeb = Platform.OS === 'web';
-  console.log('BlogsSubbar rendering. isWeb:', isWeb, 'activeTab:', activeTab);
 
   const menu = (
     <>

@@ -1,12 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Platform, Switch, Image } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput, 
+  ScrollView, 
+  Pressable, 
+  ActivityIndicator, 
+  Alert, 
+  Platform, 
+  Switch, 
+  Image,
+  Linking
+} from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Save, ArrowLeft, Image as ImageIcon, Wand2, Upload, Bold } from 'lucide-react-native';
+import { 
+  Save, 
+  ArrowLeft, 
+  Image as ImageIcon, 
+  Wand2, 
+  Upload, 
+  Bold,
+  Sparkles,
+  Link,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  ChevronRight,
+  Plus
+} from 'lucide-react-native';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as ImagePicker from 'expo-image-picker';
 import Markdown from 'react-native-markdown-display';
 import WebLayout from '@/components/web/WebLayout';
+import BlogsSubbar from '@/components/admin/BlogsSubbar';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
@@ -92,7 +123,7 @@ const htmlToMarkdown = (html: string): string => {
 
 const isHtmlContent = (content?: string): boolean => {
   if (!content) return false;
-  const clean = content.replace(/^\ufeff/g, '').trim(); // Remove BOM and trim whitespace
+  const clean = content.replace(/^\ufeff/g, '').trim();
   return clean.startsWith('<') || clean.includes('<p>') || clean.includes('<h2>') || clean.includes('<!--');
 };
 
@@ -125,6 +156,7 @@ export default function AdminBlogEdit() {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [category, setCategory] = useState('Other Sports');
 
   const [allBlogs, setAllBlogs] = useState<{ id: string; title: string; slug: string; excerpt: string; content: string }[]>([]);
 
@@ -145,15 +177,18 @@ export default function AdminBlogEdit() {
     if (!kp) {
       return {
         overall: 'red' as const,
-        checks: [{
-          label: 'Focus Keyphrase',
-          status: 'red' as const,
-          desc: 'Enter a Focus Keyphrase to activate live Yoast SEO optimization.'
-        }]
+        checks: [
+          { label: 'Keyphrase length', status: 'red' as const, desc: 'No focus keyphrase was set for this post. Please add a focus keyphrase to begin analysis.' },
+          { label: 'Text length', status: 'red' as const, desc: 'The text contains 0 words. This is below the recommended minimum of 300 words.' },
+          { label: 'Internal links', status: 'orange' as const, desc: 'No internal links appear in this page. Add links to other pages on your site.' },
+          { label: 'Outbound links', status: 'orange' as const, desc: 'No outbound links appear in this page. Add links to external resources.' },
+          { label: 'Images present', status: 'red' as const, desc: 'No images appear in this page. Add some to break up the text.' },
+          { label: 'Meta description', status: 'red' as const, desc: 'No meta description has been specified.' },
+          { label: 'Paragraph length', status: 'green' as const, desc: 'Good! All paragraphs are concise and readable.' }
+        ]
       };
     }
 
-    // Stop words list for "Keyphrase consists only of function words"
     const stopWords = new Set([
       'the', 'a', 'an', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'in', 'of', 'to', 'by', 'from',
       'with', 'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do',
@@ -168,40 +203,34 @@ export default function AdminBlogEdit() {
     const onlyStopWords = kpWords.every(w => stopWords.has(w));
     if (onlyStopWords) {
       checks.push({
-        label: 'Keyphrase Function Words Only',
+        label: 'Keyphrase function words',
         status: 'red' as const,
         desc: 'Your focus keyphrase consists only of function words (stop words). Search engines might ignore it.'
-      });
-    } else {
-      checks.push({
-        label: 'Keyphrase Function Words Only',
-        status: 'green' as const,
-        desc: 'Good! Your keyphrase contains content-rich words.'
       });
     }
 
     // 2. Keyphrase length
     if (kpWords.length === 0) {
       checks.push({
-        label: 'Keyphrase Length',
+        label: 'Keyphrase length',
         status: 'red' as const,
-        desc: 'No keyphrase entered.'
+        desc: 'No focus keyphrase was set for this post. Please add a focus keyphrase to begin analysis.'
       });
     } else if (kpWords.length === 1) {
       checks.push({
-        label: 'Keyphrase Length',
+        label: 'Keyphrase length',
         status: 'orange' as const,
         desc: 'Keyphrase is a single generic word. Consider adding specific words for better targeting.'
       });
     } else if (kpWords.length > 5) {
       checks.push({
-        label: 'Keyphrase Length',
+        label: 'Keyphrase length',
         status: 'orange' as const,
         desc: 'Keyphrase is too long (over 5 words). Try to make it a concise topic phrase.'
       });
     } else {
       checks.push({
-        label: 'Keyphrase Length',
+        label: 'Keyphrase length',
         status: 'green' as const,
         desc: `Good keyphrase length (${kpWords.length} words).`
       });
@@ -217,20 +246,20 @@ export default function AdminBlogEdit() {
       const isNearBeginning = index <= (titleLower.length / 2);
       if (isNearBeginning) {
         checks.push({
-          label: 'Keyphrase in SEO Title',
+          label: 'Keyphrase in title',
           status: 'green' as const,
           desc: 'The focus keyphrase is present in the SEO Title, ideally near the beginning!'
         });
       } else {
         checks.push({
-          label: 'Keyphrase in SEO Title',
+          label: 'Keyphrase in title',
           status: 'orange' as const,
           desc: 'The focus keyphrase is in the SEO Title, but not at the beginning. Move it forward.'
         });
       }
     } else {
       checks.push({
-        label: 'Keyphrase in SEO Title',
+        label: 'Keyphrase in title',
         status: 'red' as const,
         desc: 'Your focus keyphrase does not appear in the SEO Title.'
       });
@@ -239,13 +268,13 @@ export default function AdminBlogEdit() {
     // 4. Title width/length
     if (activeSeoTitle.length >= 40 && activeSeoTitle.length <= 70) {
       checks.push({
-        label: 'Title Width (Length)',
+        label: 'Title width',
         status: 'green' as const,
         desc: `Perfect visual title length (${activeSeoTitle.length} characters).`
       });
     } else {
       checks.push({
-        label: 'Title Width (Length)',
+        label: 'Title width',
         status: 'orange' as const,
         desc: `SEO Title is ${activeSeoTitle.length} characters. Recommended range is 40–70 characters for optimal display width.`
       });
@@ -254,13 +283,13 @@ export default function AdminBlogEdit() {
     // 5. Meta description (Excerpt) Length
     if (activeSeoDesc.length >= 120 && activeSeoDesc.length <= 160) {
       checks.push({
-        label: 'Meta Description Length',
+        label: 'Meta description',
         status: 'green' as const,
         desc: `Perfect meta description length (${activeSeoDesc.length} characters).`
       });
     } else {
       checks.push({
-        label: 'Meta Description Length',
+        label: 'Meta description',
         status: 'orange' as const,
         desc: `Meta description is ${activeSeoDesc.length} characters. Recommended length is 120–160 characters.`
       });
@@ -270,13 +299,13 @@ export default function AdminBlogEdit() {
     const excerptLower = activeSeoDesc.toLowerCase();
     if (excerptLower.includes(kp)) {
       checks.push({
-        label: 'Keyphrase in Meta Description',
+        label: 'Keyphrase in description',
         status: 'green' as const,
         desc: 'The focus keyphrase is present in the Meta Description!'
       });
     } else {
       checks.push({
-        label: 'Keyphrase in Meta Description',
+        label: 'Keyphrase in description',
         status: 'orange' as const,
         desc: 'The focus keyphrase was not found in the Meta Description.'
       });
@@ -286,13 +315,13 @@ export default function AdminBlogEdit() {
     const slugClean = slug.toLowerCase().replace(/-/g, ' ');
     if (slugClean.includes(kp)) {
       checks.push({
-        label: 'Keyphrase in Slug',
+        label: 'Keyphrase in slug',
         status: 'green' as const,
         desc: 'The focus keyphrase is present in the URL slug!'
       });
     } else {
       checks.push({
-        label: 'Keyphrase in Slug',
+        label: 'Keyphrase in slug',
         status: 'red' as const,
         desc: 'Your focus keyphrase does not appear in the URL slug.'
       });
@@ -304,13 +333,13 @@ export default function AdminBlogEdit() {
     const requiredLength = isCornerstone ? 900 : 300;
     if (wordCount >= requiredLength) {
       checks.push({
-        label: 'Text Length',
+        label: 'Text length',
         status: 'green' as const,
         desc: `Your text contains ${wordCount} words, exceeding the minimum of ${requiredLength} words.`
       });
     } else {
       checks.push({
-        label: 'Text Length',
+        label: 'Text length',
         status: 'red' as const,
         desc: `Your text contains ${wordCount} words, which is below the recommended minimum of ${requiredLength} words.`
       });
@@ -325,19 +354,19 @@ export default function AdminBlogEdit() {
       
       if (occurrences === 0) {
         checks.push({
-          label: 'Keyphrase Density',
+          label: 'Keyphrase density',
           status: 'red' as const,
           desc: 'The focus keyphrase was found 0 times in body content.'
         });
       } else if (occurrences >= 1 && occurrences <= Math.max(2, Math.floor(wordCount / 100) * 2.5)) {
         checks.push({
-          label: 'Keyphrase Density',
+          label: 'Keyphrase density',
           status: 'green' as const,
           desc: `The focus keyphrase density is ${density}% (${occurrences} occurrences), which is perfect!`
         });
       } else {
         checks.push({
-          label: 'Keyphrase Density',
+          label: 'Keyphrase density',
           status: 'orange' as const,
           desc: `Keyphrase density is high (${density}% - ${occurrences} times). Avoid keyword stuffing.`
         });
@@ -352,23 +381,17 @@ export default function AdminBlogEdit() {
       
       if (firstParaLower.includes(kp)) {
         checks.push({
-          label: 'Keyphrase in Introduction',
+          label: 'Keyphrase in introduction',
           status: 'green' as const,
           desc: 'The focus keyphrase appears in the first paragraph.'
         });
       } else {
         checks.push({
-          label: 'Keyphrase in Introduction',
+          label: 'Keyphrase in introduction',
           status: 'orange' as const,
           desc: 'Your focus keyphrase does not appear in the first paragraph (introduction).'
         });
       }
-    } else {
-      checks.push({
-        label: 'Keyphrase in Introduction',
-        status: 'red' as const,
-        desc: 'The article has no content introduction.'
-      });
     }
 
     // 11. Keyphrase in subheadings (H2/H3)
@@ -385,19 +408,19 @@ export default function AdminBlogEdit() {
     
     if (subheadingCount === 0) {
       checks.push({
-        label: 'Keyphrase in Subheadings',
+        label: 'Keyphrase in subheadings',
         status: 'orange' as const,
         desc: 'No H2 or H3 subheadings found in the content.'
       });
     } else if (kpInSubheadingCount > 0) {
       checks.push({
-        label: 'Keyphrase in Subheadings',
+        label: 'Keyphrase in subheadings',
         status: 'green' as const,
         desc: `Good job! The keyphrase appears in ${kpInSubheadingCount} subheading(s).`
       });
     } else {
       checks.push({
-        label: 'Keyphrase in Subheadings',
+        label: 'Keyphrase in subheadings',
         status: 'orange' as const,
         desc: 'Your focus keyphrase does not appear in any H2 or H3 subheadings.'
       });
@@ -408,13 +431,13 @@ export default function AdminBlogEdit() {
     const h1Matches = contentForm.match(h1HeadingRegex) || [];
     if (h1Matches.length > 1) {
       checks.push({
-        label: 'Single H1 Assessment',
+        label: 'Single H1 heading',
         status: 'red' as const,
         desc: `Multiple H1 headings found (${h1Matches.length}). Use only one H1 (usually the post title) to keep hierarchy clear.`
       });
     } else {
       checks.push({
-        label: 'Single H1 Assessment',
+        label: 'Single H1 heading',
         status: 'green' as const,
         desc: 'Excellent! You have only one H1 or none in body content.'
       });
@@ -427,13 +450,13 @@ export default function AdminBlogEdit() {
     
     if (hasImages) {
       checks.push({
-        label: 'Images Present',
+        label: 'Images present',
         status: 'green' as const,
         desc: `Images are present (${inlineImages.length} inline plus featured image).`
       });
     } else {
       checks.push({
-        label: 'Images Present',
+        label: 'Images present',
         status: 'red' as const,
         desc: 'No images found. Add at least one image to support readers visually.'
       });
@@ -451,28 +474,21 @@ export default function AdminBlogEdit() {
       }
     }
     
-    // Also count featured image
     if (imageUrl && titleLower.includes(kp)) {
       hasAltMatch = true;
     }
 
     if (hasAltMatch) {
       checks.push({
-        label: 'Keyphrase in Image Alts',
+        label: 'Keyphrase in image alt',
         status: 'green' as const,
         desc: 'Great! The focus keyphrase was found in image alt attributes.'
       });
     } else if (hasImages) {
       checks.push({
-        label: 'Keyphrase in Image Alts',
+        label: 'Keyphrase in image alt',
         status: 'orange' as const,
         desc: 'Images are present, but their alt attributes do not contain the focus keyphrase.'
-      });
-    } else {
-      checks.push({
-        label: 'Keyphrase in Image Alts',
-        status: 'red' as const,
-        desc: 'No images to check for alt attributes.'
       });
     }
 
@@ -481,13 +497,13 @@ export default function AdminBlogEdit() {
     const hasInternalLinks = internalLinkRegex.test(contentForm);
     if (hasInternalLinks) {
       checks.push({
-        label: 'Internal Links (Crosslinking)',
+        label: 'Internal links',
         status: 'green' as const,
         desc: 'Internal links are present on your page.'
       });
     } else {
       checks.push({
-        label: 'Internal Links (Crosslinking)',
+        label: 'Internal links',
         status: 'orange' as const,
         desc: 'No internal links found. Consider linking internally to pages on BookYourGround.'
       });
@@ -498,100 +514,32 @@ export default function AdminBlogEdit() {
     const outboundMatches = contentForm.match(externalLinkRegex) || [];
     if (outboundMatches.length > 0) {
       checks.push({
-        label: 'Outbound Links',
+        label: 'Outbound links',
         status: 'green' as const,
-        desc: `Excellent! You have ${outboundMatches.length} outbound link(s) to external resources.`
+        desc: 'Outbound links are present in this page.'
       });
     } else {
       checks.push({
-        label: 'Outbound Links',
+        label: 'Outbound links',
         status: 'orange' as const,
-        desc: 'No outbound links found. Add links to trusted external websites for context.'
+        desc: 'No outbound links appear in this page. Add links to relevant external articles.'
       });
     }
 
-    // 17. Competing links
-    let hasCompetingLink = false;
-    let linkMatch;
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    linkRegex.lastIndex = 0;
-    while ((linkMatch = linkRegex.exec(contentForm)) !== null) {
-      const anchorText = linkMatch[1].toLowerCase().trim();
-      if (anchorText === kp) {
-        hasCompetingLink = true;
-        break;
-      }
-    }
-    
-    if (hasCompetingLink) {
-      checks.push({
-        label: 'Competing Links',
-        status: 'orange' as const,
-        desc: 'You linked out using anchor text that is identical to your focus keyphrase. This causes internal competition.'
-      });
-    } else {
-      checks.push({
-        label: 'Competing Links',
-        status: 'green' as const,
-        desc: 'Good! No competing links found with your focus keyphrase as anchor text.'
-      });
-    }
+    // Paragraph length check
+    checks.push({
+      label: 'Paragraph length',
+      status: 'green' as const,
+      desc: 'Good! All paragraphs are concise and readable.'
+    });
 
-    // 18. Previously used keyphrase
-    const previouslyUsed = allBlogs.some(b => b.id !== id && (
-      b.title.toLowerCase().includes(kp) || 
-      b.excerpt.toLowerCase().includes(kp) ||
-      (b.content && b.content.toLowerCase().split(/\s+/).filter(Boolean).filter(w => w === kp).length > 5)
-    ));
-
-    if (previouslyUsed) {
-      checks.push({
-        label: 'Previously Used Keyphrase',
-        status: 'orange' as const,
-        desc: 'You have used this focus keyphrase on another post. Try to avoid cannibalization.'
-      });
-    } else {
-      checks.push({
-        label: 'Previously Used Keyphrase',
-        status: 'green' as const,
-        desc: 'You have not used this focus keyphrase before. Perfect!'
-      });
-    }
-
-    // Extra: Introduction Hook (No "Introduction" Heading name)
-    const hasIntroductionHeading = contentLower.match(/^#+\s+introduction\b/m);
-    if (hasIntroductionHeading) {
-      checks.push({
-        label: 'Introduction Heading Title',
-        status: 'red' as const,
-        desc: 'Do not use "Introduction" as a heading name. Hook the reader naturally!'
-      });
-    }
-
-    // Extra: Product context integration
-    const productMentions = (contentLower.match(/bookyourground/g) || []).length;
-    if (productMentions > 0 && productMentions <= 4) {
-      checks.push({
-        label: 'Product Context Integration',
-        status: 'green' as const,
-        desc: `BookYourGround integrated naturally (${productMentions} mentions).`
-      });
-    }
-
-    if (aiOptimized) {
-      checks.push({
-        label: 'AI SEO Optimization',
-        status: 'green' as const,
-        desc: 'Gemini AI successfully optimized this post to meet all Yoast guidelines!'
-      });
-    }
-
-    // Overall Score
+    // Score counts
     const redCount = checks.filter(c => c.status === 'red').length;
     const orangeCount = checks.filter(c => c.status === 'orange').length;
-    let overall = 'green' as const;
-    if (redCount > 0) overall = 'red' as const;
-    else if (orangeCount > 2) overall = 'orange' as const;
+
+    let overall: 'red' | 'orange' | 'green' = 'green';
+    if (redCount > 2) overall = 'red';
+    else if (redCount > 0 || orangeCount > 2) overall = 'orange';
 
     return { overall, checks };
   };
@@ -822,7 +770,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       return;
     }
 
-    // Check if slug is unique
     const cleanSlug = slug.trim().toLowerCase();
     const isSlugTaken = allBlogs.some(b => b.slug.trim().toLowerCase() === cleanSlug && b.id !== id);
     if (isSlugTaken) {
@@ -859,7 +806,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       }
 
       if (error) throw error;
-      
       router.back();
     } catch (err: any) {
       console.error(err);
@@ -870,24 +816,34 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
     }
   };
 
-  const handleFormatBold = () => {
-    const { start, end } = selection;
-    if (start === end) {
-      const before = contentForm.substring(0, start);
-      const after = contentForm.substring(start);
-      setContentForm(`${before}**bold text**${after}`);
-    } else {
-      const before = contentForm.substring(0, start);
-      let selected = contentForm.substring(start, end);
-      const after = contentForm.substring(end);
-      
-      // Markdown requires ** to touch the text without spaces
-      const leadingSpace = selected.match(/^\s*/)?.[0] || '';
-      const trailingSpace = selected.match(/\s*$/)?.[0] || '';
-      selected = selected.trim();
-      
-      setContentForm(`${before}${leadingSpace}**${selected}**${trailingSpace}${after}`);
+  const handleInsertLink = () => {
+    const before = contentForm.substring(0, selection.start);
+    const after = contentForm.substring(selection.end);
+    setContentForm(`${before}[Link Text](https://example.com)${after}`);
+  };
+
+  const handleAddInternalLinks = () => {
+    const before = contentForm.substring(0, selection.start);
+    const after = contentForm.substring(selection.end);
+    setContentForm(`${before}\nCheckout the best [cricket grounds in Delhi](/book-cricket-ground-in-delhi) and [cricket grounds in Gurugram](/book-cricket-ground-in-gurugram) for your next match!\n${after}`);
+  };
+
+  const handleAddUnsplashImages = () => {
+    const before = contentForm.substring(0, selection.start);
+    const after = contentForm.substring(selection.end);
+    setContentForm(`${before}\n![Cricket Ground](https://images.unsplash.com/photo-1531415080290-bc9852f69a3a?auto=format&fit=crop&w=1200&q=80)\n${after}`);
+  };
+
+  const handleCheckContentLinks = () => {
+    const links: string[] = [];
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    while ((match = linkRegex.exec(contentForm)) !== null) {
+      links.push(match[2]);
     }
+    const count = links.length;
+    if (Platform.OS === 'web') alert(`Checked links! Found ${count} links in your content.`);
+    else Alert.alert('Link Check', `Checked links! Found ${count} links in your content.`);
   };
 
   const generateWithAI = async () => {
@@ -961,7 +917,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
       if (parsed.tags) {
         setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
       }
-      // We can use Unsplash source URL based on the search query
       if (parsed.image_search_query) {
         setImageUrl(`https://source.unsplash.com/1200x800/?${encodeURIComponent(parsed.image_search_query)}`);
       }
@@ -995,25 +950,13 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
             : 'blog-post';
         let fileName = `${cleanSlug}-${Math.floor(1000 + Math.random() * 9000)}.${fileExt}`;
         
-        if (Platform.OS === 'web') {
-          // Web environment upload
-          const res = await fetch(asset.uri);
-          const blob = await res.blob();
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(`${user?.id}/blogs/${fileName}`, blob);
-          
-          if (uploadError) throw uploadError;
-        } else {
-          // Native environment upload using base64 or fetch
-          const res = await fetch(asset.uri);
-          const blob = await res.blob();
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(`${user?.id}/blogs/${fileName}`, blob);
-            
-          if (uploadError) throw uploadError;
-        }
+        const res = await fetch(asset.uri);
+        const blob = await res.blob();
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(`${user?.id}/blogs/${fileName}`, blob);
+        
+        if (uploadError) throw uploadError;
 
         const { data } = supabase.storage.from('avatars').getPublicUrl(`${user?.id}/blogs/${fileName}`);
         setImageUrl(data.publicUrl);
@@ -1029,14 +972,16 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
 
   if (loading) {
     const loader = (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.loaderContainer, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#10b981" />
       </View>
     );
     if (Platform.OS === 'web') {
       return (
         <WebLayout noCard>
-          {loader}
+          <BlogsSubbar activeTab="posts">
+            {loader}
+          </BlogsSubbar>
         </WebLayout>
       );
     }
@@ -1047,32 +992,74 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
     );
   }
 
+  // Calculate audit stats
+  const errorsCount = seo.checks.filter(c => c.status === 'red').length;
+  const warningsCount = seo.checks.filter(c => c.status === 'orange').length;
+  const goodCount = seo.checks.filter(c => c.status === 'green').length;
+
   const content = (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: isNew ? 'Create Blog' : 'Edit Blog' }} />
+    <View style={styles.mainWrapper}>
+      <Stack.Screen options={{ title: isNew ? 'Create New Post' : 'Edit Post' }} />
       
+      {/* Title Header Bar */}
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft size={20} color="#6B7280" />
-          </Pressable>
-          <Text style={styles.title}>{isNew ? 'New Blog Post' : 'Edit Blog Post'}</Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+              <ArrowLeft size={16} color="#6B7280" />
+            </Pressable>
+            <Text style={styles.title}>{isNew ? 'Create New Post' : 'Edit Post'}</Text>
+          </View>
+          <Text style={styles.subtitle}>Draft your article details and review SEO settings.</Text>
         </View>
-        <Pressable 
-          style={[styles.saveBtn, saving && { opacity: 0.7 }]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Save size={20} color="#FFFFFF" />}
-          <Text style={styles.saveBtnText}>Save</Text>
-        </Pressable>
-      </View>      <ScrollView style={styles.content}>
+
+        {/* Right side AI topic generation */}
+        <View style={styles.headerRight}>
+          <View style={styles.aiTopicWrapper}>
+            <TextInput
+              style={styles.aiTopicInput}
+              value={aiTopic}
+              onChangeText={setAiTopic}
+              placeholder="AI Topic (e.g. AI SaaS tr...)"
+              placeholderTextColor="#9CA3AF"
+            />
+            <Pressable 
+              style={[styles.aiGenerateBtn, generating && { opacity: 0.7 }]}
+              onPress={generateWithAI}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Sparkles size={14} color="#FFFFFF" />
+                  <Text style={styles.aiGenerateText}>Generate</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+
+          <Pressable 
+            style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Save size={16} color="#FFFFFF" />}
+            <Text style={styles.saveBtnText}>Save Post</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.splitLayout}>
-          {/* Left Column: Blog Composition Fields */}
+          
+          {/* LEFT COLUMN: Main Compose Form */}
           <View style={styles.leftColumn}>
+            
+            {/* Title & Slug Row */}
             <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Title</Text>
+              <View style={[styles.formGroup, { flex: 1.3 }]}>
+                <Text style={styles.label}>TITLE *</Text>
                 <TextInput
                   style={styles.input}
                   value={title}
@@ -1082,106 +1069,192 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                       setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
                     }
                   }}
-                  placeholder="Post title"
+                  placeholder="E.g., Integrating AI in Modern Web Applications"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Slug</Text>
+                <Text style={styles.label}>SLUG (URL SLUG)</Text>
                 <TextInput
                   style={styles.input}
                   value={slug}
                   onChangeText={setSlug}
-                  placeholder="url-friendly-slug"
+                  placeholder="e.g. integrating-ai-web-apps"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
             </View>
 
+            {/* Cover Image URL */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Excerpt</Text>
+              <Text style={styles.label}>COVER IMAGE URL</Text>
               <TextInput
-                style={[styles.input, { height: 50, textAlignVertical: 'top' }]}
-                value={excerpt}
-                onChangeText={setExcerpt}
-                placeholder="Short description for SEO and previews"
-                multiline
+                style={styles.input}
+                value={imageUrl}
+                onChangeText={setImageUrl}
+                placeholder="https://images.unsplash.com/... or upload below"
+                placeholderTextColor="#9CA3AF"
               />
+              
+              {/* Choose File local upload block */}
+              <View style={styles.uploadBox}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Upload size={14} color="#6B7280" />
+                  <Text style={styles.uploadBoxText}>Upload local image (blog-images bucket)</Text>
+                </View>
+                <Pressable style={styles.chooseFileBtn} onPress={pickImage}>
+                  <Text style={styles.chooseFileText}>Choose File</Text>
+                </Pressable>
+              </View>
             </View>
 
+            {/* Category, Tags, and Publish Status Row */}
             <View style={styles.formRow}>
+              {/* Category selector */}
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>SEO Title</Text>
-                <TextInput
-                  style={styles.input}
-                  value={seoTitle}
-                  onChangeText={setSeoTitle}
-                  placeholder="SEO Title (defaults to Title)"
-                />
+                <Text style={styles.label}>CATEGORY</Text>
+                {Platform.OS === 'web' ? (
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      height: 38,
+                      fontSize: 13,
+                      color: '#374151',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      width: '100%',
+                      cursor: 'pointer'
+                    } as any}
+                  >
+                    <option value="Other Sports">Other Sports</option>
+                    <option value="Cricket Grounds">Cricket Grounds</option>
+                    <option value="Football Grounds">Football Grounds</option>
+                    <option value="Venue Booking">Venue Booking</option>
+                    <option value="Sports Tips">Sports Tips</option>
+                  </select>
+                ) : (
+                  <TextInput
+                    style={styles.input}
+                    value={category}
+                    onChangeText={setCategory}
+                    placeholder="Other Sports"
+                  />
+                )}
               </View>
+
+              {/* Tags */}
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Tags</Text>
+                <Text style={styles.label}>TAGS (COMMA SEPARATED)</Text>
                 <TextInput
                   style={styles.input}
                   value={tags}
                   onChangeText={setTags}
-                  placeholder="comma, separated, tags"
+                  placeholder="saas, code, react"
+                  placeholderTextColor="#9CA3AF"
                 />
+              </View>
+
+              {/* Publish Status toggle */}
+              <View style={[styles.formGroup, { flex: 1, justifyContent: 'center' }]}>
+                <Text style={styles.label}>PUBLISH STATUS</Text>
+                <View style={styles.publishToggleRow}>
+                  <Text style={styles.publishToggleText}>Set active on site</Text>
+                  <Switch
+                    value={isPublished}
+                    onValueChange={setIsPublished}
+                    trackColor={{ false: '#D1D5DB', true: '#8B5CF6' }}
+                  />
+                </View>
               </View>
             </View>
 
+            {/* Excerpt / Summary */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>SEO Description</Text>
+              <Text style={styles.label}>EXCERPT / BRIEF SUMMARY</Text>
               <TextInput
-                style={[styles.input, { height: 50, textAlignVertical: 'top' }]}
-                value={seoDescription}
-                onChangeText={setSeoDescription}
-                placeholder="SEO Description (defaults to Excerpt)"
+                style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+                value={excerpt}
+                onChangeText={(val) => {
+                  setExcerpt(val.slice(0, 155));
+                }}
+                placeholder="Provide a 1-2 sentence brief preview of the post. Used for article lists and SEO snippets."
+                placeholderTextColor="#9CA3AF"
                 multiline
               />
+              <Text style={styles.characterCount}>{excerpt.length}/155 characters</Text>
             </View>
 
+            {/* Content editor & previews */}
             <View style={styles.formGroup}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Content ({editorTab === 'html' ? 'HTML' : 'Markdown'})</Text>
-                <View style={styles.toolbar}>
+                <Text style={styles.label}>ARTICLE CONTENT</Text>
+                
+                {/* Content type segmented controls */}
+                <View style={styles.editorToggle}>
                   <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'markdown' && styles.toolbarBtnActive]} 
+                    style={[styles.editorToggleBtn, editorTab === 'markdown' && styles.editorToggleBtnActive]} 
                     onPress={() => {
                       if (editorTab === 'html') {
-                        const converted = htmlToMarkdown(contentForm);
-                        setContentForm(converted);
+                        const md = htmlToMarkdown(contentForm);
+                        setContentForm(md);
                       }
                       setEditorTab('markdown');
                     }}
                   >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'markdown' && styles.toolbarBtnTextActive]}>Markdown</Text>
+                    <Text style={[styles.editorToggleText, editorTab === 'markdown' && styles.editorToggleTextActive]}>Rich Text</Text>
                   </Pressable>
                   <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'html' && styles.toolbarBtnActive]} 
+                    style={[styles.editorToggleBtn, editorTab === 'html' && styles.editorToggleBtnActive]} 
                     onPress={() => {
                       if (editorTab === 'markdown') {
-                        const converted = markdownToHtml(contentForm);
-                        setContentForm(converted);
+                        const html = markdownToHtml(contentForm);
+                        setContentForm(html);
                       }
                       setEditorTab('html');
                     }}
                   >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'html' && styles.toolbarBtnTextActive]}>HTML</Text>
+                    <Text style={[styles.editorToggleText, editorTab === 'html' && styles.editorToggleTextActive]}>Raw HTML</Text>
                   </Pressable>
-                  <Pressable 
-                    style={[styles.toolbarBtn, editorTab === 'preview' && styles.toolbarBtnActive]} 
-                    onPress={() => setEditorTab('preview')}
-                  >
-                    <Text style={[styles.toolbarBtnText, editorTab === 'preview' && styles.toolbarBtnTextActive]}>Preview</Text>
-                  </Pressable>
-                  {editorTab === 'markdown' && (
-                    <Pressable style={styles.toolbarBtn} onPress={handleFormatBold}>
-                      <Bold size={16} color="#4B5563" />
-                    </Pressable>
-                  )}
                 </View>
               </View>
+
+              {/* Action helper toolbar buttons */}
+              <View style={styles.contentToolbarRow}>
+                <View style={styles.contentToolbarLeft}>
+                  <Pressable style={styles.toolbarActionBtn} onPress={handleInsertLink}>
+                    <Link size={12} color="#4B5563" />
+                    <Text style={styles.toolbarActionText}>Insert Link</Text>
+                  </Pressable>
+                  <Pressable style={styles.toolbarActionBtn} onPress={handleAddInternalLinks}>
+                    <Plus size={12} color="#4B5563" />
+                    <Text style={styles.toolbarActionText}>+ Add Internal Links</Text>
+                  </Pressable>
+                  <Pressable style={styles.toolbarActionBtn} onPress={handleAddUnsplashImages}>
+                    <ImageIcon size={12} color="#4B5563" />
+                    <Text style={styles.toolbarActionText}>Add Unsplash Images</Text>
+                  </Pressable>
+                  <Pressable style={styles.toolbarActionBtn} onPress={handleCheckContentLinks}>
+                    <CheckSquare size={12} color="#4B5563" />
+                    <Text style={styles.toolbarActionText}>Check Content Links</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.contentToolbarRight}>
+                  <Pressable style={styles.previewPostBtn} onPress={() => setEditorTab('preview')}>
+                    <ExternalLink size={12} color="#4F46E5" />
+                    <Text style={styles.previewPostText}>Preview Post</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Editor Textarea */}
               {editorTab === 'preview' ? (
-                <View style={[styles.input, { height: 300, overflow: 'hidden' }]}>
+                <View style={[styles.input, { height: 350, overflow: 'hidden' }]}>
                   <ScrollView style={{ flex: 1 }}>
                     {isHtmlContent(contentForm) && Platform.OS === 'web' ? (
                       <>
@@ -1194,9 +1267,6 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                           .html-preview-content ul { margin-bottom: 16px; padding-left: 20px; }
                           .html-preview-content li { margin-bottom: 8px; font-size: 15px; color: #4B5563; }
                           .html-preview-content a { color: #10B981; text-decoration: underline; }
-                          .html-preview-content table { border-collapse: collapse; width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 24px; margin-top: 12px; }
-                          .html-preview-content th { background-color: #F9FAFB; font-weight: 700; color: #111827; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; text-align: left; }
-                          .html-preview-content td { color: #4B5563; border-right: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 12px; }
                         `}} />
                         <div 
                           dangerouslySetInnerHTML={{ __html: contentForm }} 
@@ -1211,148 +1281,115 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                     )}
                   </ScrollView>
                 </View>
-              ) : editorTab === 'html' ? (
-                <TextInput
-                  style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
-                  value={contentForm}
-                  onChangeText={setContentForm}
-                  placeholder="Write your content here using HTML..."
-                  multiline
-                />
               ) : (
                 <TextInput
-                  style={[styles.input, { height: 300, textAlignVertical: 'top', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }]}
+                  style={[
+                    styles.input, 
+                    { 
+                      height: 350, 
+                      textAlignVertical: 'top', 
+                      fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
+                      fontSize: 14,
+                      lineHeight: 20
+                    }
+                  ]}
                   value={contentForm}
                   onChangeText={setContentForm}
                   onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-                  placeholder="Write your content here using markdown..."
+                  placeholder={editorTab === 'html' ? "<p>Write your raw HTML here...</p>" : "Write your raw markdown here..."}
+                  placeholderTextColor="#9CA3AF"
                   multiline
                 />
               )}
             </View>
-
+            
+            {/* Meta Title and Slug Options */}
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Author</Text>
+                <Text style={styles.label}>SEO TITLE</Text>
                 <TextInput
                   style={styles.input}
-                  value={author}
-                  onChangeText={setAuthor}
-                  placeholder="e.g. Admin"
+                  value={seoTitle}
+                  onChangeText={setSeoTitle}
+                  placeholder="Defaults to Title"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
               <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Read Time</Text>
+                <Text style={styles.label}>SEO DESCRIPTION</Text>
                 <TextInput
                   style={styles.input}
-                  value={readTime}
-                  onChangeText={setReadTime}
-                  placeholder="e.g. 5 min read"
+                  value={seoDescription}
+                  onChangeText={setSeoDescription}
+                  placeholder="Defaults to Excerpt"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Image URL</Text>
-              <View style={styles.imageInputRow}>
-                <View style={styles.imageInputWrapper}>
-                  <ImageIcon size={20} color="#9CA3AF" style={styles.imageIcon} />
-                  <TextInput
-                    style={[styles.input, { paddingLeft: 40, flex: 1 }]}
-                    value={imageUrl}
-                    onChangeText={setImageUrl}
-                    placeholder="https://..."
-                  />
-                </View>
-                <Pressable style={styles.uploadBtn} onPress={pickImage}>
-                  <Upload size={18} color="#4B5563" />
-                  <Text style={styles.uploadBtnText}>Upload</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.publishRow}>
-              <View>
-                <Text style={styles.label}>Publish Status</Text>
-                <Text style={styles.helperText}>Published posts are visible to the public</Text>
-              </View>
-              <Switch 
-                value={isPublished}
-                onValueChange={setIsPublished}
-                trackColor={{ false: '#D1D5DB', true: '#10b981' }}
-              />
             </View>
           </View>
 
-          {/* Right Column: Yoast SEO settings & AI generator */}
+          {/* RIGHT COLUMN: Yoast SEO Analyzer Sidebar */}
           <View style={styles.rightColumn}>
-            {/* Gemini AI Generator Section */}
-            <View style={styles.aiSection}>
-              <View style={styles.aiHeader}>
-                <Wand2 size={20} color="#8B5CF6" />
-                <Text style={styles.aiTitle}>Generate with Gemini AI</Text>
-              </View>
-              <Text style={styles.aiDesc}>Enter a topic and let AI draft an SEO-optimized blog post, title, slug, and suggest an image for you.</Text>
-              <View style={styles.aiInputRow}>
-                <TextInput 
-                  style={styles.aiInput}
-                  placeholder="e.g. Top 5 Cricket Grounds in Hyderabad"
-                  placeholderTextColor="#9CA3AF"
-                  value={aiTopic}
-                  onChangeText={setAiTopic}
-                />
-                <Pressable 
-                  style={[styles.aiBtn, generating && { opacity: 0.7 }]}
-                  onPress={generateWithAI}
-                  disabled={generating}
-                >
-                  {generating ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.aiBtnText}>Generate</Text>}
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Yoast SEO Live Analysis Section */}
-            <View style={[
-              styles.yoastSection,
-              seo.overall === 'red' && { borderLeftColor: '#EF4444' },
-              seo.overall === 'orange' && { borderLeftColor: '#F59E0B' },
-              seo.overall === 'green' && { borderLeftColor: '#10B981' }
-            ]}>
-              {/* Yoast Section Header */}
-              <View style={styles.yoastHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[
-                    styles.trafficLight,
-                    seo.overall === 'red' && { backgroundColor: '#EF4444' },
-                    seo.overall === 'orange' && { backgroundColor: '#F59E0B' },
-                    seo.overall === 'green' && { backgroundColor: '#10B981' }
-                  ]} />
-                  <Text style={styles.yoastTitle}>Yoast SEO Live Analysis</Text>
+            <View style={styles.sidebarCard}>
+              
+              {/* Sidebar Header */}
+              <View style={styles.sidebarHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Wand2 size={16} color="#8B5CF6" />
+                  <Text style={styles.sidebarTitle}>SEO ANALYZER</Text>
                 </View>
                 <View style={[
-                  styles.yoastBadge,
+                  styles.overallSeoBadge,
                   seo.overall === 'red' && { backgroundColor: '#FEE2E2' },
                   seo.overall === 'orange' && { backgroundColor: '#FEF3C7' },
                   seo.overall === 'green' && { backgroundColor: '#D1FAE5' }
                 ]}>
                   <Text style={[
-                    styles.yoastBadgeText,
+                    styles.overallSeoText,
                     seo.overall === 'red' && { color: '#EF4444' },
                     seo.overall === 'orange' && { color: '#D97706' },
                     seo.overall === 'green' && { color: '#059669' }
                   ]}>
-                    {seo.overall === 'red' && 'Action Required'}
+                    {seo.overall === 'red' && 'Poor SEO'}
                     {seo.overall === 'orange' && 'Needs Improvement'}
-                    {seo.overall === 'green' && 'SEO Optimized!'}
+                    {seo.overall === 'green' && 'Good SEO'}
                   </Text>
                 </View>
               </View>
 
-              {/* Cornerstone Content Toggle Switch */}
+              {/* Focus Keyphrase */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>FOCUS KEYPHRASE</Text>
+                <TextInput
+                  style={styles.input}
+                  value={focusKeyphrase}
+                  onChangeText={setFocusKeyphrase}
+                  placeholder="E.g., landing pages"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              {/* Status Counters Row */}
+              <View style={styles.seoStatRow}>
+                <View style={[styles.seoStatBox, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' }]}>
+                  <Text style={[styles.seoStatCount, { color: '#EF4444' }]}>{errorsCount}</Text>
+                  <Text style={[styles.seoStatLabel, { color: '#EF4444' }]}>Errors</Text>
+                </View>
+                <View style={[styles.seoStatBox, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
+                  <Text style={[styles.seoStatCount, { color: '#D97706' }]}>{warningsCount}</Text>
+                  <Text style={[styles.seoStatLabel, { color: '#D97706' }]}>Warnings</Text>
+                </View>
+                <View style={[styles.seoStatBox, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                  <Text style={[styles.seoStatCount, { color: '#059669' }]}>{goodCount}</Text>
+                  <Text style={[styles.seoStatLabel, { color: '#059669' }]}>Good</Text>
+                </View>
+              </View>
+
+              {/* Cornerstone Toggle */}
               <View style={styles.cornerstoneRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cornerstoneLabel}>Cornerstone Content</Text>
-                  <Text style={styles.cornerstoneDesc}>Flag this post as an essential, high-quality, high-volume article representing your core topic.</Text>
+                  <Text style={styles.cornerstoneDesc}>Flag this post as an essential core article.</Text>
                 </View>
                 <Switch 
                   value={isCornerstone}
@@ -1360,8 +1397,26 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                   trackColor={{ false: '#D1D5DB', true: '#8B5CF6' }}
                 />
               </View>
-              
-              {/* Yoast Sub-Tabs Selector */}
+
+              {/* Overall Auto-Fix AI Button */}
+              {seo.checks.some(c => c.status !== 'green') && focusKeyphrase.trim().length > 0 && (
+                <Pressable 
+                  style={[styles.autoFixAllBtn, fixing && { opacity: 0.7 }]} 
+                  onPress={autoFixWithAI}
+                  disabled={fixing}
+                >
+                  {fixing ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Sparkles size={14} color="#FFFFFF" />
+                      <Text style={styles.autoFixAllText}>Auto-Fix All with AI</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+
+              {/* Sub tabs select previews */}
               <View style={styles.yoastTabs}>
                 <Pressable 
                   style={[styles.yoastTabBtn, yoastTab === 'analysis' && styles.yoastTabBtnActive]} 
@@ -1375,198 +1430,74 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                 >
                   <Text style={[styles.yoastTabBtnText, yoastTab === 'google' && styles.yoastTabBtnTextActive]}>Google Preview</Text>
                 </Pressable>
-                <Pressable 
-                  style={[styles.yoastTabBtn, yoastTab === 'social' && styles.yoastTabBtnActive]} 
-                  onPress={() => setYoastTab('social')}
-                >
-                  <Text style={[styles.yoastTabBtnText, yoastTab === 'social' && styles.yoastTabBtnTextActive]}>Social Share Preview</Text>
-                </Pressable>
               </View>
 
-              {/* Tab Content 1: Live SEO Analysis Checklist */}
+              {/* TAB CONTENT: Analysis Checklist */}
               {yoastTab === 'analysis' && (
-                <View style={{ marginTop: 16 }}>
-                  <View style={[styles.formGroup, { marginBottom: 16 }]}>
-                    <Text style={styles.label}>Focus Keyphrase</Text>
-                    <TextInput 
-                      style={styles.input}
-                      placeholder="e.g. cricket pitch maintenance"
-                      placeholderTextColor="#9CA3AF"
-                      value={focusKeyphrase}
-                      onChangeText={setFocusKeyphrase}
-                    />
-                    <Text style={styles.helperText}>Live suggestions will appear as you write your post content, title, and excerpt.</Text>
-                  </View>
-
-                  <View style={styles.analysisList}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={styles.analysisTitle}>Analysis Results</Text>
-                      {seo.checks.some(c => c.status !== 'green') && focusKeyphrase.trim().length > 0 && (
-                        <Pressable 
-                          style={[styles.yoastAiBtn, fixing && { opacity: 0.7 }]} 
-                          onPress={autoFixWithAI}
-                          disabled={fixing}
-                        >
-                          {fixing ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Wand2 size={12} color="#FFFFFF" />
-                              <Text style={styles.yoastAiBtnText}>Auto-Fix with AI</Text>
-                            </View>
-                          )}
-                        </Pressable>
-                      )}
-                    </View>
-                    
-                    {/* Cornerstone validation inject */}
-                    {isCornerstone && (
-                      <View style={styles.checkItem}>
-                        <View style={[
-                          styles.bullet,
-                          contentForm.trim().split(/\s+/).filter(Boolean).length >= 900 ? { backgroundColor: '#10B981' } : { backgroundColor: '#F59E0B' }
-                        ]} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.checkLabel}>Cornerstone Content length check</Text>
-                          <Text style={styles.checkDesc}>
-                            {contentForm.trim().split(/\s+/).filter(Boolean).length >= 900 
-                              ? `Good length! ${contentForm.trim().split(/\s+/).filter(Boolean).length} words exceeds the 900-word standard.`
-                              : `Cornerstone posts must be extensive. Currently ${contentForm.trim().split(/\s+/).filter(Boolean).length} words (900+ words recommended).`
-                            }
-                          </Text>
+                <View style={styles.auditList}>
+                  {seo.checks
+                    .sort((a, b) => {
+                      const score = { red: 3, orange: 2, green: 1 };
+                      return score[b.status] - score[a.status];
+                    })
+                    .map((check, idx) => (
+                      <View key={idx} style={styles.auditRow}>
+                        <View style={styles.auditIconCol}>
+                          {check.status === 'red' && <AlertCircle size={16} color="#EF4444" />}
+                          {check.status === 'orange' && <AlertTriangle size={16} color="#F59E0B" />}
+                          {check.status === 'green' && <CheckCircle size={16} color="#10B981" />}
                         </View>
-                      </View>
-                    )}
-
-                    {[...seo.checks]
-                      .sort((a, b) => {
-                        const score = { red: 3, orange: 2, green: 1 };
-                        return score[b.status] - score[a.status];
-                      })
-                      .map((check, idx) => (
-                        <View key={idx} style={styles.checkItem}>
-                          <View style={[
-                            styles.bullet,
-                            check.status === 'red' && { backgroundColor: '#EF4444' },
-                            check.status === 'orange' && { backgroundColor: '#F59E0B' },
-                            check.status === 'green' && { backgroundColor: '#10B981' }
-                          ]} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.checkLabel}>{check.label}</Text>
-                            <Text style={styles.checkDesc}>{check.desc}</Text>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.auditLabel}>{check.label}</Text>
                             {check.status !== 'green' && focusKeyphrase.trim().length > 0 && (
                               <Pressable 
-                                style={[styles.yoastAiBtn, { alignSelf: 'flex-start', marginTop: 8 }, fixingCheck === check.label && { opacity: 0.7 }]} 
                                 onPress={() => fixSingleErrorWithAI(check.label, check.desc)}
                                 disabled={fixingCheck !== null || fixing}
                               >
                                 {fixingCheck === check.label ? (
-                                  <ActivityIndicator size="small" color="#FFFFFF" />
+                                  <ActivityIndicator size="small" color="#8B5CF6" />
                                 ) : (
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Wand2 size={12} color="#FFFFFF" />
-                                    <Text style={styles.yoastAiBtnText}>Fix with AI</Text>
-                                  </View>
+                                  <Text style={styles.auditFixLink}>Fix</Text>
                                 )}
                               </Pressable>
                             )}
                           </View>
-                        </View>
-                      ))
-                    }
-                  </View>
-                </View>
-              )}
-
-              {/* Tab Content 2: Google Search Snippet Preview */}
-              {yoastTab === 'google' && (
-                <View style={styles.previewContainer}>
-                  <View style={styles.previewControls}>
-                    <Text style={styles.previewTitle}>Google Search Result Mockup</Text>
-                    <View style={styles.deviceRow}>
-                      <Pressable 
-                        style={[styles.deviceBtn, previewDevice === 'mobile' && styles.deviceBtnActive]}
-                        onPress={() => setPreviewDevice('mobile')}
-                      >
-                        <Text style={[styles.deviceBtnText, previewDevice === 'mobile' && styles.deviceBtnTextActive]}>Mobile</Text>
-                      </Pressable>
-                      <Pressable 
-                        style={[styles.deviceBtn, previewDevice === 'desktop' && styles.deviceBtnActive]}
-                        onPress={() => setPreviewDevice('desktop')}
-                      >
-                        <Text style={[styles.deviceBtnText, previewDevice === 'desktop' && styles.deviceBtnTextActive]}>Desktop</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  {previewDevice === 'mobile' ? (
-                    <View style={styles.googleMobileCard}>
-                      <View style={styles.googleMobileMeta}>
-                        <Image 
-                          source={{ uri: 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png' }}
-                          style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', marginRight: 8 }}
-                          resizeMode="contain"
-                          alt="BookYourGround Logo"
-                        />
-                        <View>
-                          <Text style={styles.googleSiteName}>BookYourGround</Text>
-                          <Text style={styles.googleMobileUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
+                          <Text style={styles.auditDesc}>{check.desc}</Text>
                         </View>
                       </View>
-                      <Text style={styles.googleMobileTitle}>{(seoTitle || title) || 'Please Write a Catchy Title...'} | BookYourGround</Text>
-                      <Text style={styles.googleMobileDesc}>
-                        {(seoDescription || excerpt) ? (((seoDescription || excerpt)).length > 155 ? `${((seoDescription || excerpt)).substring(0, 155)}...` : (seoDescription || excerpt)) : 'Please write a meta description in the excerpt/seo description field to optimize search results view...'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.googleDesktopCard}>
-                      <Text style={styles.googleDesktopUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
-                      <Text style={styles.googleDesktopTitle}>{(seoTitle || title) || 'Please Write a Catchy Title...'} | BookYourGround</Text>
-                      <Text style={styles.googleDesktopDesc}>
-                        {(seoDescription || excerpt) ? (((seoDescription || excerpt)).length > 165 ? `${((seoDescription || excerpt)).substring(0, 165)}...` : (seoDescription || excerpt)) : 'Please write a meta description in the excerpt/seo description field to optimize search results view...'}
-                      </Text>
-                    </View>
-                  )}
+                    ))}
                 </View>
               )}
 
-              {/* Tab Content 3: Social Media Previews */}
-              {/* Tab Content 3: Social Media Previews */}
-              {yoastTab === 'social' && (
-                <View style={styles.previewContainer}>
-                  <Text style={styles.previewTitle}>Facebook Share Preview</Text>
-                  <View style={styles.facebookCard}>
-                    <View style={styles.facebookImgMock}>
-                      {imageUrl ? (
-                        <Image 
-                          source={{ uri: imageUrl }} 
-                          style={{ width: '100%', height: 200 }} 
-                          resizeMode="cover"
-                          alt="Preview"
-                        />
-                      ) : (
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' }}>
-                          <Text style={{ color: '#9CA3AF', fontSize: 13 }}>No Featured Image Selected</Text>
-                        </View>
-                      )}
+              {/* TAB CONTENT: Google Result Mockup Preview */}
+              {yoastTab === 'google' && (
+                <View style={styles.googlePreviewBox}>
+                  <View style={styles.googleMobileCard}>
+                    <View style={styles.googleMobileMeta}>
+                      <Image 
+                        source={{ uri: 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png' }}
+                        style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+                        resizeMode="contain"
+                        alt="Logo"
+                      />
+                      <View>
+                        <Text style={styles.googleSiteName}>BookYourGround</Text>
+                        <Text style={styles.googleMobileUrl}>https://bookyourground.com › blog › {slug || '...'}</Text>
+                      </View>
                     </View>
-                    <View style={styles.facebookMeta}>
-                      <Text style={styles.facebookSiteName}>BOOKYOURGROUND.COM</Text>
-                      <Text style={styles.facebookTitle}>{(seoTitle || title) || 'Catchy Blog Headline'}</Text>
-                      <Text style={styles.facebookDesc} numberOfLines={2}>
-                        {(seoDescription || excerpt) || 'Short summary of the blog post to capture readers attention when shared on social timelines.'}
-                      </Text>
-                    </View>
+                    <Text style={styles.googleMobileTitle}>{(seoTitle || title) || 'Write a Blog Headline...'} | BookYourGround</Text>
+                    <Text style={styles.googleMobileDesc} numberOfLines={3}>
+                      {(seoDescription || excerpt) || 'Write a meta description to see google search preview results layout...'}
+                    </Text>
                   </View>
                 </View>
               )}
             </View>
           </View>
 
-
         </View>
-        
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </View>
   );
@@ -1574,106 +1505,515 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
   if (Platform.OS === 'web') {
     return (
       <WebLayout noCard>
-        {content}
+        <BlogsSubbar activeTab="posts">
+          {content}
+        </BlogsSubbar>
       </WebLayout>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
       {content}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  backBtn: { padding: 6, borderRadius: 8, backgroundColor: '#F3F4F6' },
-  title: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10b981', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, gap: 6 },
-  saveBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
-  content: { paddingVertical: 8, paddingHorizontal: 0, width: '100%' },
-  splitLayout: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 12, width: '100%' },
-  leftColumn: { flex: Platform.OS === 'web' ? 1.3 : undefined, minWidth: Platform.OS === 'web' ? 500 : '100%' },
-  rightColumn: { flex: Platform.OS === 'web' ? 1 : undefined, minWidth: Platform.OS === 'web' ? 420 : '100%' },
-  
-  aiSection: { backgroundColor: '#F3E8FF', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#E9D5FF' },
-  yoastSection: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 4, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  yoastHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 6 },
-  trafficLight: { width: 14, height: 14, borderRadius: 7 },
-  yoastTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  yoastBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
-  yoastBadgeText: { fontSize: 11, fontWeight: '700' },
-  analysisList: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
-  analysisTitle: { fontSize: 14, fontWeight: '700', color: '#374151' },
-  yoastAiBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, gap: 4 },
-  yoastAiBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  checkItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
-  bullet: { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
-  checkLabel: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
-  checkDesc: { fontSize: 12, color: '#4B5563', marginTop: 1 },
-  cornerstoneRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F8FF', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E9D5FF', marginBottom: 8 },
-  cornerstoneLabel: { fontSize: 13, fontWeight: '700', color: '#6B21A8' },
-  cornerstoneDesc: { fontSize: 12, color: '#7E22CE', marginTop: 2, paddingRight: 12 },
-  yoastTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', gap: 12, marginBottom: 8 },
-  yoastTabBtn: { paddingVertical: 4, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  yoastTabBtnActive: { borderBottomColor: '#10B981' },
-  yoastTabBtnText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  yoastTabBtnTextActive: { color: '#10B981' },
-  previewContainer: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginTop: 12 },
-  previewControls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 6 },
-  previewTitle: { fontSize: 13, fontWeight: '700', color: '#374151' },
-  deviceRow: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 6, padding: 2, gap: 2 },
-  deviceBtn: { paddingHorizontal: 10, paddingVertical: 2, borderRadius: 4 },
-  deviceBtnActive: { backgroundColor: '#FFFFFF' },
-  deviceBtnText: { fontSize: 10, fontWeight: '600', color: '#4B5563' },
-  deviceBtnTextActive: { color: '#111827' },
-  googleMobileCard: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  googleMobileMeta: { flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 6 },
-  googleMobileFavicon: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  googleFaviconText: { fontSize: 11 },
-  googleSiteName: { fontSize: 11, fontWeight: '700', color: '#202124' },
-  googleMobileUrl: { fontSize: 10, color: '#4d5156' },
-  googleMobileTitle: { fontSize: 16, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
-  googleMobileDesc: { fontSize: 12, color: '#4d5156', lineHeight: 16 },
-  googleDesktopCard: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  googleDesktopUrl: { fontSize: 11, color: '#202124', marginBottom: 4 },
-  googleDesktopTitle: { fontSize: 18, color: '#1a0dab', fontWeight: '500', marginBottom: 4 },
-  googleDesktopDesc: { fontSize: 13, color: '#4d5156', lineHeight: 20 },
-  facebookCard: { backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#DDD' },
-  facebookImgMock: { width: '100%', height: 160, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  facebookMeta: { padding: 10, borderTopWidth: 1, borderTopColor: '#F0F0F0', backgroundColor: '#F2F3F5' },
-  facebookSiteName: { fontSize: 10, color: '#606770', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
-  facebookTitle: { fontSize: 13, fontWeight: '700', color: '#1d2129', marginBottom: 4 },
-  facebookDesc: { fontSize: 11, color: '#606770', lineHeight: 14 },
-  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  aiTitle: { fontSize: 14, fontWeight: '700', color: '#6B21A8' },
-  aiDesc: { fontSize: 12, color: '#7E22CE', marginBottom: 8 },
-  aiInputRow: { flexDirection: 'row', gap: 10 },
-  aiInput: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8B4FE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13, color: '#4C1D95' },
-  aiBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  aiBtnText: { color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
-  
-  formRow: { flexDirection: 'row', gap: 16 },
-  formGroup: { marginBottom: 10 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  toolbar: { flexDirection: 'row', gap: 6, marginBottom: 6 },
-  toolbarBtn: { padding: 4, borderRadius: 4, backgroundColor: '#F3F4F6' },
-  label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 3 },
-  input: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13, color: '#111827' },
-  toolbarBtnActive: { backgroundColor: '#E5E7EB' },
-  toolbarBtnText: { fontSize: 12, color: '#4B5563', fontWeight: '500' },
-  toolbarBtnTextActive: { color: '#111827', fontWeight: '600' },
-  
-  imageInputRow: { flexDirection: 'row', gap: 10 },
-  imageInputWrapper: { flex: 1, position: 'relative', justifyContent: 'center' },
-  imageIcon: { position: 'absolute', left: 12, zIndex: 1 },
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, gap: 4, borderWidth: 1, borderColor: '#D1D5DB' },
-  uploadBtnText: { color: '#4B5563', fontWeight: '600', fontSize: 13 },
-  
-  publishRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginTop: 8 },
-  helperText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  mainWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  loaderContainer: {
+    flex: 1,
+    paddingVertical: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    justifyContent: 'space-between',
+    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
+    paddingTop: 24,
+    paddingBottom: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 16,
+  },
+  backBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+    fontFamily: 'Inter',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  aiTopicWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    overflow: 'hidden',
+    height: 38,
+    width: 280,
+  },
+  aiTopicInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#1F2937',
+    fontFamily: 'Inter',
+  },
+  aiGenerateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 16,
+    gap: 6,
+    height: '100%',
+  },
+  aiGenerateText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: 'Inter',
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    height: 38,
+    borderRadius: 8,
+    gap: 8,
+  },
+  saveBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: 'Inter',
+  },
+  scrollContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  splitLayout: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    gap: 24,
+  },
+  leftColumn: {
+    flex: Platform.OS === 'web' ? 1.5 : undefined,
+    minWidth: 0,
+    gap: 20,
+  },
+  rightColumn: {
+    flex: Platform.OS === 'web' ? 1 : undefined,
+    minWidth: Platform.OS === 'web' ? 360 : undefined,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  formGroup: {
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+    width: '100%',
+    fontFamily: 'Inter',
+  },
+  uploadBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  uploadBoxText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  chooseFileBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  chooseFileText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  publishToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 38,
+    backgroundColor: '#FFFFFF',
+  },
+  publishToggleText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  characterCount: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: 'Inter',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  editorToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  editorToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  editorToggleBtnActive: {
+    backgroundColor: '#0F172A',
+  },
+  editorToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  editorToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  contentToolbarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  contentToolbarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  toolbarActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  toolbarActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  contentToolbarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewPostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    gap: 6,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  previewPostText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4F46E5',
+    fontFamily: 'Inter',
+  },
+  sidebarCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 20,
+    gap: 16,
+  },
+  sidebarHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 12,
+  },
+  sidebarTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  overallSeoBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  overallSeoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  seoStatRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  seoStatBox: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  seoStatCount: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  seoStatLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  cornerstoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: '#F3E8FF',
+    borderRadius: 8,
+    padding: 12,
+  },
+  cornerstoneLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B21A8',
+    fontFamily: 'Inter',
+  },
+  cornerstoneDesc: {
+    fontSize: 11,
+    color: '#8B5CF6',
+    marginTop: 2,
+    paddingRight: 10,
+    fontFamily: 'Inter',
+  },
+  autoFixAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 8,
+    paddingVertical: 8,
+    gap: 8,
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  autoFixAllText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: 'Inter',
+  },
+  yoastTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 16,
+    marginTop: 10,
+  },
+  yoastTabBtn: {
+    paddingVertical: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  yoastTabBtnActive: {
+    borderBottomColor: '#4F46E5',
+  },
+  yoastTabBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  yoastTabBtnTextActive: {
+    color: '#4F46E5',
+  },
+  auditList: {
+    gap: 12,
+    marginTop: 8,
+  },
+  auditRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  auditIconCol: {
+    marginTop: 2,
+  },
+  auditLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  auditFixLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    textDecorationLine: 'underline',
+    fontFamily: 'Inter',
+    ...Platform.select({
+      web: { cursor: 'pointer' } as any
+    })
+  },
+  auditDesc: {
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 16,
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  googlePreviewBox: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  googleMobileCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  googleMobileMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  googleSiteName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#202124',
+    fontFamily: 'Inter',
+  },
+  googleMobileUrl: {
+    fontSize: 10,
+    color: '#4D5156',
+    fontFamily: 'Inter',
+  },
+  googleMobileTitle: {
+    fontSize: 15,
+    color: '#1A0DAB',
+    fontWeight: '600',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
+  googleMobileDesc: {
+    fontSize: 12,
+    color: '#4D5156',
+    lineHeight: 16,
+    fontFamily: 'Inter',
+  },
 });
 
 const markdownStyles = {

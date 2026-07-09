@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "EXPO_NO_TELEMETRY=1 expo start",
+    "dev": "expo start",
     "build": "npm run build:web",
     "build:web": "node scripts/generate-sitemap.js && expo export --platform web",
     "build:debug": "EXPO_PUBLIC_DEBUG=true expo export --platform web",

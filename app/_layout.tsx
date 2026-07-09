@@ -39,6 +39,9 @@ function getSeoMetadata(pathname: string) {
   } else if (pathname === '/how-it-works') {
     title = `How It Works - ${baseTitle}`;
     description = "Discover how easy it is to book sports grounds and register venues with BookYourGround. Step-by-step guide for players and owners.";
+  } else if (pathname === '/grounds-info') {
+    title = `Grounds Info & Specifications Guide - ${baseTitle}`;
+    description = "Explore dimensions, turf specifications, guidelines, and facilities for cricket pitches, practice nets, and football turfs before booking online.";
   } else if (pathname === '/corporate') {
     title = `Corporate Events & Venue Booking - ${baseTitle}`;
     description = "Custom sports solutions for corporate tournaments, team outings, and regular matches. Book premium grounds with customized facilities.";

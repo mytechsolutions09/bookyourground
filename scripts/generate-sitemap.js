@@ -69,6 +69,7 @@ async function generateSitemap() {
       '/corporate',
       '/cricket-grounds',
       '/football-grounds',
+      '/grounds-info',
       '/how-it-works',
       '/list-your-venue',
       '/match-strategies',
@@ -77,11 +78,55 @@ async function generateSitemap() {
       '/book-cricket-ground-in-gurugram',
     ];
 
+    // Fetch custom URLs and exclusions from sitemap_urls table
+    const exclusions = new Set();
+    const activeCustomUrls = [];
+
+    try {
+      console.log('Fetching custom sitemap URLs from Supabase...');
+      const { data: customUrls, error: customError } = await supabase
+        .from('sitemap_urls')
+        .select('*');
+      
+      if (customError) {
+        console.warn('Error fetching custom sitemap URLs from Supabase. Skipping custom routes:', customError.message);
+      } else if (customUrls && customUrls.length > 0) {
+        for (const item of customUrls) {
+          if (!item.url) continue;
+          
+          let route = item.url.trim();
+          if (!route.startsWith('/')) {
+            route = '/' + route;
+          }
+          
+          // Check if is_indexed is explicitly false
+          const isIndexed = item.is_indexed !== false;
+          
+          if (!isIndexed) {
+            exclusions.add(route.toLowerCase());
+          } else {
+            activeCustomUrls.push({
+              url: route,
+              priority: item.priority,
+              changefreq: item.changefreq
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process custom sitemap routes:', err);
+    }
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
     // Add static routes
     for (const route of routes) {
+      const normalizedRoute = route === '' ? '/' : (route.startsWith('/') ? route : '/' + route);
+      if (exclusions.has(normalizedRoute.toLowerCase())) {
+        console.log(`Excluding static route from sitemap: ${normalizedRoute}`);
+        continue;
+      }
       xml += `  <url>\n`;
       xml += `    <loc>${SITE_URL}${route}</loc>\n`;
       xml += `    <lastmod>${date}</lastmod>\n`;
@@ -97,6 +142,11 @@ async function generateSitemap() {
         const n = slugifyGroundSegment(ground.name);
         const route = `/ground/${c}/${n}`;
         
+        if (exclusions.has(route.toLowerCase())) {
+          console.log(`Excluding ground route from sitemap: ${route}`);
+          continue;
+        }
+
         xml += `  <url>\n`;
         xml += `    <loc>${SITE_URL}${route}</loc>\n`;
         xml += `    <lastmod>${date}</lastmod>\n`;
@@ -121,6 +171,11 @@ async function generateSitemap() {
           if (!blog.slug) continue;
           const route = `/blog/${blog.slug}`;
           
+          if (exclusions.has(route.toLowerCase())) {
+            console.log(`Excluding blog route from sitemap: ${route}`);
+            continue;
+          }
+
           xml += `  <url>\n`;
           xml += `    <loc>${SITE_URL}${route}</loc>\n`;
           xml += `    <lastmod>${date}</lastmod>\n`;
@@ -147,6 +202,11 @@ async function generateSitemap() {
           if (!product.name) continue;
           const route = `/shop/${slugify(product.name)}`;
           
+          if (exclusions.has(route.toLowerCase())) {
+            console.log(`Excluding product route from sitemap: ${route}`);
+            continue;
+          }
+
           xml += `  <url>\n`;
           xml += `    <loc>${SITE_URL}${route}</loc>\n`;
           xml += `    <lastmod>${date}</lastmod>\n`;
@@ -159,38 +219,17 @@ async function generateSitemap() {
       console.error('Failed to process product routes for sitemap:', err);
     }
 
-    // Add custom sitemap URLs from sitemap_urls table
-    try {
-      console.log('Fetching custom sitemap URLs from Supabase...');
-      const { data: customUrls, error: customError } = await supabase
-        .from('sitemap_urls')
-        .select('url, priority, changefreq');
+    // Add active custom sitemap URLs
+    for (const item of activeCustomUrls) {
+      const priorityVal = item.priority ? Number(item.priority).toFixed(1) : '0.8';
+      const freqVal = item.changefreq || 'weekly';
       
-      if (customError) {
-        console.warn('Error fetching custom sitemap URLs from Supabase. Skipping custom routes:', customError.message);
-      } else if (customUrls && customUrls.length > 0) {
-        for (const item of customUrls) {
-          if (!item.url) continue;
-          
-          // Ensure it starts with /
-          let route = item.url.trim();
-          if (!route.startsWith('/')) {
-            route = '/' + route;
-          }
-          
-          const priorityVal = item.priority ? Number(item.priority).toFixed(1) : '0.8';
-          const freqVal = item.changefreq || 'weekly';
-          
-          xml += `  <url>\n`;
-          xml += `    <loc>${SITE_URL}${route}</loc>\n`;
-          xml += `    <lastmod>${date}</lastmod>\n`;
-          xml += `    <changefreq>${freqVal}</changefreq>\n`;
-          xml += `    <priority>${priorityVal}</priority>\n`;
-          xml += `  </url>\n`;
-        }
-      }
-    } catch (err) {
-      console.error('Failed to process custom sitemap routes:', err);
+      xml += `  <url>\n`;
+      xml += `    <loc>${SITE_URL}${item.url}</loc>\n`;
+      xml += `    <lastmod>${date}</lastmod>\n`;
+      xml += `    <changefreq>${freqVal}</changefreq>\n`;
+      xml += `    <priority>${priorityVal}</priority>\n`;
+      xml += `  </url>\n`;
     }
 
     xml += `</urlset>`;
