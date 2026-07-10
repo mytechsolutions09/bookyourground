@@ -15,7 +15,7 @@ export default function BlogsSubbar({ children, activeTab }: { children: React.R
           // @ts-ignore
           title="Create New Blog"
         >
-          <Plus size={16} color="#FFFFFF" />
+          <Plus size={16} color="#FFFFFF" strokeWidth={1.5} />
         </Pressable>
       )}
 
@@ -30,7 +30,7 @@ export default function BlogsSubbar({ children, activeTab }: { children: React.R
         // @ts-ignore
         title="Blog Posts"
       >
-        <FileText size={isWeb ? 18 : 14} color={activeTab === 'posts' ? '#10B981' : '#6B7280'} />
+        <FileText size={isWeb ? 18 : 14} color={activeTab === 'posts' ? '#10B981' : '#6B7280'} strokeWidth={1.5} />
         {!isWeb && (
           <Text style={[
             styles.subbarItemText,
@@ -53,7 +53,7 @@ export default function BlogsSubbar({ children, activeTab }: { children: React.R
         // @ts-ignore
         title="Sitemap Manager"
       >
-        <Globe size={isWeb ? 18 : 14} color={activeTab === 'sitemap' ? '#10B981' : '#6B7280'} />
+        <Globe size={isWeb ? 18 : 14} color={activeTab === 'sitemap' ? '#10B981' : '#6B7280'} strokeWidth={1.5} />
         {!isWeb && (
           <Text style={[
             styles.subbarItemText,
@@ -102,12 +102,13 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   subbar: {
-    width: 48,
-    backgroundColor: '#FCFDFD',
+    width: 36,
+    flexDirection: 'column',
+    backgroundColor: 'transparent',
     borderRightWidth: 1,
     borderRightColor: '#E5E7EB',
     paddingVertical: 24,
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
     alignItems: 'center',
     gap: 16,
   },
@@ -118,6 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
     marginBottom: 8,
     ...Platform.select({
       web: {
@@ -133,6 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
     backgroundColor: 'transparent',
     ...Platform.select({
       web: {
@@ -166,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   mobileSubbar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     paddingHorizontal: 16,

@@ -160,7 +160,7 @@ const NavLink = React.memo(({
           hovered && !hideLabel && { transform: [{ scale: 1.15 }] }
         ]}
       >
-        <Icon size={18} color={iconColor} />
+        <Icon size={18} color={iconColor} strokeWidth={1.5} />
       </View>
       {hideLabel && Platform.OS === 'web' && (
         <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
@@ -1310,9 +1310,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             onPress={() => setSidebarCollapsed((prev) => !prev)}
                           >
                             {sidebarCollapsed ? (
-                              <PanelLeftOpen size={16} color="#00ea6b" />
+                              <PanelLeftOpen size={16} color="#00ea6b" strokeWidth={1.5} />
                             ) : (
-                              <PanelLeftClose size={16} color="#9CA3AF" />
+                              <PanelLeftClose size={16} color="#9CA3AF" strokeWidth={1.5} />
                             )}
                           </TouchableOpacity>
                         </View>
@@ -1417,7 +1417,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             title: sidebarCollapsed ? 'Sign out' : undefined,
                           } : {})}
                         >
-                          <LogOut size={18} color="#01b854" />
+                          <LogOut size={18} color="#01b854" strokeWidth={1.5} />
                           {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                           {sidebarCollapsed && Platform.OS === 'web' && (
                             <View style={[styles.tooltip, { opacity: signOutHovered ? 1 : 0 }]}>
@@ -1437,9 +1437,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             onPress={() => setSidebarCollapsed((prev) => !prev)}
                           >
                             {sidebarCollapsed ? (
-                              <PanelLeftOpen size={16} color="#00ea6b" />
+                              <PanelLeftOpen size={16} color="#00ea6b" strokeWidth={1.5} />
                             ) : (
-                              <PanelLeftClose size={16} color="#9CA3AF" />
+                              <PanelLeftClose size={16} color="#9CA3AF" strokeWidth={1.5} />
                             )}
                           </TouchableOpacity>
                         </View>
@@ -1485,7 +1485,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           style={[styles.signOutButton, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}
                           onPress={handleSignOut}
                         >
-                          <LogOut size={18} color="#01b854" />
+                          <LogOut size={18} color="#01b854" strokeWidth={1.5} />
                           {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                         </TouchableOpacity>
                       </>
@@ -1549,7 +1549,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           style={[styles.signOutButton, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}
                           onPress={handleSignOut}
                         >
-                          <LogOut size={18} color="#00ea6b" />
+                          <LogOut size={18} color="#00ea6b" strokeWidth={1.5} />
                           {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                         </TouchableOpacity>
                       </>

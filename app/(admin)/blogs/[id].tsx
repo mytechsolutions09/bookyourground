@@ -1177,7 +1177,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
             <View style={styles.formGroup}>
               <Text style={styles.label}>EXCERPT / BRIEF SUMMARY</Text>
               <TextInput
-                style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+                style={[styles.input, { height: 56, textAlignVertical: 'top' }]}
                 value={excerpt}
                 onChangeText={(val) => {
                   setExcerpt(val.slice(0, 155));
@@ -1254,7 +1254,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
 
               {/* Editor Textarea */}
               {editorTab === 'preview' ? (
-                <View style={[styles.input, { height: 350, overflow: 'hidden' }]}>
+                <View style={[styles.input, { height: 260, overflow: 'hidden' }]}>
                   <ScrollView style={{ flex: 1 }}>
                     {isHtmlContent(contentForm) && Platform.OS === 'web' ? (
                       <>
@@ -1286,11 +1286,16 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
                   style={[
                     styles.input, 
                     { 
-                      height: 350, 
+                      height: 260, 
                       textAlignVertical: 'top', 
                       fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-                      fontSize: 14,
-                      lineHeight: 20
+                      fontSize: 13,
+                      lineHeight: 18,
+                      ...Platform.select({
+                        web: {
+                          overflowY: 'auto'
+                        } as any
+                      })
                     }
                   ]}
                   value={contentForm}
@@ -1526,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     flex: 1,
-    paddingVertical: 120,
+    paddingVertical: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1534,36 +1539,36 @@ const styles = StyleSheet.create({
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'space-between',
     alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
-    paddingTop: 24,
-    paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    gap: 16,
+    gap: 12,
   },
   backBtn: {
-    padding: 6,
-    borderRadius: 8,
+    padding: 4,
+    borderRadius: 6,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
     color: '#111827',
     fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
     fontFamily: 'Inter',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   aiTopicWrapper: {
@@ -1573,13 +1578,13 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     borderRadius: 8,
     overflow: 'hidden',
-    height: 38,
-    width: 280,
+    height: 32,
+    width: 240,
   },
   aiTopicInput: {
     flex: 1,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    paddingHorizontal: 10,
+    fontSize: 12,
     color: '#1F2937',
     fontFamily: 'Inter',
   },
@@ -1587,61 +1592,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#8B5CF6',
-    paddingHorizontal: 16,
-    gap: 6,
+    paddingHorizontal: 12,
+    gap: 4,
     height: '100%',
   },
   aiGenerateText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter',
   },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    height: 38,
+    paddingHorizontal: 12,
+    height: 32,
     borderRadius: 8,
-    gap: 8,
+    gap: 6,
   },
   saveBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Inter',
   },
   scrollContent: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   splitLayout: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    gap: 24,
+    gap: 16,
   },
   leftColumn: {
     flex: Platform.OS === 'web' ? 1.5 : undefined,
     minWidth: 0,
-    gap: 20,
+    gap: 12,
   },
   rightColumn: {
     flex: Platform.OS === 'web' ? 1 : undefined,
-    minWidth: Platform.OS === 'web' ? 360 : undefined,
+    minWidth: Platform.OS === 'web' ? 320 : undefined,
   },
   formRow: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
   formGroup: {
     marginBottom: 4,
   },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#374151',
-    marginBottom: 6,
+    marginBottom: 4,
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
@@ -1650,9 +1655,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
     color: '#111827',
     width: '100%',
     fontFamily: 'Inter',
@@ -1665,12 +1670,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
   },
   uploadBoxText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#4B5563',
     fontFamily: 'Inter',
   },
@@ -1679,14 +1684,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     ...Platform.select({
       web: { cursor: 'pointer' } as any
     })
   },
   chooseFileText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#374151',
     fontFamily: 'Inter',
@@ -1698,19 +1703,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 38,
+    paddingHorizontal: 10,
+    height: 32,
     backgroundColor: '#FFFFFF',
   },
   publishToggleText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#4B5563',
     fontFamily: 'Inter',
   },
   characterCount: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#9CA3AF',
-    marginTop: 4,
+    marginTop: 2,
     textAlign: 'right',
     fontFamily: 'Inter',
   },
@@ -1718,7 +1723,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   editorToggle: {
     flexDirection: 'row',
@@ -1729,8 +1734,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   editorToggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 6,
     ...Platform.select({
       web: { cursor: 'pointer' } as any
@@ -1740,7 +1745,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
   },
   editorToggleText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#4B5563',
     fontFamily: 'Inter',
@@ -1758,15 +1763,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   contentToolbarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
   },
   toolbarActionBtn: {
@@ -1776,15 +1781,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
     ...Platform.select({
       web: { cursor: 'pointer' } as any
     })
   },
   toolbarActionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#4B5563',
     fontFamily: 'Inter',
@@ -1799,16 +1804,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 6,
-    gap: 6,
+    gap: 4,
     ...Platform.select({
       web: { cursor: 'pointer' } as any
     })
   },
   previewPostText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#4F46E5',
     fontFamily: 'Inter',
@@ -1818,8 +1823,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    padding: 20,
-    gap: 16,
+    padding: 14,
+    gap: 12,
   },
   sidebarHeaderRow: {
     flexDirection: 'row',
@@ -1827,43 +1832,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   sidebarTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#111827',
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
   overallSeoBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   overallSeoText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter',
   },
   seoStatRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   seoStatBox: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
   },
   seoStatCount: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     fontFamily: 'Inter',
   },
   seoStatLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
     fontFamily: 'Inter',
@@ -1875,16 +1880,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F3E8FF',
     borderRadius: 8,
-    padding: 12,
+    padding: 8,
   },
   cornerstoneLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#6B21A8',
     fontFamily: 'Inter',
   },
   cornerstoneDesc: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#8B5CF6',
     marginTop: 2,
     paddingRight: 10,
@@ -1896,8 +1901,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#8B5CF6',
     borderRadius: 8,
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 6,
+    gap: 6,
     ...Platform.select({
       web: { cursor: 'pointer' } as any
     })
@@ -1905,18 +1910,18 @@ const styles = StyleSheet.create({
   autoFixAllText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Inter',
   },
   yoastTabs: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    gap: 16,
-    marginTop: 10,
+    gap: 12,
+    marginTop: 6,
   },
   yoastTabBtn: {
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     ...Platform.select({
@@ -1927,7 +1932,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#4F46E5',
   },
   yoastTabBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#6B7280',
     fontFamily: 'Inter',
@@ -1936,25 +1941,25 @@ const styles = StyleSheet.create({
     color: '#4F46E5',
   },
   auditList: {
-    gap: 12,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 4,
   },
   auditRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
   },
   auditIconCol: {
     marginTop: 2,
   },
   auditLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#111827',
     fontFamily: 'Inter',
   },
   auditFixLink: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#8B5CF6',
     textDecorationLine: 'underline',
@@ -1964,9 +1969,9 @@ const styles = StyleSheet.create({
     })
   },
   auditDesc: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#4B5563',
-    lineHeight: 16,
+    lineHeight: 14,
     marginTop: 2,
     fontFamily: 'Inter',
   },
@@ -1975,12 +1980,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
+    padding: 8,
+    marginTop: 4,
   },
   googleMobileCard: {
     backgroundColor: '#FFFFFF',
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -2002,16 +2007,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   googleMobileTitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#1A0DAB',
     fontWeight: '600',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
   googleMobileDesc: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#4D5156',
-    lineHeight: 16,
+    lineHeight: 14,
     fontFamily: 'Inter',
   },
 });
