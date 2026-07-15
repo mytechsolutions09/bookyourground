@@ -22,6 +22,8 @@ function FetchGroundsInner() {
   const paginationRef = useRef<any>(null);
   
   const isPaginatingRef = useRef(false);
+  const serviceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const paginationRetryCountRef = useRef(0);
 
   const fetchEmailsWithAI = async (venuesList: any[]) => {
     const geminiApiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
@@ -90,8 +92,11 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
     }
     setProgressText('Searching Google Places...');
 
-    const dummy = document.createElement('div');
-    const service = new google.maps.places.PlacesService(dummy);
+    if (!serviceRef.current) {
+      const dummy = document.createElement('div');
+      serviceRef.current = new google.maps.places.PlacesService(dummy);
+    }
+    const service = serviceRef.current;
     const searchQuery = `${query.trim()} in ${city.trim()}`;
 
     const performQuery = () => {
@@ -102,6 +107,7 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
           setHasNextPage(!!(pagination && pagination.hasNextPage));
 
           if (status === google.maps.places.PlacesServiceStatus.OK && places) {
+            paginationRetryCountRef.current = 0; // Reset retry count on success
             const totalCount = places.length;
             const detailedResults: any[] = [];
 
@@ -163,6 +169,22 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
             setProgressText('');
             setLoading(false);
             setFetchCompleted(true);
+          } else if (status === google.maps.places.PlacesServiceStatus.INVALID_REQUEST && isPaginatingRef.current) {
+            // Google next_page_token takes a moment to become active.
+            // If we hit INVALID_REQUEST while paginating, retry after a delay.
+            if (paginationRetryCountRef.current < 3) {
+              paginationRetryCountRef.current++;
+              setProgressText(`Next page token not active yet. Retrying in 2.5 seconds (Attempt ${paginationRetryCountRef.current}/3)...`);
+              setTimeout(() => {
+                if (paginationRef.current) {
+                  paginationRef.current.nextPage();
+                }
+              }, 2500);
+            } else {
+              setLoading(false);
+              setProgressText('');
+              alert('Failed to load more venues after 3 attempts due to Google Places invalid request.');
+            }
           } else {
             setLoading(false);
             setProgressText('');
@@ -177,14 +199,17 @@ Ensure the output is ONLY raw JSON. Do not wrap in markdown code blocks (\`\`\`j
 
   const handleFetch = () => {
     isPaginatingRef.current = false;
+    paginationRetryCountRef.current = 0;
     runSearch();
   };
 
   const handleLoadMore = () => {
+    if (loading) return; // Prevent double clicks
     if (paginationRef.current && paginationRef.current.hasNextPage) {
       isPaginatingRef.current = true;
       setLoading(true);
       setProgressText('Fetching next page of venues...');
+      paginationRetryCountRef.current = 0;
       paginationRef.current.nextPage();
     }
   };

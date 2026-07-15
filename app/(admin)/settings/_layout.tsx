@@ -10,6 +10,7 @@ export default function AdminSettingsLayout() {
       <Stack.Screen name="contract-submissions" />
       <Stack.Screen name="skills" />
       <Stack.Screen name="fetch-grounds" />
+      <Stack.Screen name="scrape-gw" />
       <Stack.Screen name="corporate" />
     </Stack>
   );
