@@ -40,6 +40,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isSkills = pathname.includes('/settings/skills');
   const isFetchGrounds = pathname.includes('/settings/fetch-grounds');
   const isCorporate = pathname.includes('/settings/corporate');
+  const isScrapeGW = pathname.includes('/settings/scrape-gw');
 
   return (
     <View style={styles.shell}>
@@ -150,6 +151,15 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           >
             <Text style={[styles.subLinkText, isFetchGrounds && styles.subLinkTextActive]}>
               Fetch Grounds
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/scrape-gw') as any)}
+            style={[styles.subLink, isScrapeGW && styles.subLinkActive]}
+          >
+            <Text style={[styles.subLinkText, isScrapeGW && styles.subLinkTextActive]}>
+              GW Scraper
             </Text>
           </Pressable>
         </ScrollView>

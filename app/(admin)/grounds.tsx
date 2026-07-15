@@ -153,8 +153,10 @@ export default function GroundsAdminScreen() {
   const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [allLocations, setAllLocations] = useState<any[]>([]);
+  const [allOwners, setAllOwners] = useState<any[]>([]);
   const [editLocationKey, setEditLocationKey] = useState<string>('');
   const [createForm, setCreateForm] = useState<any>({
+    owner_id: ownerIdParam || '',
     name: '',
     description: '',
     address: '',
@@ -225,8 +227,24 @@ export default function GroundsAdminScreen() {
   useEffect(() => {
     loadGrounds();
     loadLocations();
+    loadOwners();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerIdParam]);
+
+  const loadOwners = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, business_name, phone')
+        .eq('role', 'ground_owner')
+        .order('full_name', { ascending: true });
+      
+      if (error) throw error;
+      setAllOwners(data || []);
+    } catch (err) {
+      console.error('Error loading owners:', err);
+    }
+  };
 
   const loadLocations = async () => {
     try {
@@ -307,6 +325,7 @@ export default function GroundsAdminScreen() {
 
   const resetCreateForm = () => {
     setCreateForm({
+      owner_id: ownerIdParam || '',
       name: '',
       description: '',
       address: '',
@@ -356,6 +375,7 @@ export default function GroundsAdminScreen() {
     setCreateOpen(false);
     setEditForm({
       id: ground.id,
+      owner_id: ground.owner_id ?? '',
       name: ground.name ?? '',
       description: (ground.description ?? '') as string,
       address: ground.address ?? '',
@@ -414,6 +434,7 @@ export default function GroundsAdminScreen() {
     try {
       setEditLoading(true);
       const payload: any = {
+        owner_id: editForm.owner_id || selectedGround?.owner_id || ownerIdParam || user.id,
         name: String(editForm.name ?? '').trim(),
         description: String(editForm.description ?? '').trim() || null,
         address: String(editForm.address ?? '').trim(),
@@ -642,6 +663,12 @@ export default function GroundsAdminScreen() {
       else Alert.alert('Error', 'Please login');
       return;
     }
+    const targetOwnerId = createForm.owner_id || ownerIdParam || user.id;
+    if (!targetOwnerId) {
+      if (Platform.OS === 'web') alert('Please select a ground owner.');
+      else Alert.alert('Error', 'Please select a ground owner.');
+      return;
+    }
     if (isCricketGroundType(createForm.pitch_type)) {
       const s = cricketPitchSurfaceForDb(createForm.pitch_type, createForm.cricket_pitch_surface);
       if (!s) {
@@ -654,7 +681,7 @@ export default function GroundsAdminScreen() {
       setCreateLoading(true);
 
       const payload: any = {
-        owner_id: user.id,
+        owner_id: targetOwnerId,
         name: String(createForm.name ?? '').trim(),
         description: String(createForm.description ?? '').trim() || null,
         address: String(createForm.address ?? '').trim(),
@@ -1162,6 +1189,18 @@ export default function GroundsAdminScreen() {
             <Text style={styles.formTitle}>Add Ground</Text>
 
             <ScrollView style={styles.formWrap}>
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={styles.surfaceFieldLabel}>Owner</Text>
+                  <OwnerDropdown
+                    value={createForm.owner_id || ownerIdParam || ''}
+                    options={allOwners.map(o => ({
+                      id: o.id,
+                      name: o.business_name || o.full_name || o.phone || 'Unnamed Owner'
+                    }))}
+                    onChange={(id) => setCreateForm({ ...createForm, owner_id: id })}
+                  />
+                </View>
+
                 <TextInput
                   style={styles.formInput}
                   value={String(createForm.name ?? '')}
@@ -1814,6 +1853,17 @@ export default function GroundsAdminScreen() {
                 {/* Left Column: Basic Info & Media */}
                 <View style={[styles.compactFormCol, width >= 768 && { flex: 1 }]}>
                   <Text style={styles.compactSectionTitle}>Basic Details</Text>
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={styles.locationLabel}>Owner</Text>
+                    <OwnerDropdown
+                      value={editForm?.owner_id ?? ''}
+                      options={allOwners.map(o => ({
+                        id: o.id,
+                        name: o.business_name || o.full_name || o.phone || 'Unnamed Owner'
+                      }))}
+                      onChange={(id) => setEditForm((p: any) => ({ ...p, owner_id: id }))}
+                    />
+                  </View>
                   <TextInput
                     style={styles.compactInput}
                     value={String(editForm?.name ?? '')}
@@ -3048,6 +3098,50 @@ function OwnerLocationDropdown({
                 style={locationDropdownStyles.option}
               >
                 <Text style={locationDropdownStyles.optionText}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function OwnerDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { id: string; name: string }[];
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value);
+
+  return (
+    <View style={locationDropdownStyles.outer}>
+      <Pressable
+        onPress={() => setOpen((prev) => !prev)}
+        style={[locationDropdownStyles.button, open && locationDropdownStyles.buttonOpen]}
+      >
+        <Text style={locationDropdownStyles.buttonText}>
+          {selected?.name || 'Select Owner'}
+        </Text>
+      </Pressable>
+      {open && (
+        <View style={[locationDropdownStyles.menu, { maxHeight: 200 }]}>
+          <ScrollView nestedScrollEnabled={true}>
+            {options.map((opt) => (
+              <Pressable
+                key={opt.id}
+                onPress={() => {
+                  onChange(opt.id);
+                  setOpen(false);
+                }}
+                style={locationDropdownStyles.option}
+              >
+                <Text style={locationDropdownStyles.optionText}>{opt.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
