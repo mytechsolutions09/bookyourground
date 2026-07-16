@@ -289,15 +289,17 @@ export default function OwnerGroundsScreen() {
     })();
   }, []);
 
-  const parseNullableFloat = (value: string): number | null => {
-    const trimmed = value.trim();
+  const parseNullableFloat = (value: any): number | null => {
+    if (value === null || value === undefined) return null;
+    const trimmed = String(value).trim();
     if (!trimmed) return null;
-    const n = Number(trimmed);
+    const n = parseFloat(trimmed);
     return Number.isFinite(n) ? n : null;
   };
 
-  const parseNullableInt = (value: string): number | null => {
-    const trimmed = value.trim();
+  const parseNullableInt = (value: any): number | null => {
+    if (value === null || value === undefined) return null;
+    const trimmed = String(value).trim();
     if (!trimmed) return null;
     const n = parseInt(trimmed, 10);
     return Number.isFinite(n) ? n : null;
@@ -339,8 +341,8 @@ export default function OwnerGroundsScreen() {
         has_practice_nets: !!editForm.has_practice_nets,
         has_swimming_pool: !!editForm.has_swimming_pool,
         active: !!editForm.active,
-        latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
-        longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
+        latitude: parseNullableFloat(String(editForm.latitude ?? '')),
+        longitude: parseNullableFloat(String(editForm.longitude ?? '')),
       };
 
       const { error } = await supabase
