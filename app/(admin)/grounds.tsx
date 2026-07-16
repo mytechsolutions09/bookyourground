@@ -407,15 +407,17 @@ export default function GroundsAdminScreen() {
     setEditLocationKey(`${ground.city ?? ''}__${ground.state ?? ''}`);
   };
 
-  const parseNullableFloat = (value: string): number | null => {
-    const trimmed = value.trim();
+  const parseNullableFloat = (value: any): number | null => {
+    if (value === null || value === undefined) return null;
+    const trimmed = String(value).trim();
     if (!trimmed) return null;
-    const n = Number(trimmed);
+    const n = parseFloat(trimmed);
     return Number.isFinite(n) ? n : null;
   };
 
-  const parseNullableInt = (value: string): number | null => {
-    const trimmed = value.trim();
+  const parseNullableInt = (value: any): number | null => {
+    if (value === null || value === undefined) return null;
+    const trimmed = String(value).trim();
     if (!trimmed) return null;
     const n = parseInt(trimmed, 10);
     return Number.isFinite(n) ? n : null;
