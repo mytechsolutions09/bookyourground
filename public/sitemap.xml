@@ -2,361 +2,463 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://bookyourground.com</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/about</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/contact</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/faq</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/terms</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/privacy</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shipping</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/refund-policy</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/corporate</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/cricket-grounds</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/football-grounds</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/grounds-info</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/how-it-works</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/list-your-venue</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/match-strategies</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/pricing</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/book-cricket-ground-in-delhi</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/book-cricket-ground-in-gurugram</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/ground/new-delhi/six-flags-3-0</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/ground/new-gurugram/six-flags-1-0</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/new-gurugram/six-flags-2-0</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/new-gurugram/battle-station-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/new-gurugram/the-royal-rumble-cricket</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/ambala/ambala-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/gurugram/dpgitm-sports-complex</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/gurugram/kraft-drinkpole-star-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/gurugram/hare-knoll-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/gurugram/boundary-box-cricket-arena</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/new-gurugram/ghs-greenfield-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/gurugram/strike-ani-strike-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bookyourground.com/ground/new-gurugram/green-2-0-test</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/ground/new-gurugram/balls-of-fire</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/six-flags-2-0</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/battle-station-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-delhi/aarbin-cricket-academy</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/lords-cricket-ground-baliawas</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/the-royal-rumble-cricket</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/ambala/ambala-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/dpgitm-sports-complex</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/kraft-drinkpole-star-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/ghaziabad/jawaharlal-nehru-stadium-ghaziabad</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/3-c-s-sports-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/noida/colosseum-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/pioneer-sports-park</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/hare-knoll-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/boundary-box-cricket-arena</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/ghs-greenfield-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/ghaziabad/gaur-city-stadium</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/backyard-sports-club</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/noida/adwan-sports-bal-bharati-cricket-academy</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/strike-ani-strike-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/dhani-sports</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/ap-sports-cricket-ground</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/games-forest</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-delhi/airliner-cricket-academy</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/new-gurugram/rb-sports-club</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/ground/gurugram/the-ball-park</loc>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/ground-booking-for-cricket</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/how-mvp-is-calculated</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/how-to-book-sports-ground-online</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/online-ground-booking-vs-whatsapp-calling</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/book-cricket-ground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/cricket-ground-booking-refund-policy</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/football-turf-faridabad</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/box-cricket-vs-full-pitch-cricket-which-should-you-book-2026-bookyourground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/corporate-cricket-tournament-in-delhi-how-to-plan-book-2026-bookyourground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/online-cricket-ground-booking</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/spain-vs-cape-verde-historic-draw</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/ultimate-guide-to-football-world-cup</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/difference-between-english-willow-and-kashmir-willow</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/best-box-cricket-venues-in-noida-ranked-reviewed-2026-bookyourground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/best-cricket-grounds-in-gurgaon-to-book-in-2026-bookyourground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/10-best-cricket-grounds-in-faridabad-what-you-need-to-know-2026-bookyourground</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/pickleball-courts-in-delhi-ncr-2026-prices-online-booking-guide</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/blog/cricket-ground-booking-in-ghaziabad-top-venues-prices-2026</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/blog/top-10-cricket-grounds-in-gurgaon-reviews-booking-guide-2026</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/blog/best-cricket-grounds-with-cafeteria-in-delhi-ncr-2026-guide</loc>
+    <lastmod>2026-07-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bookyourground.com/blog/corporate-cricket-tournament-checklist-2026-the-complete-planning-guide-bookyourground</loc>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/adidas-mens-cri-yard-m-cricket-shoes</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/ss-storm-english-willow-cricket-bat-short-handle</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/adidas-men-cricup-23-cricket-shoe</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/sg-test-rh-batting-legguard-adult-multicolour-wood</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/sg-shield-20-cricket-balls-colour-white-pack-size-pack-of-1-water-resistant-leather-ball-suitable-for-practice-game-tournament-game-cork</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/shrey-cricket-match-t-shirt-20-long-sleeves-off-white</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/sg-shield-20-cricket-balls-colour-red-pack-size-pack-of-1-water-resistant-leather-ball-suitable-for-practice-game-tournament-game-cork</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://bookyourground.com/shop/puma-men-cricket-power-cricket-shoes</loc>
-    <lastmod>2026-07-09</lastmod>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

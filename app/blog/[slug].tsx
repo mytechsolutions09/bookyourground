@@ -25,8 +25,42 @@ interface Blog {
   created_at: string;
 }
 
+function getCachedBlog(slugParam: string | string[] | undefined): Blog | null {
+  if (typeof window !== 'undefined') return null;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(process.cwd(), 'tmp', 'blogs-cache.json');
+    if (!fs.existsSync(cachePath)) return null;
+
+    const blogsList = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    const slugStr = Array.isArray(slugParam) ? slugParam[0] : slugParam;
+    if (!slugStr) return null;
+
+    const match = blogsList.find((b: any) => b.is_published && b.slug === slugStr);
+    return match || null;
+  } catch (err) {
+    console.error('Error reading blogs cache:', err);
+    return null;
+  }
+}
+
 export async function generateStaticParams(): Promise<Record<string, string>[]> {
   try {
+    if (typeof window === 'undefined') {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const cachePath = path.join(process.cwd(), 'tmp', 'blogs-cache.json');
+        if (fs.existsSync(cachePath)) {
+          const blogsList = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+          if (Array.isArray(blogsList) && blogsList.length > 0) {
+            return blogsList.filter((b: any) => b.slug).map((blog: any) => ({ slug: blog.slug }));
+          }
+        }
+      } catch (_) {}
+    }
+
     const { data, error } = await supabase
       .from('blogs')
       .select('slug')
@@ -48,18 +82,20 @@ export async function generateStaticParams(): Promise<Record<string, string>[]> 
 
 export default function DynamicBlogPage() {
   const { slug } = useLocalSearchParams();
-  const [blog, setBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedBlog = React.useMemo(() => getCachedBlog(slug), [slug]);
+  const [blog, setBlog] = useState<Blog | null>(cachedBlog);
+  const [loading, setLoading] = useState<boolean>(!cachedBlog);
 
   useEffect(() => {
     async function fetchBlog() {
       if (!slug) return;
+      const slugStr = Array.isArray(slug) ? slug[0] : slug;
       const { data, error } = await supabase
         .from('blogs')
         .select('*')
-        .eq('slug', slug)
+        .eq('slug', slugStr)
         .eq('is_published', true)
-        .single();
+        .maybeSingle();
         
       if (!error && data) {
         setBlog(data);
@@ -143,10 +179,7 @@ export default function DynamicBlogPage() {
         <meta property="twitter:description" content={blog.excerpt} />
         <meta property="twitter:image" content={blog.image_url || "https://bookyourground.com/assets/images/ground-booking-for-cricket.png"} />
 
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
-        />
+        <script type="application/ld+json">{JSON.stringify(schemaMarkup)}</script>
       </Head>
       <WebLayout>
         <Stack.Screen options={{ title: blog.title }} />
