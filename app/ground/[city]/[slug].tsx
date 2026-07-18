@@ -78,8 +78,80 @@ const CLEAN_MAP_STYLES = [
     stylers: [{ visibility: "off" }],
   }
 ];
+export function getRichGroundDescription(ground: any): string {
+  if (!ground) return '';
+  if (ground.description && ground.description.trim().length > 40) {
+    return ground.description.trim();
+  }
+
+  const name = ground.name || 'Sports Venue';
+  const city = ground.city || 'Gurugram';
+  const state = ground.state || 'Haryana';
+  const address = ground.address ? `${ground.address}, ${city}, ${state}` : `${city}, ${state}`;
+
+  // Amenities list
+  const amenitiesList: string[] = [];
+  if (ground.has_floodlights) amenitiesList.push('Night Floodlights for evening matches');
+  if (ground.has_parking) amenitiesList.push('Dedicated Vehicle Parking');
+  if (ground.has_changing_rooms) amenitiesList.push('Clean Changing Rooms');
+  if (ground.has_pavilion) amenitiesList.push('Player Pavilion & Seating Area');
+  if (ground.has_washrooms) amenitiesList.push('Restroom Facilities');
+  if (ground.has_swimming_pool) amenitiesList.push('Swimming Pool Access');
+  if (ground.has_bowling_machine) amenitiesList.push('Professional Bowling Machine');
+  if (ground.has_umpires) amenitiesList.push('On-demand Certified Umpires');
+  if (ground.has_new_balls) amenitiesList.push('Fresh Match Balls Provided');
+  if (ground.has_scoring) amenitiesList.push('Digital Live Scoring Setup');
+  if (ground.has_practice_nets) amenitiesList.push(`Practice Nets (${ground.lanes_count ? ground.lanes_count + ' Net Lanes' : 'Net Facility'})`);
+
+  // Venue specs
+  const pitchSurface = ground.cricket_pitch_surface || ground.pitch_type || 'turf';
+  const groundSize = ground.ground_size ? `Size: ${ground.ground_size}` : '';
+  const capacityStr = ground.capacity ? `Capacity for ${ground.capacity}+ spectators.` : '';
+  const indoorStr = ground.is_indoor ? 'Indoor Covered Sports Facility' : 'Outdoor Open Ground';
+
+  // Pricing
+  const price = ground.min_price || ground.base_price_per_hour;
+  const pricingModel = ground.pricing_model === 'overs' ? 'per match/overs' : 'per hour';
+  const priceText = price ? `Slot rates start from ₹${price} ${pricingModel}.` : '';
+
+  let text = `${name} is a premier ${indoorStr.toLowerCase()} located at ${address}. Designed for cricket enthusiasts and sports teams, the venue features a high-quality ${pitchSurface} surface ${groundSize ? `(${groundSize})` : ''} suitable for competitive tournaments, friendly matches, and practice sessions. ${capacityStr}`.trim();
+
+  if (amenitiesList.length > 0) {
+    text += `\n\nKey Venue Amenities & Facilities at ${name}:\n• ` + amenitiesList.join('\n• ');
+  } else {
+    text += `\n\nThe venue offers well-maintained playing conditions, convenient access in ${city}, and an ideal environment for team sports.`;
+  }
+
+  if (priceText) {
+    text += `\n\nBooking & Pricing Information:\n${priceText} You can instantly compare available slots, view venue photos, and reserve your match times online via BookYourGround.`;
+  } else {
+    text += `\n\nCheck live slot availability and book your match session at ${name} online via BookYourGround.`;
+  }
+
+  return text;
+}
+
 export async function generateStaticParams(): Promise<Record<string, string>[]> {
   try {
+    if (typeof window === 'undefined') {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const cachePath = path.join(process.cwd(), 'tmp', 'grounds-cache.json');
+        if (fs.existsSync(cachePath)) {
+          const groundsList = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+          if (Array.isArray(groundsList) && groundsList.length > 0) {
+            return groundsList
+              .filter((g: any) => g.active && g.approved)
+              .map((ground: any) => ({
+                city: slugifyGroundSegment(ground.city),
+                slug: slugifyGroundSegment(ground.name),
+              }));
+          }
+        }
+      } catch (_) {}
+    }
+
     const { data, error } = await supabase
       .from('grounds')
       .select('city, name')
@@ -604,12 +676,12 @@ export default function GroundDetailsPrettyUrlScreen() {
                           </Text>
                         </View>
                         
-                        {ground.description && (
+                        {getRichGroundDescription(ground) ? (
                           <View style={{ marginTop: 40 }}>
                             <Text style={styles.webSubTitle}>About the Venue</Text>
-                            <Text style={styles.webDescriptionText}>{ground.description}</Text>
+                            <Text style={[styles.webDescriptionText, { whiteSpace: 'pre-line' as any }]}>{getRichGroundDescription(ground)}</Text>
                           </View>
-                        )}
+                        ) : null}
                       </View>
                     </View>
                   </View>
@@ -768,7 +840,7 @@ export default function GroundDetailsPrettyUrlScreen() {
               </View>
 
               <View style={styles.section}>
-                {ground.description && (
+                {getRichGroundDescription(ground) ? (
                   <View style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 16, marginBottom: 16 }}>
                     <TouchableOpacity 
                       onPress={() => setAboutExpanded(!aboutExpanded)} 
@@ -778,10 +850,10 @@ export default function GroundDetailsPrettyUrlScreen() {
                       <ChevronRight size={16} color="#64748B" style={aboutExpanded && { transform: [{ rotate: '90deg' }] }} />
                     </TouchableOpacity>
                     {aboutExpanded && (
-                      <Text style={styles.description}>{ground.description}</Text>
+                      <Text style={[styles.description, { whiteSpace: 'pre-line' as any }]}>{getRichGroundDescription(ground)}</Text>
                     )}
                   </View>
-                )}
+                ) : null}
 
                 <View style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 16, marginBottom: 16 }}>
                   <TouchableOpacity 
@@ -975,7 +1047,10 @@ export default function GroundDetailsPrettyUrlScreen() {
       />
       {ground && (() => {
         const venueImg = ground.ground_images?.[0]?.image_url || 'https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/Assets/logo.png';
-        const venueDesc = ground.description || `Book ${ground.name} on BookYourGround. Compare slots, pricing, and amenities online.`;
+        const richDesc = getRichGroundDescription(ground);
+        const venueDesc = (ground.description && ground.description.trim().length > 20)
+          ? ground.description.trim()
+          : `${ground.name} in ${ground.city}, ${ground.state}. ${ground.cricket_pitch_surface ? ground.cricket_pitch_surface + ' surface.' : ''} Compare slots & book online on BookYourGround.`;
         
         const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
         const rawImages = (ground.ground_images ?? []).filter((img) => img.image_url);
@@ -993,7 +1068,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           "@type": "SportsActivityLocation",
           "@id": `https://bookyourground.com/ground/${cityParam}/${slugParam}#sports-activity-location`,
           "name": ground.name,
-          "description": venueDesc,
+          "description": richDesc || venueDesc,
           "image": imageUrls,
           "address": {
             "@type": "PostalAddress",
@@ -1039,10 +1114,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             <meta name="twitter:description" content={venueDesc} />
             <meta name="twitter:image" content={venueImg} />
 
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(sportsActivityLocationSchema) }}
-            />
+            <script type="application/ld+json">{JSON.stringify(sportsActivityLocationSchema)}</script>
           </Head>
         );
       })()}

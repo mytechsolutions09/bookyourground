@@ -157,16 +157,18 @@ async function generateSitemap() {
     }
 
     // Add dynamic blog routes
+    let allBlogs = [];
     try {
       console.log('Fetching active blogs from Supabase...');
       const { data: blogs, error: blogError } = await supabase
         .from('blogs')
-        .select('slug')
+        .select('*')
         .eq('is_published', true);
       
       if (blogError) {
         console.warn('Error fetching blogs from Supabase. Skipping blog routes:', blogError);
       } else if (blogs && blogs.length > 0) {
+        allBlogs = blogs;
         for (const blog of blogs) {
           if (!blog.slug) continue;
           const route = `/blog/${blog.slug}`;
@@ -242,13 +244,16 @@ async function generateSitemap() {
     fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml);
     console.log('Successfully generated sitemap.xml');
 
-    // Write grounds cache to tmp folder
+    // Write grounds and blogs cache to tmp folder
     const tmpDir = path.join(__dirname, '..', 'tmp');
     if (!fs.existsSync(tmpDir)) {
       fs.mkdirSync(tmpDir, { recursive: true });
     }
-    fs.writeFileSync(path.join(tmpDir, 'grounds-cache.json'), JSON.stringify(grounds, null, 2));
+    fs.writeFileSync(path.join(tmpDir, 'grounds-cache.json'), JSON.stringify(grounds || [], null, 2));
     console.log('Successfully cached grounds data to tmp/grounds-cache.json');
+
+    fs.writeFileSync(path.join(tmpDir, 'blogs-cache.json'), JSON.stringify(allBlogs || [], null, 2));
+    console.log('Successfully cached blogs data to tmp/blogs-cache.json');
 
     // Generate robots.txt
     const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;
