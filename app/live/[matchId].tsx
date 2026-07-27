@@ -27,6 +27,7 @@ import {
 } from '@/utils/mvp';
 import { ChevronRight, ChevronLeft, ChevronDown, Award, MessageCircle, Share2, Trophy, BarChart3, Settings, Sliders, HelpCircle, ImagePlus, Camera, Zap, Flame, Star, Activity, Target, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import YouTubePlayer from '@/components/cricket/YouTubePlayer';
 
 const DynamicSportsLoader = () => {
   const [iconIndex, setIconIndex] = useState(0);
@@ -1195,6 +1196,9 @@ export default function LiveScorecard() {
       case 'info':
         return (
           <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
+            {match?.youtube_video_id && (
+              <YouTubePlayer videoId={match.youtube_video_id} title={match.title} />
+            )}
             {/* Main Info Card */}
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
               <TouchableOpacity 

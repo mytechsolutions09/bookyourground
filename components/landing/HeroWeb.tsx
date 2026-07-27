@@ -10,20 +10,18 @@ import {
   useWindowDimensions,
   Pressable,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   ActivityIndicator,
   Animated,
-  Easing,
+  DeviceEventEmitter,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  MapPin, 
-  Calendar as CalendarIcon, 
-  Clock, 
-  ChevronDown, 
-  ShieldCheck, 
-  Trophy, 
+import {
+  MapPin,
+  Calendar as CalendarIcon,
+  Clock,
+  ChevronDown,
+  ShieldCheck,
+  Trophy,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -32,17 +30,18 @@ import {
   Users,
   Percent,
   Headphones,
-  Zap,
-  Activity,
   Star,
-  Building2
+  Building2,
+  Search,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Svg, { Rect, Line, Circle, Path } from 'react-native-svg';
 
+// ─── Sport Icons ────────────────────────────────────────────────────────────
+
 const GroundIcon = ({ color, size }: { color: string; size: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <Rect x="2" y="4" width="20" height="16" rx="2" />
     <Line x1="12" y1="4" x2="12" y2="20" />
     <Circle cx="12" cy="12" r="3" />
@@ -52,7 +51,7 @@ const GroundIcon = ({ color, size }: { color: string; size: number }) => (
 );
 
 const TurfIcon = ({ color, size }: { color: string; size: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <Circle cx="12" cy="12" r="10" />
     <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
     <Path d="M12 6 l -3 2 v 4 l 3 2 l 3 -2 v -4 Z" />
@@ -60,19 +59,8 @@ const TurfIcon = ({ color, size }: { color: string; size: number }) => (
   </Svg>
 );
 
-const CourtIcon = ({ color, size }: { color: string; size: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M6 4L10 18C10.5 19.5 13.5 19.5 14 18L18 4" />
-    <Line x1="9" y1="4" x2="11.2" y2="18" />
-    <Line x1="15" y1="4" x2="12.8" y2="18" />
-    <Path d="M7.3 9h9.4" />
-    <Path d="M8.7 14h6.6" />
-    <Path d="M10 18c0 1.5 4 1.5 4 0" fill={color} />
-  </Svg>
-);
-
 const AllSportsIcon = ({ color, size }: { color: string; size: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <Rect x="3" y="3" width="7" height="7" rx="1.5" />
     <Rect x="14" y="3" width="7" height="7" rx="1.5" />
     <Rect x="14" y="14" width="7" height="7" rx="1.5" />
@@ -80,1210 +68,1016 @@ const AllSportsIcon = ({ color, size }: { color: string; size: number }) => (
   </Svg>
 );
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-type LocationOption = {
-  key: string;
-  city: string;
-  state: string;
-};
+type LocationOption = { key: string; city: string; state: string };
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function HeroWeb() {
   const isMobile = useIsCompact();
   const hasMounted = useHasMounted();
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const { width, height } = useWindowDimensions();
+
+  // ── Data state ────────────────────────────────────────────────────────────
   const [locations, setLocations] = useState<LocationOption[]>([]);
-  const [loadingLocations, setLoadingLocations] = useState(true);
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
-  const [groundTypes, setGroundTypes] = useState<{name: string, label: string}[]>([]);
-  const [loadingGroundTypes, setLoadingGroundTypes] = useState(true);
-  const [selectedType, setSelectedType] = useState<string>('');
+  const [groundTypes, setGroundTypes] = useState<{ name: string; label: string }[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState('');
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
-  
+  const [totalVenues, setTotalVenues] = useState(85);
+  const [searchTab, setSearchTab] = useState<'grounds' | 'nets' | 'all'>('grounds');
+  const [viewDate, setViewDate] = useState(new Date());
+
+  // ── Dropdown open state ───────────────────────────────────────────────────
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(false);
 
-  // Tabs for search box
-  const [searchTab, setSearchTab] = useState<'grounds' | 'nets' | 'all'>('grounds');
-
-  // Calendar State
-  const [viewDate, setViewDate] = useState(new Date());
-  
-  const [totalVenues, setTotalVenues] = useState(10);
-  const [reviewsCount, setReviewsCount] = useState(1540);
+  // ── Scroll animation ──────────────────────────────────────────────────────
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { count: groundCount } = await supabase
-          .from('grounds')
-          .select('*', { count: 'exact', head: true });
-        if (groundCount) setTotalVenues(groundCount);
+    const sub = DeviceEventEmitter.addListener('mainScroll', ({ y }) => {
+      scrollY.setValue(y);
+    });
+    return () => sub.remove();
+  }, [scrollY]);
 
-        const { count: reviews } = await supabase
-          .from('reviews')
-          .select('*', { count: 'exact', head: true });
-        if (reviews) setReviewsCount(reviews);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchStats();
-  }, []);
+  // Background slowly zooms in and drifts up (parallax)
+  const bgScale = scrollY.interpolate({ inputRange: [0, 600], outputRange: [1, 1.18], extrapolate: 'clamp' });
+  const bgTranslateY = scrollY.interpolate({ inputRange: [0, 600], outputRange: [0, 100], extrapolate: 'clamp' });
 
-  const formRef = useRef<View>(null);
+  // Headline fades out and floats up
+  const headlineOpacity = scrollY.interpolate({ inputRange: [0, 250], outputRange: [1, 0], extrapolate: 'clamp' });
+  const headlineTranslateY = scrollY.interpolate({ inputRange: [0, 300], outputRange: [0, -60], extrapolate: 'clamp' });
 
+  // Search pill lags slightly behind the headline (subtle delay effect)
+  const searchOpacity = scrollY.interpolate({ inputRange: [0, 320], outputRange: [1, 0], extrapolate: 'clamp' });
+  const searchTranslateY = scrollY.interpolate({ inputRange: [0, 360], outputRange: [0, -40], extrapolate: 'clamp' });
+
+  // Stats badges drift upward slightly later
+  const statsOpacity = scrollY.interpolate({ inputRange: [50, 380], outputRange: [1, 0], extrapolate: 'clamp' });
+  const statsTranslateY = scrollY.interpolate({ inputRange: [0, 400], outputRange: [0, -30], extrapolate: 'clamp' });
+
+  // Bottom bar slides down and vanishes
+  const barOpacity = scrollY.interpolate({ inputRange: [0, 160], outputRange: [1, 0], extrapolate: 'clamp' });
+  const barTranslateY = scrollY.interpolate({ inputRange: [0, 160], outputRange: [0, 24], extrapolate: 'clamp' });
+
+  // Overlay darkens slightly as you scroll (cinematic depth)
+  const overlayOpacity = scrollY.interpolate({ inputRange: [0, 400], outputRange: [0.55, 0.78], extrapolate: 'clamp' });
+
+  // ── Data fetching ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (isLocationOpen || isTypeOpen || isDateOpen || isTimeOpen) {
-        // @ts-ignore - web specific
-        if (formRef.current && !formRef.current.contains(e.target as Node)) {
-          closeAll();
-        }
-      }
-    };
-
-    window.addEventListener('mousedown', handleOutsideClick);
-    return () => window.removeEventListener('mousedown', handleOutsideClick);
-  }, [isLocationOpen, isTypeOpen, isDateOpen, isTimeOpen]);
-
-  const closeAll = () => {
-    setIsLocationOpen(false);
-    setIsTypeOpen(false);
-    setIsDateOpen(false);
-    setIsTimeOpen(false);
-  };
-
-  useEffect(() => {
-    const fetchLocations = async () => {
-      setLoadingLocations(true);
-      const { data, error } = await supabase
-        .from('locations')
-        .select('city, state')
-        .eq('active', true)
-        .order('city');
-      
-      if (!error && data) {
-        const unique = data.map(l => ({
-          key: `${l.city}__${l.state}`,
-          city: l.city,
-          state: l.state
-        }));
-        setLocations(unique);
-      }
-      setLoadingLocations(false);
-    };
-    fetchLocations();
-  }, []);
-
-  useEffect(() => {
-    const fetchGroundTypes = async () => {
-      setLoadingGroundTypes(true);
-      try {
-        const { data, error } = await supabase
-          .from('ground_types')
-          .select('name, label')
-          .eq('active', true)
-          .order('sort_order', { ascending: true });
-        
-        if (!error && data) {
+    supabase.from('locations').select('city, state').eq('active', true).order('city')
+      .then(({ data }) => {
+        if (data) setLocations(data.map(l => ({ key: `${l.city}__${l.state}`, city: l.city, state: l.state })));
+      });
+    supabase.from('grounds').select('*', { count: 'exact', head: true })
+      .then(({ count }) => { if (count) setTotalVenues(count); });
+    supabase.from('ground_types').select('name, label').eq('active', true).order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data) {
           const types = [...data];
-          if (!types.some(t => t.name.toLowerCase() === 'nets')) {
-            types.push({ name: 'Nets', label: 'Nets' });
-          }
+          if (!types.some(t => t.name.toLowerCase() === 'nets')) types.push({ name: 'Nets', label: 'Nets' });
           setGroundTypes(types);
         }
-      } catch (e) {
-        console.error('Error fetching ground types:', e);
-      } finally {
-        setLoadingGroundTypes(false);
-      }
-    };
-    fetchGroundTypes();
+      });
   }, []);
 
   useEffect(() => {
-    const fetchAvailableTimes = async () => {
-      if (!selectedLocation || !selectedDate || !selectedType) {
-        setAvailableTimes([]);
-        return;
-      }
-      
-      setLoadingTimes(true);
-      try {
-        const [city, state] = selectedLocation.split('__');
-        const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        
-        const { data: grounds } = await supabase
-          .from('grounds')
-          .select('id')
-          .eq('city', city)
-          .eq('state', state)
-          .eq('pitch_type', selectedType)
-          .eq('active', true);
-          
-        if (!grounds || grounds.length === 0) {
-          setAvailableTimes([]);
-          return;
-        }
-        
-        const groundIds = grounds.map(g => g.id);
-        
-        const { data: slots } = await supabase
-          .from('time_slots')
-          .select('start_time')
-          .in('ground_id', groundIds)
-          .eq('day_of_week', dayOfWeek)
-          .eq('is_available', true);
-          
-        if (slots) {
-          const uniqueTimes = Array.from(new Set(slots.map(s => s.start_time.slice(0, 5)))).sort();
-          setAvailableTimes(uniqueTimes);
-        } else {
-          setAvailableTimes([]);
-        }
-      } catch (e) {
-        console.error('Error fetching slots:', e);
-      } finally {
+    if (!selectedLocation || !selectedDate || !selectedType) { setAvailableTimes([]); return; }
+    setLoadingTimes(true);
+    const [city, state] = selectedLocation.split('__');
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    supabase.from('grounds').select('id').eq('city', city).eq('state', state).eq('pitch_type', selectedType).eq('active', true)
+      .then(async ({ data: grounds }) => {
+        if (!grounds?.length) { setAvailableTimes([]); setLoadingTimes(false); return; }
+        const { data: slots } = await supabase.from('time_slots').select('start_time')
+          .in('ground_id', grounds.map(g => g.id)).eq('day_of_week', dayOfWeek).eq('is_available', true);
+        setAvailableTimes(slots ? Array.from(new Set(slots.map(s => s.start_time.slice(0, 5)))).sort() : []);
         setLoadingTimes(false);
-      }
-    };
-    
-    fetchAvailableTimes();
+      });
   }, [selectedLocation, selectedDate, selectedType]);
 
-  const handleSearch = () => {
-    const params: any = {};
-    if (selectedLocation) {
-      params.location = selectedLocation;
-    }
-    if (selectedType) {
-      params.type = selectedType;
-    }
-    if (selectedDate) {
-      params.date = selectedDate.toISOString().split('T')[0];
-    }
-    if (selectedTime) params.time = selectedTime;
+  // ── Outside click handler ─────────────────────────────────────────────────
+  const formRef = useRef<View>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (e: MouseEvent) => {
+      if (isLocationOpen || isTypeOpen || isDateOpen || isTimeOpen) {
+        // @ts-ignore
+        if (formRef.current && !formRef.current.contains(e.target as Node)) closeAll();
+      }
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [isLocationOpen, isTypeOpen, isDateOpen, isTimeOpen]);
 
-    router.push({
-      pathname: '/search',
-      params
-    });
-  };
+  const closeAll = () => { setIsLocationOpen(false); setIsTypeOpen(false); setIsDateOpen(false); setIsTimeOpen(false); };
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const isSearchEnabled = !!selectedLocation && !!selectedType && !!selectedDate && !!selectedTime;
-
-  const formatDate = (date: Date | null) => {
-    if (!date) return 'Select Date';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+  const formatDate = (d: Date | null) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Select Date';
 
   const calendarDays = useMemo(() => {
-    const year = viewDate.getFullYear();
-    const month = viewDate.getMonth();
+    const y = viewDate.getFullYear(), m = viewDate.getMonth();
     const days: (number | null)[] = [];
-    const firstDay = firstDayOfMonth(year, month);
-    const totalDays = daysInMonth(year, month);
-
-    for (let i = 0; i < firstDay; i++) days.push(null);
-    for (let i = 1; i <= totalDays; i++) days.push(i);
-    
+    for (let i = 0; i < new Date(y, m, 1).getDay(); i++) days.push(null);
+    for (let i = 1; i <= new Date(y, m + 1, 0).getDate(); i++) days.push(i);
     return days;
   }, [viewDate]);
 
-  const monthName = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  const nextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
-  const prevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
-
-  // Change category based on search tabs
-  const handleTabChange = (tab: 'grounds' | 'nets' | 'all') => {
-    setSearchTab(tab);
-    if (tab === 'grounds') {
-      setSelectedType('Cricket Ground');
-    } else if (tab === 'nets') {
-      setSelectedType('Nets');
-    } else {
-      setSelectedType('');
-    }
+  const handleSearch = () => {
+    const params: any = {};
+    if (selectedLocation) params.location = selectedLocation;
+    if (selectedType) params.type = selectedType;
+    if (selectedDate) params.date = selectedDate.toISOString().split('T')[0];
+    if (selectedTime) params.time = selectedTime;
+    router.push({ pathname: '/search', params });
   };
 
+  const handleTabChange = (tab: 'grounds' | 'nets' | 'all') => {
+    setSearchTab(tab);
+    setSelectedType(tab === 'grounds' ? 'Cricket Ground' : tab === 'nets' ? 'Nets' : '');
+  };
+
+  const stats = [
+    { icon: <Users size={14} color="#00E676" />, value: '50K+', label: 'Players' },
+    { icon: <Trophy size={14} color="#00E676" />, value: `${totalVenues * 50}+`, label: 'Venues' },
+    { icon: <Star size={14} color="#00E676" fill="#00E676" />, value: '4.9★', label: 'Rating' },
+    { icon: <Building2 size={14} color="#00E676" />, value: '100+', label: 'Cities' },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <ImageBackground
-      source={require('@/assets/hero.png')}
-      onLoad={() => setIsImageLoaded(true)}
-      style={[
-        styles.root, 
-        { height: '100%', minHeight: isMobile ? 580 : 580, justifyContent: 'center' },
-        isMobile && { paddingTop: 100, paddingBottom: 40 }
-      ]}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay} />
+    <View style={styles.root}>
 
-      {(isLocationOpen || isDateOpen || isTimeOpen) && (
-        <Pressable 
-          style={StyleSheet.absoluteFill} 
-          onPress={closeAll}
+      {/* ── Parallax Background ─────────────────────────────────────────── */}
+      <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ scale: bgScale }, { translateY: bgTranslateY }] }]}>
+        <ImageBackground
+          source={require('@/assets/hero.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
         />
+      </Animated.View>
+
+      {/* ── Cinematic Overlay (gradient + animated darkening) ───────────── */}
+      <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: overlayOpacity, backgroundColor: '#000' }]} />
+      {/* Bottom-to-top gradient for depth */}
+      <View style={styles.gradientBottom} />
+      {/* Top vignette */}
+      <View style={styles.gradientTop} />
+
+      {/* ── Close dropdowns on outside click ────────────────────────────── */}
+      {(isLocationOpen || isTypeOpen || isDateOpen || isTimeOpen) && (
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeAll} />
       )}
-      
-      <View style={[
-        styles.container, 
-        !isMobile && { 
-          flexDirection: 'row', 
-          justifyContent: 'space-between', 
-          alignItems: 'stretch',
-          gap: 40,
-          paddingTop: 64,
-          paddingBottom: 72,
-        }
-      ]}>
-        {!isMobile ? (
-          <View style={styles.heroLeftColumn}>
-            {/* Title & Subtitle matching the mockup */}
-            <Text 
-              accessibilityRole="header" 
-              aria-level={1} 
-              style={[styles.titleText, { fontSize: 38, lineHeight: 44, marginBottom: 8 }]}
-            >
-              Play Hard. <Text style={styles.titleAccent}>Book Easy.</Text>
-            </Text>
-            
-            <Text style={[styles.subtitleText, { marginBottom: 14, fontSize: 14, lineHeight: 20 }]}>
-              Find and book your favorite turf, court, or ground instantly. Join games, find opponents, and build your local sports community.
-            </Text>
-            
 
+      {/* ══════════════════════════════════════════════════════════════════
+          DESKTOP LAYOUT
+      ══════════════════════════════════════════════════════════════════ */}
+      {!isMobile ? (
+        <View style={styles.desktopWrapper}>
 
-            {/* Search Box Card with top tabs on the left */}
-            <View ref={formRef} style={[styles.searchBoxCard, { padding: 16 }]}>
-              {/* Category Tabs */}
-              <View style={[styles.tabsHeaderRow, { marginBottom: 12 }]}>
-                <TouchableOpacity 
-                  style={[styles.tabButton, searchTab === 'grounds' && styles.tabButtonActive, { paddingVertical: 6, paddingHorizontal: 10 }]}
-                  onPress={() => handleTabChange('grounds')}
-                >
-                  <GroundIcon size={14} color={searchTab === 'grounds' ? '#01b854' : '#94A3B8'} />
-                  <Text style={[styles.tabButtonText, searchTab === 'grounds' && styles.tabButtonTextActive, { fontSize: 12 }]}>Grounds</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.tabButton, searchTab === 'nets' && styles.tabButtonActive, { paddingVertical: 6, paddingHorizontal: 10 }]}
-                  onPress={() => handleTabChange('nets')}
-                >
-                  <TurfIcon size={14} color={searchTab === 'nets' ? '#01b854' : '#94A3B8'} />
-                  <Text style={[styles.tabButtonText, searchTab === 'nets' && styles.tabButtonTextActive, { fontSize: 12 }]}>Nets</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.tabButton, searchTab === 'all' && styles.tabButtonActive, { paddingVertical: 6, paddingHorizontal: 10 }]}
-                  onPress={() => handleTabChange('all')}
-                >
-                  <AllSportsIcon size={14} color={searchTab === 'all' ? '#01b854' : '#94A3B8'} />
-                  <Text style={[styles.tabButtonText, searchTab === 'all' && styles.tabButtonTextActive, { fontSize: 12 }]}>All Sports</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Grid Fields */}
-              <View style={[styles.fieldsGridContainer, { gap: 10, marginBottom: 14, zIndex: 10, position: 'relative' }]}>
-                {/* Row 1 */}
-                <View style={[styles.fieldsGridRow, { zIndex: 200, position: 'relative' }]}>
-                  {/* Location field */}
-                  <View style={styles.gridFieldCell}>
-                    <Text style={styles.fieldHeadingLabel}>LOCATION</Text>
-                    <Pressable 
-                      style={[styles.gridFieldContent, { height: 38 }]} 
-                      onPress={() => { setIsLocationOpen(!isLocationOpen); setIsDateOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}
-                    >
-                      <MapPin size={18} color="#01b854" />
-                      <Text style={[styles.gridFieldText, !selectedLocation && styles.gridFieldPlaceholderText, { fontSize: 13 }]}>
-                        {selectedLocation ? selectedLocation.split('__')[0] : 'Enter location or area'}
-                      </Text>
-                    </Pressable>
-                    {isLocationOpen && (
-                      <View style={styles.gridDropdown}>
-                        <ScrollView style={{ maxHeight: 180 }}>
-                          {locations.map((loc) => (
-                            <Pressable key={loc.key} style={styles.dropdownOption} onPress={() => { setSelectedLocation(loc.key); setIsLocationOpen(false); setSelectedTime(''); }}>
-                              <Text style={styles.dropdownOptionText}>{loc.city}, {loc.state}</Text>
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Venue Type field */}
-                  <View style={styles.gridFieldCell}>
-                    <Text style={styles.fieldHeadingLabel}>VENUE TYPE</Text>
-                    <Pressable 
-                      style={[styles.gridFieldContent, { height: 38 }]} 
-                      onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}
-                    >
-                      <Trophy size={18} color="#01b854" />
-                      <Text style={[styles.gridFieldText, !selectedType && styles.gridFieldPlaceholderText, { fontSize: 13 }]}>
-                        {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'All Venue Types'}
-                      </Text>
-                      <ChevronDown size={14} color="#64748B" />
-                    </Pressable>
-                    {isTypeOpen && (
-                      <View style={styles.gridDropdown}>
-                        <ScrollView style={{ maxHeight: 180 }}>
-                          {groundTypes.map((type) => (
-                            <Pressable key={type.name} style={styles.dropdownOption} onPress={() => { setSelectedType(type.name); setIsTypeOpen(false); setSelectedTime(''); }}>
-                              <Text style={styles.dropdownOptionText}>{type.label}</Text>
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Row 2 */}
-                <View style={[styles.fieldsGridRow, { zIndex: 100, position: 'relative' }]}>
-                  {/* Date field */}
-                  <View style={styles.gridFieldCell}>
-                    <Text style={styles.fieldHeadingLabel}>DATE</Text>
-                    <Pressable 
-                      style={[styles.gridFieldContent, { height: 38 }]} 
-                      onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}
-                    >
-                      <CalendarIcon size={18} color="#01b854" />
-                      <Text style={[styles.gridFieldText, !selectedDate && styles.gridFieldPlaceholderText, { fontSize: 13 }]}>
-                        {formatDate(selectedDate)}
-                      </Text>
-                    </Pressable>
-                    {isDateOpen && (
-                      <View style={[styles.gridDropdown, { zIndex: 1100 }]}>
-                        <View style={styles.calendarHeader}>
-                           <TouchableOpacity onPress={prevMonth} style={styles.calendarNav}><ChevronLeft size={16} color="#1E293B" /></TouchableOpacity>
-                          <Text style={styles.calendarMonthTitle}>{monthName}</Text>
-                          <TouchableOpacity onPress={nextMonth} style={styles.calendarNav}><ChevronRight size={16} color="#1E293B" /></TouchableOpacity>
-                        </View>
-                        <View style={styles.calendarWeekdays}>
-                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={styles.weekdayText}>{d}</Text>)}
-                        </View>
-                        <View style={styles.calendarGrid}>
-                          {calendarDays.map((day, idx) => {
-                            const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === viewDate.getMonth() && selectedDate.getFullYear() === viewDate.getFullYear();
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
-                            return (
-                              <Pressable
-                                key={idx}
-                                style={[styles.calendarDay, isSelected && styles.calendarDaySelected, (day === null || isPast) && styles.calendarDayEmpty, isPast && { opacity: 0.3 }]}
-                                onPress={() => { if (day && !isPast) { setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day)); setIsDateOpen(false); setSelectedTime(''); } }}
-                                disabled={!day || isPast}
-                              >
-                                <Text style={[styles.dayText, isSelected && styles.dayTextSelected, isPast && { color: '#CBD5E1' }]}>{day}</Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Time field */}
-                  <View style={styles.gridFieldCell}>
-                    <Text style={styles.fieldHeadingLabel}>TIME</Text>
-                    <Pressable 
-                      style={[styles.gridFieldContent, { height: 38 }]} 
-                      onPress={() => { setIsTimeOpen(!isTimeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTypeOpen(false); }}
-                      disabled={!selectedLocation || !selectedDate}
-                    >
-                      <Clock size={18} color="#01b854" />
-                      <Text style={[styles.gridFieldText, !selectedTime && styles.gridFieldPlaceholderText, { fontSize: 13 }]}>
-                        {selectedTime || 'Select Time'}
-                      </Text>
-                      {loadingTimes && <ActivityIndicator size="small" color="#01b854" />}
-                    </Pressable>
-                    {isTimeOpen && (selectedLocation && selectedDate) && (
-                      <View style={styles.gridDropdown}>
-                        <ScrollView style={{ maxHeight: 180 }}>
-                          {availableTimes.length > 0 ? (
-                            availableTimes.map((time) => {
-                              const today = new Date();
-                              const isToday = selectedDate?.toDateString() === today.toDateString();
-                              let isPast = false;
-                              if (isToday) {
-                                const [hours, minutes] = time.split(':').map(Number);
-                                const slotTime = new Date();
-                                slotTime.setHours(hours, minutes, 0, 0);
-                                isPast = slotTime < today;
-                              }
-                              return (
-                                <Pressable key={time} style={styles.dropdownOption} onPress={() => { if (!isPast) { setSelectedTime(time); setIsTimeOpen(false); } }} disabled={isPast}>
-                                  <Text style={[styles.dropdownItemText, isPast && { color: '#94A3B8' }]}>{time} {isPast ? '(Passed)' : ''}</Text>
-                                </Pressable>
-                              );
-                            })
-                          ) : (
-                            <View style={styles.dropdownEmpty}>
-                              <Text style={styles.dropdownEmptyText}>No slots found</Text>
-                            </View>
-                          )}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-
-              {/* Solid Green Search Button */}
-              <TouchableOpacity 
-                style={[styles.mockupSearchButton, isSearchEnabled && styles.mockupSearchButtonActive, { height: 40, zIndex: 0 }]}
-                onPress={handleSearch}
-              >
-                <Text style={styles.mockupSearchButtonText}>SEARCH VENUES</Text>
-                <ArrowRight size={18} color="#06392e" strokeWidth={2.5} style={{ marginLeft: 6 }} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <Text 
-            accessibilityRole="header" 
-            aria-level={1} 
-            style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}
-          >
-            Play Hard. Book Easy.
-          </Text>
-        )}
-
-        {!isMobile ? (
-          <View style={styles.heroRightColumn}>
-            {/* Promo Badges moved from left column */}
-            <View style={[styles.promoRow, { marginBottom: 16, justifyContent: 'flex-end', width: '100%' }]}>
-              <View style={styles.promoItem}>
-                <View style={styles.promoIconContainer}>
-                  <ShieldCheck size={16} color="#01b854" />
-                </View>
-                <View>
-                  <Text style={[styles.promoLabel, { fontSize: 12 }]}>Instant Booking</Text>
-                  <Text style={[styles.promoSubLabel, { fontSize: 10 }]}>In Just a Few Clicks</Text>
-                </View>
-              </View>
-
-              <View style={styles.promoItem}>
-                <View style={styles.promoIconContainer}>
-                  <CircleDollarSign size={16} color="#01b854" />
-                </View>
-                <View>
-                  <Text style={[styles.promoLabel, { fontSize: 12 }]}>Secure Payments</Text>
-                  <Text style={[styles.promoSubLabel, { fontSize: 10 }]}>100% Safe & Secure</Text>
-                </View>
-              </View>
-
-              <View style={styles.promoItem}>
-                <View style={styles.promoIconContainer}>
-                  <CloudRain size={16} color="#01b854" />
-                </View>
-                <View>
-                  <Text style={[styles.promoLabel, { fontSize: 12 }]}>Rain Refund</Text>
-                  <Text style={[styles.promoSubLabel, { fontSize: 10 }]}>Hassle-Free Refunds</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Stats Card matching mockup */}
-            <View style={styles.insightsCard}>
-              <Text style={styles.insightsTitle}>COMMUNITY INSIGHTS</Text>
-              
-              <View style={styles.insightsGrid}>
-                {/* Stat 1: Players */}
-                <View style={styles.insightStatCell}>
-                  <Users size={24} color="#01b854" />
-                  <View style={styles.insightTextContainer}>
-                    <Text style={styles.insightValue}>50K+</Text>
-                    <Text style={styles.insightLabel}>Active Players</Text>
-                  </View>
-                </View>
-
-                {/* Stat 2: Venues */}
-                <View style={styles.insightStatCell}>
-                  <Trophy size={24} color="#01b854" />
-                  <View style={styles.insightTextContainer}>
-                    <Text style={styles.insightValue}>{totalVenues * 50}+</Text>
-                    <Text style={styles.insightLabel}>Verified Venues</Text>
-                  </View>
-                </View>
-
-                {/* Stat 3: Rating */}
-                <View style={styles.insightStatCell}>
-                  <Star size={24} color="#01b854" fill="#01b854" />
-                  <View style={styles.insightTextContainer}>
-                    <Text style={styles.insightValue}>4.9 ★</Text>
-                    <Text style={styles.insightLabel}>Average Rating</Text>
-                  </View>
-                </View>
-
-                {/* Stat 4: Cities */}
-                <View style={styles.insightStatCell}>
-                  <Building2 size={24} color="#01b854" />
-                  <View style={styles.insightTextContainer}>
-                    <Text style={styles.insightValue}>100+</Text>
-                    <Text style={styles.insightLabel}>Cities Covered</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        ) : (
-          /* Mobile Search Form */
-          <View ref={formRef} style={[styles.searchFormWrapper, styles.searchFormWrapperMobile]}>
-            <View style={[styles.searchFormContainer, styles.searchFormContainerMobile]}>
-              <View style={[styles.searchForm, styles.searchFormMobile]}>
-                
-                {/* Location Select */}
-                <View style={{ width: '100%', position: 'relative', zIndex: isLocationOpen ? 300 : 1 }}>
-                  <Pressable style={styles.formField} onPress={() => { setIsLocationOpen(!isLocationOpen); setIsDateOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}>
-                    <MapPin size={20} color="#01b854" />
-                    <Text style={styles.fieldText}>{selectedLocation ? selectedLocation.split('__')[0] : 'Location'}</Text>
-                  </Pressable>
-                  {isLocationOpen && (
-                    <View style={styles.gridDropdown}>
-                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
-                        {locations.map((loc) => (
-                          <Pressable key={loc.key} style={styles.dropdownOption} onPress={() => { setSelectedLocation(loc.key); setIsLocationOpen(false); setSelectedTime(''); }}>
-                            <Text style={styles.dropdownOptionText}>{loc.city}, {loc.state}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
-                {/* Venue Type Select */}
-                <View style={{ width: '100%', position: 'relative', zIndex: isTypeOpen ? 300 : 1 }}>
-                  <Pressable style={styles.formField} onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}>
-                    <Trophy size={20} color="#01b854" />
-                    <Text style={styles.fieldText}>{selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Venue Type'}</Text>
-                  </Pressable>
-                  {isTypeOpen && (
-                    <View style={styles.gridDropdown}>
-                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
-                        {groundTypes.map((type) => (
-                          <Pressable key={type.name} style={styles.dropdownOption} onPress={() => { setSelectedType(type.name); setIsTypeOpen(false); setSelectedTime(''); }}>
-                            <Text style={styles.dropdownOptionText}>{type.label}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
-                {/* Date Select */}
-                <View style={{ width: '100%', position: 'relative', zIndex: isDateOpen ? 300 : 1 }}>
-                  <Pressable style={styles.formField} onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTimeOpen(false); setIsTypeOpen(false); }}>
-                    <CalendarIcon size={20} color="#01b854" />
-                    <Text style={styles.fieldText}>{formatDate(selectedDate)}</Text>
-                  </Pressable>
-                  {isDateOpen && (
-                    <View style={[styles.gridDropdown, { zIndex: 1100 }]}>
-                      <View style={styles.calendarHeader}>
-                        <TouchableOpacity onPress={prevMonth} style={styles.calendarNav}><ChevronLeft size={16} color="#1E293B" /></TouchableOpacity>
-                        <Text style={styles.calendarMonthTitle}>{monthName}</Text>
-                        <TouchableOpacity onPress={nextMonth} style={styles.calendarNav}><ChevronRight size={16} color="#1E293B" /></TouchableOpacity>
-                      </View>
-                      <View style={styles.calendarWeekdays}>
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={styles.weekdayText}>{d}</Text>)}
-                      </View>
-                      <View style={styles.calendarGrid}>
-                        {calendarDays.map((day, idx) => {
-                          const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === viewDate.getMonth() && selectedDate.getFullYear() === viewDate.getFullYear();
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
-                          return (
-                            <Pressable
-                              key={idx}
-                              style={[styles.calendarDay, isSelected && styles.calendarDaySelected, (day === null || isPast) && styles.calendarDayEmpty, isPast && { opacity: 0.3 }]}
-                              onPress={() => { if (day && !isPast) { setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day)); setIsDateOpen(false); setSelectedTime(''); } }}
-                              disabled={!day || isPast}
-                            >
-                              <Text style={[styles.dayText, isSelected && styles.dayTextSelected, isPast && { color: '#CBD5E1' }]}>{day}</Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {/* Time Select */}
-                <View style={{ width: '100%', position: 'relative', zIndex: isTimeOpen ? 300 : 1 }}>
-                  <Pressable 
-                    style={styles.formField} 
-                    onPress={() => { setIsTimeOpen(!isTimeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTypeOpen(false); }}
-                    disabled={!selectedLocation || !selectedDate}
+          {/* ── HEADLINE ─────────────────────────────────────────────── */}
+          <Animated.View style={[styles.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineTranslateY }] }]}>
+            {/* Category pills */}
+            <View style={styles.categoryRow}>
+              {(['grounds', 'nets', 'all'] as const).map((tab) => {
+                const labels = { grounds: 'Grounds', nets: 'Nets', all: 'All Sports' };
+                const icons = {
+                  grounds: <GroundIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
+                  nets: <TurfIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
+                  all: <AllSportsIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
+                };
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    style={[styles.categoryPill, searchTab === tab && styles.categoryPillActive]}
+                    onPress={() => handleTabChange(tab)}
                   >
-                    <Clock size={20} color="#01b854" />
-                    <Text style={styles.fieldText}>{selectedTime || 'Select Time'}</Text>
-                    {loadingTimes && <ActivityIndicator size="small" color="#01b854" />}
-                  </Pressable>
-                  {isTimeOpen && (selectedLocation && selectedDate) && (
-                    <View style={styles.gridDropdown}>
-                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
-                        {availableTimes.length > 0 ? (
-                          availableTimes.map((time) => {
-                            const today = new Date();
-                            const isToday = selectedDate?.toDateString() === today.toDateString();
-                            let isPast = false;
-                            if (isToday) {
-                              const [hours, minutes] = time.split(':').map(Number);
-                              const slotTime = new Date();
-                              slotTime.setHours(hours, minutes, 0, 0);
-                              isPast = slotTime < today;
-                            }
-                            return (
-                              <Pressable key={time} style={styles.dropdownOption} onPress={() => { if (!isPast) { setSelectedTime(time); setIsTimeOpen(false); } }} disabled={isPast}>
-                                <Text style={[styles.dropdownOptionText, isPast && { color: '#94A3B8' }]}>{time} {isPast ? '(Passed)' : ''}</Text>
-                              </Pressable>
-                            );
-                          })
-                        ) : (
-                          <View style={styles.dropdownEmpty}>
-                            <Text style={styles.dropdownEmptyText}>No slots found</Text>
-                          </View>
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
+                    {icons[tab]}
+                    <Text style={[styles.categoryPillText, searchTab === tab && styles.categoryPillTextActive]}>
+                      {labels[tab]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-                {/* Search Submit */}
-                <Pressable 
-                  style={[
-                    styles.formField, 
-                    { 
-                      backgroundColor: isSearchEnabled ? '#01b854' : 'rgba(1, 184, 84, 0.2)', 
-                      borderColor: 'rgba(1, 184, 84, 0.3)', 
-                      justifyContent: 'center',
-                      marginTop: 8
-                    }
-                  ]} 
-                  onPress={handleSearch} 
-                  disabled={!isSearchEnabled}
+            {/* Main heading */}
+            <Text style={styles.headline} accessibilityRole="header" aria-level={1}>
+              Play Hard.{'\n'}<Text style={styles.headlineAccent}>Book Easy.</Text>
+            </Text>
+            <Text style={styles.subtitle}>
+              Find & book premium cricket grounds, turfs, and nets in seconds.{'\n'}Real-time availability · Instant confirmation.
+            </Text>
+          </Animated.View>
+
+          {/* ── HORIZONTAL SEARCH PILL ───────────────────────────────── */}
+          <Animated.View
+            ref={formRef as any}
+            style={[styles.searchPillOuter, { opacity: searchOpacity, transform: [{ translateY: searchTranslateY }] }]}
+          >
+            <View style={styles.searchPillInner}>
+
+              {/* Location */}
+              <View style={[styles.pillField, { zIndex: isLocationOpen ? 400 : 10 }]}>
+                <Text style={styles.pillFieldLabel}>LOCATION</Text>
+                <Pressable
+                  style={[styles.pillFieldContent, isLocationOpen && styles.pillFieldContentActive]}
+                  onPress={() => { setIsLocationOpen(!isLocationOpen); setIsTypeOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}
                 >
-                  <Text style={[styles.searchButtonText, { color: isSearchEnabled ? '#031713' : 'rgba(255,255,255,0.4)' }]}>Search Venues</Text>
+                  <MapPin size={16} color="#00E676" />
+                  <Text style={[styles.pillFieldText, !selectedLocation && styles.pillFieldPlaceholder]} numberOfLines={1}>
+                    {selectedLocation ? selectedLocation.split('__')[0] : 'City or Area'}
+                  </Text>
+                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
                 </Pressable>
-
+                {isLocationOpen && (
+                  <View style={[styles.pillDropdown, { top: 64 }]}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      {locations.map(loc => (
+                        <Pressable key={loc.key} style={styles.dropdownItem}
+                          onPress={() => { setSelectedLocation(loc.key); setIsLocationOpen(false); setSelectedTime(''); }}>
+                          <Text style={styles.dropdownItemText}>{loc.city}, {loc.state}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
+
+              <View style={styles.pillDivider} />
+
+              {/* Venue Type */}
+              <View style={[styles.pillField, { zIndex: isTypeOpen ? 400 : 10 }]}>
+                <Text style={styles.pillFieldLabel}>VENUE TYPE</Text>
+                <Pressable
+                  style={[styles.pillFieldContent, isTypeOpen && styles.pillFieldContentActive]}
+                  onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}
+                >
+                  <Trophy size={16} color="#00E676" />
+                  <Text style={[styles.pillFieldText, !selectedType && styles.pillFieldPlaceholder]} numberOfLines={1}>
+                    {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'All Types'}
+                  </Text>
+                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+                </Pressable>
+                {isTypeOpen && (
+                  <View style={[styles.pillDropdown, { top: 64 }]}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      {groundTypes.map(type => (
+                        <Pressable key={type.name} style={styles.dropdownItem}
+                          onPress={() => { setSelectedType(type.name); setIsTypeOpen(false); setSelectedTime(''); }}>
+                          <Text style={styles.dropdownItemText}>{type.label}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.pillDivider} />
+
+              {/* Date */}
+              <View style={[styles.pillField, { zIndex: isDateOpen ? 400 : 10 }]}>
+                <Text style={styles.pillFieldLabel}>DATE</Text>
+                <Pressable
+                  style={[styles.pillFieldContent, isDateOpen && styles.pillFieldContentActive]}
+                  onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTypeOpen(false); setIsTimeOpen(false); }}
+                >
+                  <CalendarIcon size={16} color="#00E676" />
+                  <Text style={[styles.pillFieldText, !selectedDate && styles.pillFieldPlaceholder]}>
+                    {formatDate(selectedDate)}
+                  </Text>
+                </Pressable>
+                {isDateOpen && (
+                  <View style={[styles.pillDropdown, { top: 64, width: 280 }]}>
+                    <View style={styles.calHeader}>
+                      <TouchableOpacity onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} style={styles.calNav}>
+                        <ChevronLeft size={15} color="#fff" />
+                      </TouchableOpacity>
+                      <Text style={styles.calMonthTitle}>
+                        {viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </Text>
+                      <TouchableOpacity onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} style={styles.calNav}>
+                        <ChevronRight size={15} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.calWeekdays}>
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                        <Text key={d} style={styles.calWeekdayText}>{d}</Text>
+                      ))}
+                    </View>
+                    <View style={styles.calGrid}>
+                      {calendarDays.map((day, idx) => {
+                        const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === viewDate.getMonth() && selectedDate.getFullYear() === viewDate.getFullYear();
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
+                        return (
+                          <Pressable
+                            key={idx}
+                            style={[styles.calDay, isSelected && styles.calDaySelected, (!day || isPast) && styles.calDayEmpty, isPast && { opacity: 0.25 }]}
+                            onPress={() => { if (day && !isPast) { setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day)); setIsDateOpen(false); setSelectedTime(''); } }}
+                            disabled={!day || isPast}
+                          >
+                            <Text style={[styles.calDayText, isSelected && styles.calDayTextSelected]}>{day}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.pillDivider} />
+
+              {/* Time */}
+              <View style={[styles.pillField, { zIndex: isTimeOpen ? 400 : 10 }]}>
+                <Text style={styles.pillFieldLabel}>TIME</Text>
+                <Pressable
+                  style={[styles.pillFieldContent, isTimeOpen && styles.pillFieldContentActive]}
+                  onPress={() => { setIsTimeOpen(!isTimeOpen); setIsLocationOpen(false); setIsTypeOpen(false); setIsDateOpen(false); }}
+                  disabled={!selectedLocation || !selectedDate}
+                >
+                  <Clock size={16} color="#00E676" />
+                  <Text style={[styles.pillFieldText, !selectedTime && styles.pillFieldPlaceholder]}>
+                    {selectedTime || 'Any Time'}
+                  </Text>
+                  {loadingTimes && <ActivityIndicator size="small" color="#00E676" />}
+                </Pressable>
+                {isTimeOpen && selectedLocation && selectedDate && (
+                  <View style={[styles.pillDropdown, { top: 64 }]}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      {availableTimes.length > 0 ? availableTimes.map(time => {
+                        const isToday = selectedDate?.toDateString() === new Date().toDateString();
+                        let isPast = false;
+                        if (isToday) {
+                          const [h, m] = time.split(':').map(Number);
+                          const slot = new Date(); slot.setHours(h, m, 0, 0);
+                          isPast = slot < new Date();
+                        }
+                        return (
+                          <Pressable key={time} style={styles.dropdownItem} onPress={() => { if (!isPast) { setSelectedTime(time); setIsTimeOpen(false); } }} disabled={isPast}>
+                            <Text style={[styles.dropdownItemText, isPast && { color: '#475569' }]}>{time}{isPast ? ' (Passed)' : ''}</Text>
+                          </Pressable>
+                        );
+                      }) : (
+                        <View style={{ padding: 16, alignItems: 'center' }}>
+                          <Text style={{ color: '#94A3B8', fontSize: 13 }}>No slots available</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Search Button */}
+              <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} activeOpacity={0.85}>
+                <Search size={18} color="#031713" strokeWidth={2.5} />
+                <Text style={styles.searchBtnText}>Search</Text>
+              </TouchableOpacity>
+
             </View>
-          </View>
-        )}
-      </View>
+          </Animated.View>
 
-      {/* Mockup Bottom Value Bar */}
-      {!isMobile && (
-        <View style={styles.propsBar}>
-          <View style={styles.propsItem}>
-            <CalendarIcon size={24} color="#01b854" />
-            <View>
-              <Text style={styles.propsTitle}>Real-Time Availability</Text>
-              <Text style={styles.propsDesc}>Check live availability before you book</Text>
+          {/* ── STAT BADGES ──────────────────────────────────────────── */}
+          <Animated.View style={[styles.statsRow, { opacity: statsOpacity, transform: [{ translateY: statsTranslateY }] }]}>
+            {stats.map((s, i) => (
+              <View key={i} style={styles.statBadge}>
+                {s.icon}
+                <Text style={styles.statValue}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </Animated.View>
+
+        </View>
+      ) : (
+        /* ══════════════════════════════════════════════════════════════
+            MOBILE LAYOUT
+        ══════════════════════════════════════════════════════════════ */
+        <View style={styles.mobileWrapper}>
+          <Text style={styles.mobileHeadline} accessibilityRole="header" aria-level={1}>
+            Play Hard.{'\n'}<Text style={styles.headlineAccent}>Book Easy.</Text>
+          </Text>
+          <Text style={styles.mobileSubtitle}>Find & book premium sports venues instantly.</Text>
+
+          <View ref={formRef} style={styles.mobileFormCard}>
+            {/* Location */}
+            <View style={{ position: 'relative', zIndex: isLocationOpen ? 300 : 1 }}>
+              <Pressable style={styles.mobileField} onPress={() => { setIsLocationOpen(!isLocationOpen); setIsTypeOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}>
+                <MapPin size={18} color="#00E676" />
+                <Text style={[styles.mobileFieldText, !selectedLocation && styles.mobileFieldPlaceholder]}>
+                  {selectedLocation ? selectedLocation.split('__')[0] : 'Location'}
+                </Text>
+                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+              </Pressable>
+              {isLocationOpen && (
+                <View style={styles.mobileDropdown}>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                    {locations.map(loc => (
+                      <Pressable key={loc.key} style={styles.dropdownItem}
+                        onPress={() => { setSelectedLocation(loc.key); setIsLocationOpen(false); setSelectedTime(''); }}>
+                        <Text style={styles.dropdownItemText}>{loc.city}, {loc.state}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
-          </View>
 
-          <View style={styles.propsDivider} />
-
-          <View style={styles.propsItem}>
-            <Percent size={24} color="#01b854" />
-            <View>
-              <Text style={styles.propsTitle}>Best Prices</Text>
-              <Text style={styles.propsDesc}>Exclusive deals and offers everyday</Text>
+            {/* Venue Type */}
+            <View style={{ position: 'relative', zIndex: isTypeOpen ? 300 : 1 }}>
+              <Pressable style={styles.mobileField} onPress={() => { setIsTypeOpen(!isTypeOpen); setIsLocationOpen(false); setIsDateOpen(false); setIsTimeOpen(false); }}>
+                <Trophy size={18} color="#00E676" />
+                <Text style={[styles.mobileFieldText, !selectedType && styles.mobileFieldPlaceholder]}>
+                  {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Venue Type'}
+                </Text>
+                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+              </Pressable>
+              {isTypeOpen && (
+                <View style={styles.mobileDropdown}>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                    {groundTypes.map(type => (
+                      <Pressable key={type.name} style={styles.dropdownItem}
+                        onPress={() => { setSelectedType(type.name); setIsTypeOpen(false); setSelectedTime(''); }}>
+                        <Text style={styles.dropdownItemText}>{type.label}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
-          </View>
 
-          <View style={styles.propsDivider} />
-
-          <View style={styles.propsItem}>
-            <Headphones size={24} color="#01b854" />
-            <View>
-              <Text style={styles.propsTitle}>24/7 Support</Text>
-              <Text style={styles.propsDesc}>We're here to help you anytime</Text>
+            {/* Date */}
+            <View style={{ position: 'relative', zIndex: isDateOpen ? 300 : 1 }}>
+              <Pressable style={styles.mobileField} onPress={() => { setIsDateOpen(!isDateOpen); setIsLocationOpen(false); setIsTypeOpen(false); setIsTimeOpen(false); }}>
+                <CalendarIcon size={18} color="#00E676" />
+                <Text style={[styles.mobileFieldText, !selectedDate && styles.mobileFieldPlaceholder]}>{formatDate(selectedDate)}</Text>
+              </Pressable>
+              {isDateOpen && (
+                <View style={[styles.mobileDropdown, { zIndex: 1100 }]}>
+                  <View style={styles.calHeader}>
+                    <TouchableOpacity onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} style={styles.calNav}><ChevronLeft size={15} color="#fff" /></TouchableOpacity>
+                    <Text style={styles.calMonthTitle}>{viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
+                    <TouchableOpacity onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} style={styles.calNav}><ChevronRight size={15} color="#fff" /></TouchableOpacity>
+                  </View>
+                  <View style={styles.calWeekdays}>
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <Text key={d} style={styles.calWeekdayText}>{d}</Text>)}
+                  </View>
+                  <View style={styles.calGrid}>
+                    {calendarDays.map((day, idx) => {
+                      const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === viewDate.getMonth() && selectedDate.getFullYear() === viewDate.getFullYear();
+                      const today = new Date(); today.setHours(0, 0, 0, 0);
+                      const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
+                      return (
+                        <Pressable key={idx}
+                          style={[styles.calDay, isSelected && styles.calDaySelected, (!day || isPast) && styles.calDayEmpty, isPast && { opacity: 0.25 }]}
+                          onPress={() => { if (day && !isPast) { setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day)); setIsDateOpen(false); setSelectedTime(''); } }}
+                          disabled={!day || isPast}>
+                          <Text style={[styles.calDayText, isSelected && styles.calDayTextSelected]}>{day}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
             </View>
-          </View>
 
-          <View style={styles.propsDivider} />
-
-          <View style={styles.propsItem}>
-            <ShieldCheck size={24} color="#01b854" />
-            <View>
-              <Text style={styles.propsTitle}>Trusted & Verified</Text>
-              <Text style={styles.propsDesc}>Verified venues for a safe experience</Text>
+            {/* Time */}
+            <View style={{ position: 'relative', zIndex: isTimeOpen ? 300 : 1 }}>
+              <Pressable style={styles.mobileField}
+                onPress={() => { setIsTimeOpen(!isTimeOpen); setIsLocationOpen(false); setIsTypeOpen(false); setIsDateOpen(false); }}
+                disabled={!selectedLocation || !selectedDate}>
+                <Clock size={18} color="#00E676" />
+                <Text style={[styles.mobileFieldText, !selectedTime && styles.mobileFieldPlaceholder]}>{selectedTime || 'Select Time'}</Text>
+                {loadingTimes && <ActivityIndicator size="small" color="#00E676" />}
+              </Pressable>
+              {isTimeOpen && selectedLocation && selectedDate && (
+                <View style={styles.mobileDropdown}>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled>
+                    {availableTimes.length > 0 ? availableTimes.map(time => (
+                      <Pressable key={time} style={styles.dropdownItem} onPress={() => { setSelectedTime(time); setIsTimeOpen(false); }}>
+                        <Text style={styles.dropdownItemText}>{time}</Text>
+                      </Pressable>
+                    )) : (
+                      <View style={{ padding: 16, alignItems: 'center' }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 13 }}>No slots available</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
             </View>
+
+            {/* Mobile Search Button */}
+            <TouchableOpacity
+              style={[styles.mobileSearchBtn, isSearchEnabled && styles.mobileSearchBtnActive]}
+              onPress={handleSearch}
+              disabled={!isSearchEnabled}
+              activeOpacity={0.85}
+            >
+              <Search size={18} color={isSearchEnabled ? '#031713' : 'rgba(255,255,255,0.4)'} strokeWidth={2.5} />
+              <Text style={[styles.mobileSearchBtnText, { color: isSearchEnabled ? '#031713' : 'rgba(255,255,255,0.4)' }]}>
+                Search Venues
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
-    </ImageBackground>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          BOTTOM GREEN BAR (desktop only)
+      ══════════════════════════════════════════════════════════════════ */}
+      {!isMobile && (
+        <Animated.View style={[styles.bottomBar, { opacity: barOpacity, transform: [{ translateY: barTranslateY }] }]}>
+          {[
+            { icon: <CalendarIcon size={18} color="#031713" />, title: 'Real-Time Availability', desc: 'Live slots, no surprises' },
+            { icon: <Percent size={18} color="#031713" />, title: 'Best Price Guaranteed', desc: 'No hidden charges ever' },
+            { icon: <Headphones size={18} color="#031713" />, title: '24/7 Support', desc: 'Always here for you' },
+            { icon: <ShieldCheck size={18} color="#031713" />, title: '100% Verified Venues', desc: 'Safe & trusted grounds' },
+          ].map((item, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <View style={styles.barDivider} />}
+              <View style={styles.barItem}>
+                <View style={styles.barIconWrap}>{item.icon}</View>
+                <View>
+                  <Text style={styles.barTitle}>{item.title}</Text>
+                  <Text style={styles.barDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            </React.Fragment>
+          ))}
+        </Animated.View>
+      )}
+    </View>
   );
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: {
     width: '100%',
-    justifyContent: 'center',
+    height: '100%',
+    minHeight: 600,
+    backgroundColor: '#020e0b',
+    overflow: 'hidden',
     alignItems: 'center',
-    backgroundColor: '#032019',
-    position: 'relative',
+    justifyContent: 'center',
   },
-  overlay: {
+
+  // Vignette overlays
+  gradientBottom: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    top: '50%',
+    ...Platform.select({
+      web: { background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' } as any,
+      default: { backgroundColor: 'transparent' },
+    }),
   },
-  container: {
+  gradientTop: {
+    ...StyleSheet.absoluteFillObject,
+    bottom: '70%',
+    ...Platform.select({
+      web: { background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)' } as any,
+      default: { backgroundColor: 'transparent' },
+    }),
+  },
+
+  // ── Desktop ──────────────────────────────────────────────────────────────
+  desktopWrapper: {
     width: '100%',
-    maxWidth: 1200,
-    paddingHorizontal: 20,
+    maxWidth: 1100,
+    paddingHorizontal: 24,
+    alignItems: 'center',
     zIndex: 200,
+    paddingTop: 32,
+    paddingBottom: 100,
   },
-  titleText: {
-    fontSize: 56,
+
+  // Category pills row
+  categoryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 28,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 40,
+    padding: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 40,
+  },
+  categoryPillActive: {
+    backgroundColor: '#00E676',
+  },
+  categoryPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  categoryPillTextActive: {
+    color: '#031713',
+  },
+
+  // Headline block
+  headlineBlock: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  headline: {
+    fontSize: 72,
     fontWeight: '900',
     color: '#FFFFFF',
-    fontFamily: 'Inter',
-    letterSpacing: -1.5,
-    lineHeight: 64,
-    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: -2.5,
+    lineHeight: 80,
+    marginBottom: 18,
+    ...Platform.select({
+      web: { textShadow: '0 0 80px rgba(0,230,118,0.15), 0 4px 40px rgba(0,0,0,0.5)' } as any,
+    }),
   },
-  titleAccent: {
-    color: '#01b854',
+  headlineAccent: {
+    color: '#00E676',
+    ...Platform.select({
+      web: { textShadow: '0 0 60px rgba(0,230,118,0.45)' } as any,
+    }),
   },
-  subtitleText: {
+  subtitle: {
     fontSize: 16,
-    color: '#E2E8F0',
+    color: 'rgba(255,255,255,0.65)',
+    textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
-    fontFamily: 'Inter',
-    marginBottom: 32,
-    maxWidth: 500,
+    maxWidth: 540,
   },
-  promoRow: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 40,
-    alignItems: 'center',
-  },
-  promoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  promoIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.2)',
-  },
-  promoLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  promoSubLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  searchBoxCard: {
+
+  // ── Horizontal Search Pill ────────────────────────────────────────────────
+  searchPillOuter: {
     width: '100%',
-    backgroundColor: '#031713',
+    marginBottom: 24,
+    zIndex: 300,
+  },
+  searchPillInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(6, 32, 24, 0.88)',
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(1, 184, 84, 0.25)',
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
+    borderColor: 'rgba(0, 230, 118, 0.28)',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    gap: 0,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,230,118,0.08)',
+      } as any,
+    }),
   },
-  tabsHeaderRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  tabButtonActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderColor: '#01b854',
-  },
-  tabButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#94A3B8',
-  },
-  tabButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  fieldsGridContainer: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  fieldsGridRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  gridFieldCell: {
+  pillField: {
     flex: 1,
-    gap: 8,
     position: 'relative',
+    paddingHorizontal: 4,
   },
-  fieldHeadingLabel: {
+  pillFieldLabel: {
     fontSize: 9,
-    fontWeight: '850',
-    color: '#94A3B8',
-    letterSpacing: 1,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 1.3,
+    marginBottom: 4,
+    paddingLeft: 12,
   },
-  gridFieldContent: {
+  pillFieldContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 50,
-    backgroundColor: '#020d0b',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    gap: 12,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
   },
-  gridFieldText: {
+  pillFieldContentActive: {
+    backgroundColor: 'rgba(0,230,118,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,230,118,0.35)',
+  },
+  pillFieldText: {
     flex: 1,
     fontSize: 14,
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontWeight: '600',
   },
-  gridFieldPlaceholderText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+  pillFieldPlaceholder: {
+    color: 'rgba(255,255,255,0.38)',
     fontWeight: '500',
   },
-  gridDropdown: {
+  pillDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginHorizontal: 2,
+  },
+
+  // Search button (inside pill)
+  searchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00E676',
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    gap: 8,
+    marginLeft: 6,
+    ...Platform.select({
+      web: { boxShadow: '0 0 24px rgba(0,230,118,0.4)' } as any,
+    }),
+  },
+  searchBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#031713',
+    letterSpacing: 0.3,
+  },
+
+  // Dropdown
+  pillDropdown: {
     position: 'absolute',
-    top: 60,
     left: 0,
     right: 0,
-    backgroundColor: '#020d0b',
-    borderRadius: 12,
+    backgroundColor: '#041a12',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.25)',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    borderColor: 'rgba(0,230,118,0.25)',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(20px)',
+      } as any,
+    }),
     zIndex: 1000,
     overflow: 'hidden',
   },
-  dropdownOption: {
+  dropdownItem: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.02)',
-  },
-  dropdownOptionText: {
-    fontSize: 13,
-    color: '#E2E8F0',
-  },
-  mockupSearchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#01b854',
-    height: 52,
-    borderRadius: 12,
-    width: '100%',
-  },
-  mockupSearchButtonActive: {
-    backgroundColor: '#02d964',
-  },
-  mockupSearchButtonText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#031713',
-    letterSpacing: 0.5,
-  },
-  heroLeftColumn: {
-    flex: 1.1,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    maxWidth: 580,
-    width: '100%',
-    zIndex: 200,
-  },
-  heroRightColumn: {
-    flex: 0.9,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    maxWidth: 520,
-    width: '100%',
-    zIndex: 100,
-  },
-  insightsCard: {
-    backgroundColor: 'rgba(3, 23, 19, 0.85)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(1, 184, 84, 0.2)',
-    padding: 16,
-    width: '100%',
-    maxWidth: 480,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(20px)' }
-    }) as any,
-  },
-  insightsTitle: {
-    fontSize: 10,
-    fontWeight: '850',
-    color: '#01b854',
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  insightsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  insightStatCell: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#020d0b',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 14,
-    padding: 10,
-    gap: 10,
-  },
-  insightTextContainer: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  insightValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    lineHeight: 22,
-  },
-  insightLabel: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
-    lineHeight: 12,
-  },
-  propsBar: {
-    position: 'absolute',
-    bottom: 12,
-    left: 0,
-    right: 0,
-    marginLeft: 'auto',
-    marginRight: 'auto',
-    maxWidth: 1200,
-    width: 'calc(100% - 40px)' as any,
-    flexDirection: 'row',
-    backgroundColor: '#020d0b',
-    borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.15)',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  propsItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  propsTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  propsDesc: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  propsDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginHorizontal: 12,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-  },
-  calendarNav: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarMonthTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  calendarWeekdays: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  weekdayText: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 4,
-  },
-  calendarDay: {
-    width: '14.28%',
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  calendarDayEmpty: {
-    opacity: 0,
-  },
-  calendarDaySelected: {
-    backgroundColor: '#01b854',
-  },
-  dayText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  dayTextSelected: {
-    color: '#020d0b',
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-    letterSpacing: -1.5,
-    lineHeight: 64,
-    marginBottom: 16,
-    textAlign: 'center',
+    borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   dropdownItemText: {
     fontSize: 13,
     color: '#E2E8F0',
+    fontWeight: '500',
   },
-  searchFormWrapper: {
-    width: '100%',
+
+  // Stat badges row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
     alignItems: 'center',
-    zIndex: 10,
   },
-  searchFormWrapperMobile: {
-    marginTop: 10,
-    width: '100%',
-  },
-  searchFormContainer: {
-    width: '100%',
-  },
-  searchFormContainerMobile: {
-    width: '100%',
-    backgroundColor: 'rgba(3, 23, 19, 0.75)',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(1, 184, 84, 0.25)',
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-      }
-    }) as any,
-  },
-  searchForm: {
-    width: '100%',
-    gap: 12,
-  },
-  searchFormMobile: {
-    width: '100%',
-    gap: 12,
-  },
-  formField: {
+  statBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 7,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 12,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 40,
     paddingHorizontal: 16,
-    gap: 12,
-    width: '100%',
+    paddingVertical: 9,
     ...Platform.select({
-      web: {
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }
-    }) as any,
+      web: { backdropFilter: 'blur(12px)' } as any,
+    }),
   },
-  fieldText: {
+  statValue: {
     fontSize: 14,
+    fontWeight: '900',
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontFamily: 'Inter',
   },
-  searchButtonText: {
-    fontSize: 14,
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
+  },
+
+  // ── Bottom Green Bar ──────────────────────────────────────────────────────
+  bottomBar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 24,
+    right: 24,
+    flexDirection: 'row',
+    backgroundColor: '#00E676',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 100,
+    ...Platform.select({
+      web: { boxShadow: '0 8px 40px rgba(0,230,118,0.35)' } as any,
+    }),
+  },
+  barItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  barIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(3,23,19,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barTitle: {
+    fontSize: 12,
     fontWeight: '800',
     color: '#031713',
-    letterSpacing: 0.5,
-    width: '100%',
-    textAlign: 'center',
   },
-  dropdownEmpty: {
-    padding: 16,
+  barDesc: {
+    fontSize: 10,
+    color: 'rgba(3,23,19,0.65)',
+    fontWeight: '500',
+  },
+  barDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(3,23,19,0.15)',
+    marginHorizontal: 12,
+  },
+
+  // ── Calendar ──────────────────────────────────────────────────────────────
+  calHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  dropdownEmptyText: {
-    color: '#94A3B8',
+  calNav: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calMonthTitle: {
     fontSize: 13,
-    fontFamily: 'Inter',
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  calWeekdays: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  calWeekdayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  calGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 6,
+  },
+  calDay: {
+    width: '14.28%',
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  calDaySelected: {
+    backgroundColor: '#00E676',
+  },
+  calDayEmpty: {
+    opacity: 0,
+  },
+  calDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  calDayTextSelected: {
+    color: '#031713',
+    fontWeight: '900',
+  },
+
+  // ── Mobile ────────────────────────────────────────────────────────────────
+  mobileWrapper: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 100,
+    paddingBottom: 40,
+    alignItems: 'center',
+    zIndex: 200,
+  },
+  mobileHeadline: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -1.5,
+    lineHeight: 50,
+    marginBottom: 12,
+  },
+  mobileSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  mobileFormCard: {
+    width: '100%',
+    backgroundColor: 'rgba(6, 32, 24, 0.9)',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,230,118,0.25)',
+    padding: 16,
+    gap: 10,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(20px)' } as any,
+    }),
+  },
+  mobileField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 48,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+  },
+  mobileFieldText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  mobileFieldPlaceholder: {
+    color: 'rgba(255,255,255,0.38)',
+    fontWeight: '400',
+  },
+  mobileDropdown: {
+    position: 'absolute',
+    top: 52,
+    left: 0,
+    right: 0,
+    backgroundColor: '#041a12',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,230,118,0.25)',
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  mobileSearchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    backgroundColor: 'rgba(0,230,118,0.2)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,230,118,0.3)',
+    marginTop: 4,
+  },
+  mobileSearchBtnActive: {
+    backgroundColor: '#00E676',
+    borderColor: '#00E676',
+  },
+  mobileSearchBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });
