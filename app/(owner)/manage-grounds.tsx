@@ -610,6 +610,26 @@ export default function OwnerGroundsScreen() {
           <Text style={[styles.webTitle, width < 768 && { fontSize: 18 }]}>My Venues</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Button
+              title="Connect YouTube"
+              onPress={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: {
+                    scopes: 'https://www.googleapis.com/auth/youtube',
+                    redirectTo: Platform.OS === 'web' ? `${window.location.origin}/(owner)/manage-grounds` : undefined,
+                  },
+                });
+                if (error) {
+                  if (Platform.OS === 'web') alert('YouTube Connect Error: ' + error.message);
+                  else Alert.alert('YouTube Connect Error', error.message);
+                }
+              }}
+              variant="outline"
+              size="small"
+              style={{ borderColor: '#FF0000', backgroundColor: 'rgba(255,0,0,0.05)', height: 36, paddingHorizontal: 12 }}
+              textStyle={{ color: '#FF0000', fontSize: 12, fontWeight: '700' }}
+            />
+            <Button
               title={width < 768 ? "Import" : "Import Venue"}
               onPress={handleImportGround}
               variant="outline"

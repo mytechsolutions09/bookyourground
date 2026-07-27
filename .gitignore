@@ -37,4 +37,6 @@ yarn-error.*
 .idea/
 *.txt
 *.log
-
+# local temp & scratch
+tmp/
+scratch/

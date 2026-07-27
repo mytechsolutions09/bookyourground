@@ -499,10 +499,10 @@ export const ExtraRunsSelector = ({ isVisible, onClose, type, onSelect }: any) =
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.extraRunsContent}>
+        <View style={(styles as any).extraRunsContent || styles.modalContent}>
              <View style={styles.selectionHeader}>
                 <Text style={styles.selectionTitle}>{type?.toUpperCase()} RUNS</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <TouchableOpacity onPress={onClose} style={(styles as any).closeBtn || { padding: 4 }}>
                    <Plus size={24} color="#64748B" style={{ transform: [{ rotate: '45deg' }] }} />
                 </TouchableOpacity>
              </View>

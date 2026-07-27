@@ -959,6 +959,7 @@ export const ScoringSettingsSheet = React.memo(({ isVisible, onClose, onAction }
       title: 'Match Settings',
       icon: <Target size={18} color="#666" />,
       items: [
+        { label: '🔴 Go Live (YouTube Stream)', id: 'youtube_live' },
         { label: 'Edit Scorecard', id: 'edit_scorecard' },
         { label: 'Change Match Overs', id: 'change_overs' },
         { label: 'Match Rules (WD, NB, WW)', id: 'match_rules' },

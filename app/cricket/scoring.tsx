@@ -11,7 +11,8 @@ import {
   Modal,
   ActivityIndicator,
   Animated,
-  Pressable
+  Pressable,
+  Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -49,6 +50,7 @@ import {
   OpeningSelectionView,
   ScoringSettingsSheet
 } from '@/components/cricket/ScoringViews';
+import YouTubeLiveModal from '@/components/cricket/YouTubeLiveModal';
 import { 
   LiveScoringView, 
   BowlerSelectionView,
@@ -91,6 +93,7 @@ export default function ScoringScreen() {
   const [tempInputValue, setTempInputValue] = useState('');
   const [isManualAddPlayerVisible, setIsManualAddPlayerVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isYouTubeModalVisible, setIsYouTubeModalVisible] = useState(false);
 
   // --- Match Data States ---
   const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
@@ -568,7 +571,11 @@ export default function ScoringScreen() {
   };
 
   const handleSettingsAction = (id: string) => {
+    setIsSettingsVisible(false);
     switch (id) {
+      case 'youtube_live':
+        setIsYouTubeModalVisible(true);
+        break;
       case 'end_innings':
         declareInnings();
         break;
@@ -954,6 +961,12 @@ export default function ScoringScreen() {
         isVisible={isSettingsVisible} 
         onClose={() => setIsSettingsVisible(false)}
         onAction={handleSettingsAction}
+      />
+      <YouTubeLiveModal
+        visible={isYouTubeModalVisible}
+        onClose={() => setIsYouTubeModalVisible(false)}
+        matchId={matchId || (urlMatchId as string)}
+        matchTitle={`${selectedTeamA?.name || 'Team A'} vs ${selectedTeamB?.name || 'Team B'}`}
       />
     </View>
   );
