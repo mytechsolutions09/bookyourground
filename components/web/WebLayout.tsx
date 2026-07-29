@@ -864,21 +864,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            {!isCompact && isLanding && !isGroundOwner && (
-              <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
-                <TouchableOpacity 
-                  onPress={handleHostVenuePress} 
-                  style={styles.headerSecondaryButton}
-                >
-                  <Text style={[
-                    styles.headerSecondaryButtonText,
-                    scrolled && styles.headerSecondaryButtonTextScrolled
-                  ]}>
-                    HOST YOUR VENUE
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             <View style={[styles.headerRight, { zIndex: 10 }]}>
               <>
@@ -1148,21 +1134,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            {!isCompact && !headerContent && isLanding && !isGroundOwner && (
-              <View style={{ position: 'absolute', width: '100%', alignItems: 'center', zIndex: 5, pointerEvents: 'box-none' as any }}>
-                <TouchableOpacity 
-                  onPress={handleHostVenuePress} 
-                  style={styles.headerSecondaryButton}
-                >
-                  <Text style={[
-                    styles.headerSecondaryButtonText,
-                    scrolled && styles.headerSecondaryButtonTextScrolled
-                  ]}>
-                    HOST YOUR VENUE
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             {headerContent && (
               <View style={{ flex: 1, paddingHorizontal: 16, alignItems: 'center', zIndex: 5 }}>

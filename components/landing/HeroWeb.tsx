@@ -248,29 +248,6 @@ export default function HeroWeb() {
 
           {/* ── HEADLINE ─────────────────────────────────────────────── */}
           <Animated.View style={[styles.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineTranslateY }] }]}>
-            {/* Category pills */}
-            <View style={styles.categoryRow}>
-              {(['grounds', 'nets', 'all'] as const).map((tab) => {
-                const labels = { grounds: 'Grounds', nets: 'Nets', all: 'All Sports' };
-                const icons = {
-                  grounds: <GroundIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
-                  nets: <TurfIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
-                  all: <AllSportsIcon size={13} color={searchTab === tab ? '#031713' : '#94A3B8'} />,
-                };
-                return (
-                  <TouchableOpacity
-                    key={tab}
-                    style={[styles.categoryPill, searchTab === tab && styles.categoryPillActive]}
-                    onPress={() => handleTabChange(tab)}
-                  >
-                    {icons[tab]}
-                    <Text style={[styles.categoryPillText, searchTab === tab && styles.categoryPillTextActive]}>
-                      {labels[tab]}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
 
             {/* Main heading */}
             <Text style={styles.headline} accessibilityRole="header" aria-level={1}>
