@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Globe, Plus } from 'lucide-react-native';
+import { FileText, Globe, MessageSquare, Plus } from 'lucide-react-native';
 
-export default function BlogsSubbar({ children, activeTab }: { children: React.ReactNode; activeTab: 'posts' | 'sitemap' }) {
+export default function BlogsSubbar({ children, activeTab }: { children: React.ReactNode; activeTab: 'posts' | 'sitemap' | 'comments' }) {
   const isWeb = Platform.OS === 'web';
 
   const menu = (
@@ -38,6 +38,29 @@ export default function BlogsSubbar({ children, activeTab }: { children: React.R
             { fontSize: 13 }
           ]}>
             Blog Posts
+          </Text>
+        )}
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/(admin)/blogs/comments' as any)}
+        style={[
+          styles.subbarItem,
+          activeTab === 'comments' && styles.subbarItemActive,
+          !isWeb && styles.mobileTab,
+          !isWeb && activeTab === 'comments' && styles.mobileTabActive
+        ]}
+        // @ts-ignore
+        title="Comments Moderation"
+      >
+        <MessageSquare size={isWeb ? 18 : 14} color={activeTab === 'comments' ? '#10B981' : '#6B7280'} strokeWidth={1.5} />
+        {!isWeb && (
+          <Text style={[
+            styles.subbarItemText,
+            activeTab === 'comments' && styles.subbarItemTextActive,
+            { fontSize: 13 }
+          ]}>
+            Comments
           </Text>
         )}
       </Pressable>

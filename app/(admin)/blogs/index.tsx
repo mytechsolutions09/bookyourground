@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, Platform, Image } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit3, Trash2, Globe, Lock } from 'lucide-react-native';
+import { Plus, Edit3, Trash2, Globe, Lock, MessageSquare } from 'lucide-react-native';
 
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -16,6 +16,7 @@ interface Blog {
   created_at: string;
   image_url?: string;
   excerpt?: string;
+  comments_count?: number;
 }
 
 export default function AdminBlogsList() {
@@ -35,7 +36,25 @@ export default function AdminBlogsList() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBlogs(data || []);
+
+      // Fetch comment counts per blog
+      const { data: commentCounts, error: countErr } = await supabase
+        .from('blog_comments')
+        .select('blog_id');
+
+      const countMap: Record<string, number> = {};
+      if (!countErr && commentCounts) {
+        commentCounts.forEach((c: any) => {
+          countMap[c.blog_id] = (countMap[c.blog_id] || 0) + 1;
+        });
+      }
+
+      const formattedBlogs = (data || []).map((b) => ({
+        ...b,
+        comments_count: countMap[b.id] || 0,
+      }));
+
+      setBlogs(formattedBlogs);
     } catch (err: any) {
       console.error(err);
       if (Platform.OS === 'web') alert(err.message);
@@ -103,8 +122,9 @@ export default function AdminBlogsList() {
             <View style={styles.tableHeader}>
               <Text style={[styles.th, { flex: 2 }]}>Post Details</Text>
               <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+              <Text style={[styles.th, { flex: 0.8 }]}>Comments</Text>
               <Text style={[styles.th, { flex: 1 }]}>Date</Text>
-              <Text style={[styles.th, { width: 100, textAlign: 'right' }]}>Actions</Text>
+              <Text style={[styles.th, { width: 110, textAlign: 'right' }]}>Actions</Text>
             </View>
 
             {blogs.map(blog => (
@@ -133,12 +153,30 @@ export default function AdminBlogsList() {
                     </Text>
                   </View>
                 </View>
+                <View style={[styles.td, { flex: 0.8 }]}>
+                  <Pressable
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    onPress={() => router.push(`/(admin)/blogs/comments?blogId=${blog.id}` as any)}
+                  >
+                    <MessageSquare size={14} color="#10B981" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#10B981' }}>
+                      {blog.comments_count || 0}
+                    </Text>
+                  </Pressable>
+                </View>
                 <View style={[styles.td, { flex: 1 }]}>
                   <Text style={styles.dateText}>
                     {new Date(blog.created_at).toLocaleDateString()}
                   </Text>
                 </View>
-                <View style={[styles.td, { width: 100, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }]}>
+                <View style={[styles.td, { width: 110, flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }]}>
+                  <Pressable 
+                    onPress={() => router.push(`/(admin)/blogs/comments?blogId=${blog.id}` as any)}
+                    // @ts-ignore
+                    title="Moderate comments"
+                  >
+                    <MessageSquare size={18} color="#10B981" />
+                  </Pressable>
                   <Pressable onPress={() => router.push(`/(admin)/blogs/${blog.id}`)}>
                     <Edit3 size={18} color="#3B82F6" />
                   </Pressable>

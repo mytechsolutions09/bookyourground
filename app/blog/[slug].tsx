@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import { supabase } from '@/lib/supabase';
 import Head from 'expo-router/head';
+import BlogComments from '@/components/blog/BlogComments';
 
 const isHtmlContent = (content?: string): boolean => {
   if (!content) return false;
@@ -234,6 +235,8 @@ export default function DynamicBlogPage() {
                 {blog.content || ''}
               </Markdown>
             )}
+
+            <BlogComments blogId={blog.id} blogAuthor={blog.author} />
           </View>
 
           <View style={styles.footer}>
